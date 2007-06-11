@@ -1,7 +1,7 @@
 Package: monomvn
 Type: Package
 Title: Estimation for multivariate normal data with monotone missingness
-Version: 1.0
+Version: 1.0-1
 Date: 2007-06-11
 Author: Robert B. Gramacy <bobby@statslab.cam.ac.uk>
 Maintainer: Robert B. Gramacy <bobby@statslab.cam.ac.uk>
@@ -16,4 +16,4 @@ Description: Estimation of multivariate normal data of arbitrary dimension
 Depends: R (>= 2.5), pls
 Suggests: mvtnorm, accuracy
 License: LGPL (Lesser GNU Public License)
-Packaged: Mon Jun 11 11:34:49 2007; bobby
+Packaged: Mon Jun 11 13:48:59 2007; bobby
