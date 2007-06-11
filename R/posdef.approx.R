@@ -8,7 +8,7 @@ function(S, name="S", quiet=FALSE)
 {
   ## sanity check
   if(!is.matrix(S) || nrow(S) != ncol(S))
-    error(paste(name, "needs to be a symmetric matrix"))
+    stop(paste(name, "needs to be a symmetric matrix"))
   
   if(class(try(chol(S), silent=TRUE)) == "try-error") {
 
