@@ -14,12 +14,15 @@
 
 `monomvn` <-
 function(y, pre=TRUE, method=c("plsr", "pcr"), p=0.9, ncomp.max=Inf,
-         obs=FALSE, verb=0, quiet=TRUE)
+         validation=c("CV", "LOO"), obs=FALSE, verb=0, quiet=TRUE)
   {
     ##
     ## Begin: pre-processing
     ##
 
+    ## check method argument
+    method <- match.arg(method)
+    
     ## check p argument
     if(length(p) != 1 || p > 1 || p < 0) {
       warning("should have scalar 0 <= p <= 1, using default p=1")
@@ -32,8 +35,8 @@ function(y, pre=TRUE, method=c("plsr", "pcr"), p=0.9, ncomp.max=Inf,
       ncomp.max <- Inf
     }
 
-    ## check method argument
-    method <- match.arg(method)
+    ## check validation argument
+    validation <- match.arg(validation)
 
     ## check pre argument
     if(length(pre) != 1 || !is.logical(pre))
@@ -168,7 +171,8 @@ function(y, pre=TRUE, method=c("plsr", "pcr"), p=0.9, ncomp.max=Inf,
         }
         
         ## regress to add a component to mu, and a row/col to S
-        add <- addy(y1, y2, mu[a], S[a,a], method, p, ncomp.max, verb, quiet)
+        add <- addy(y1, y2, mu[a], S[a,a], method, p, ncomp.max, validation, 
+                    verb, quiet)
         if(verb > 0) cat("\n")
         
         ## save updated mu and S, and other stats from addy

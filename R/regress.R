@@ -6,7 +6,8 @@
 ## (pls) or principal component (pc) regression instead of lsfit
 
 `regress` <-
-function(y1, y2, method="plsr", p=1.0, ncomp.max=Inf, verb=0, quiet=TRUE)
+function(y1, y2, method="plsr", p=1.0, ncomp.max=Inf, validation="CV", 
+         verb=0, quiet=TRUE)
   {
     ## number of regressions
     numreg <- ncol(y2); if(is.null(numreg)) numreg <- 1
