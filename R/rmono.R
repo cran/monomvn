@@ -9,7 +9,7 @@
 ## distribution with parameters alpha=ab[1] and beta=ab[2]
 
 'rmono' <-
-function(x, m=4, ab=c(1,2))
+function(x, m=4, ab=NULL)
   {
     N <- nrow(x)
     d <- ncol(x)
@@ -32,7 +32,7 @@ function(x, m=4, ab=c(1,2))
 
       ## check ab
       if(length(ab) != 2 || !prod(ab > 0))
-        stop("ab should be a positive 2-vector")
+        stop("ab should be a positive 2-vector, or NULL")
       
       chop <- c(miss[ceiling(length(miss) * rbeta(d-1, ab[1], ab[2]))])
     }

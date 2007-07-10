@@ -15,7 +15,8 @@
 
 
 `addy` <-
-function(y1, y2, m1, s11, method="plsr", p=1.0, ncomp.max=Inf, verb=0, quiet=TRUE)
+function(y1, y2, m1, s11, method="plsr", p=1.0, ncomp.max=Inf, validation="CV", 
+         verb=0, quiet=TRUE)
   {
     ## decide what kind of regression to do and return coeffs & mean-sq resids
     reg <- regress(y1, y2, method, p, ncomp.max, verb, quiet)

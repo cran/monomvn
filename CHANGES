@@ -1,3 +1,14 @@
+<<<<<<< CHANGES
+1.0-2: (10 July 2007)
+------
+
+added validation argument to allow forcing of LOO
+
+ab=NULL is now the default in rmono.R
+
+cosmetic changes to documentation, particularly for 
+monomvn
+
 1.0-1: (11 June 2007)
 ------
 

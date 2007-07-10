@@ -28,8 +28,7 @@ posdef.approx(S, name = "S", quiet=FALSE) }
     Micah Altman, Jeff Gill and Michael McDonald (2003).
   \emph{Numerical Issues in Statistical Computing for the Social
     Scientist.} John Wiley and Sons, New York.
-  http://www.hmdc.harvard.edu/micah\_altman/numal/
-  
+  \url{http://www.hmdc.harvard.edu/micah\_altman/numal/}
 }
 \author{ Robert B. Gramacy \email{bobby@statslab.cam.ac.uk} }
 \note{

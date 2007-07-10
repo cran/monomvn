@@ -7,7 +7,7 @@
   of each column of the input matrix by a random number of \code{NA}s
 }
 \usage{
-rmono(x, m = 4, ab = c(1, 2))
+rmono(x, m = 4, ab = NULL)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -16,12 +16,13 @@ rmono(x, m = 4, ab = c(1, 2))
   \item{ab}{ a two-vector of \eqn{\alpha}{alpha} (\code{ab[1]}) and
     \eqn{\beta}{beta}
     (\code{\ab[2]}) parameters to a beta distribution describing the
-      proportion of \code{NA} entries in each column.  If \code{ab =
-	NULL} then a uniform distribution is used }
+      proportion of \code{NA} entries in each column.  The default
+      setting\code{ab = NULL} yields a uniform distribution }
 }
 \details{
 The returned \code{x} always has
-one complete column, and no column has fewer than \code{m >= 4}
+one (randomly selected)complete column, 
+and no column has fewer than \code{m >= 4}
 non-missing entries.  Otherwise, the proportion of missing entries
 in each column can be uniform, or it can have a beta
 distribution with parameters \eqn{\alpha}{alpha} (\code{ab[1]}) and

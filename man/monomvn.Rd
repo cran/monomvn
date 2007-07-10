@@ -13,8 +13,9 @@ this function can handle an (almost) arbitrary amount
 of missing data.
 }
 \usage{
-monomvn(y, pre = TRUE, method = c("plsr", "pcr"), p = 0.9, ncomp.max = Inf,
-        obs = FALSE, verb = 0, quiet = TRUE)
+monomvn(y, pre = TRUE, method = c("plsr", "pcr"), p = 0.9, 
+	ncomp.max = Inf, validation = c("CV", "LOO"), obs = FALSE, 
+        verb = 0, quiet = TRUE)
 }
 
 \arguments{
@@ -43,6 +44,13 @@ monomvn(y, pre = TRUE, method = c("plsr", "pcr"), p = 0.9, ncomp.max = Inf,
   \item{ncomp.max}{ maximal number of (principal) components to include
     in a \code{method}.  Large settings can cause the execution to be
     slow as it drastically increases the cross-validation (CV) time}
+  \item{validation}{ method for validation when applying 
+  \code{\link[pls]{plsr}} or \code{\link[pls]{pcr}}.  The default setting
+  of \code{"CV"} (randomized 10-fold cross-validation) is the faster method, 
+  but does not yield a deterministic result and does not apply for regressions
+  on less than ten responses.  \code{"LOO"} (leave-one-out cross-validation)
+  is deterministic, always applicable, and applied automatically whenever 
+  \code{"CV"} cannot be used}
   \item{obs}{ logical indicating whether or not to (additionally)
     compute a mean vector and covariance matrix based only on the observed
     data, without regressions.  I.e., means are calculated via averages of each
@@ -53,8 +61,8 @@ monomvn(y, pre = TRUE, method = c("plsr", "pcr"), p = 0.9, ncomp.max = Inf,
     of \code{y}}
   \item{verb}{ whether or not to print progress indicators.  The default
     (\code{verb = 0}) keeps quiet, while any positive number causes brief
-    statement about each of the \code{ncol(y)-1} regressions to print to
-    the screen as they happen.  Future versions will allow \code{verb}
+    statement about dimensions of each regression to print to
+    the screen as it happens.  Future versions will allow \code{verb}
     more granular control of the level of verbosity}
   \item{quiet}{ causes \code{\link{warning}}s about regressions to be silenced
     when \code{TRUE}}
