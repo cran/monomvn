@@ -24,6 +24,9 @@
   For now, simply returns the text of \code{\link{print.monomvn}}
 }
 \author{ Robert B. Gramacy \email{bobby@statslab.cam.ac.uk} }
+\references{
+\url{http://www.statslab.cam.ac.uk/~bobby/monomvn.html}
+}
 \seealso{ \code{\link{monomvn}} }
 }
 \keyword{ methods }

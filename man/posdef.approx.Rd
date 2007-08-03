@@ -29,6 +29,8 @@ posdef.approx(S, name = "S", quiet=FALSE) }
   \emph{Numerical Issues in Statistical Computing for the Social
     Scientist.} John Wiley and Sons, New York.
   \url{http://www.hmdc.harvard.edu/micah\_altman/numal/}
+
+\url{http://www.statslab.cam.ac.uk/~bobby/monomvn.html}
 }
 \author{ Robert B. Gramacy \email{bobby@statslab.cam.ac.uk} }
 \note{
