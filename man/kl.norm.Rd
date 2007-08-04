@@ -52,6 +52,9 @@ kl.norm(mu1, S1, mu2, S2, quiet=FALSE)
 
   \code{0.5 * (kl.norm(mu1,S1,mu2,S2) + kl.norm(mu2,S2,mu1,S1))}
 }
+\references{
+\url{http://www.statslab.cam.ac.uk/~bobby/monomvn.html}
+}
 \seealso{ \code{\link{posdef.approx}} }
 \examples{
 mu1 <- rnorm(5)

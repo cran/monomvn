@@ -27,6 +27,7 @@ Robert B. Gramacy \email{bobby@statslab.cam.ac.uk}
  \emph{Statistical Analysis with Missing Data}, Second Edition.
    Roderick J.A. Little and Donald B. Rubin.  Wilely. (2002)
 
+\url{http://www.statslab.cam.ac.uk/~bobby/monomvn.html}
 }
 \keyword{ package }
 \seealso{ \code{\link{monomvn}}, \pkg{norm}, \pkg{mvnmle} }

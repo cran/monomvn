@@ -1,4 +1,18 @@
-<<<<<<< CHANGES
+1.0-3: (03 Aug 2007)
+------
+
+added url to DESCRIPTION and each relevant .Rd file
+
+fixed verbosity/validation error in the call of regress 
+from addy
+
+simplified s22.1 calculation in addy to follow Stambaugh
+
+fixed pls author last name
+
+removed print(full) from rmono
+
+
 1.0-2: (10 July 2007)
 ------
 

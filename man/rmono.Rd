@@ -32,6 +32,9 @@ distribution with parameters \eqn{\alpha}{alpha} (\code{ab[1]}) and
   returns a matrix with the same dimensions as the input \code{x}
 }
 \author{ Robert B. Gramacy \email{bobby@statslab.cam.ac.uk}}
+\references{
+\url{http://www.statslab.cam.ac.uk/~bobby/monomvn.html}
+}
 \seealso{ \code{randmvn} }
 
 \examples{

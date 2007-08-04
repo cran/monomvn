@@ -19,7 +19,7 @@ function(y1, y2, m1, s11, method="plsr", p=1.0, ncomp.max=Inf, validation="CV",
          verb=0, quiet=TRUE)
   {
     ## decide what kind of regression to do and return coeffs & mean-sq resids
-    reg <- regress(y1, y2, method, p, ncomp.max, verb, quiet)
+    reg <- regress(y1, y2, method, p, ncomp.max, validation, verb, quiet)
     
     ## separate out the intercept term from the regression coeffs
     b0 <- reg$b[1,]
@@ -37,8 +37,9 @@ function(y1, y2, m1, s11, method="plsr", p=1.0, ncomp.max=Inf, validation="CV",
       s21 <- t(b1) %*% s11
     }
 
-    s22 <- s22.1 + s21 %*% solve(s11,t(s21))
-    ## S <- rbind(cbind(s11,t(s21)),cbind(s21,s22))
+    ## don't actually need to invert s11 here -- check this!
+    ## s22 <- s22.1 + s21 %*% solve(s11,t(s21))
+    s22 <- s22.1 + t(b1) %*% s11 %*% b1
 
     ## return
     return(list(method=rep(reg$method, ncol(reg$b)), ncomp=reg$ncomp,

@@ -44,7 +44,6 @@ function(x, m=4, ab=NULL)
     chop <- c(chop, 0)
     chop[length(chop)] <- chop[full]
     chop[full] <- N+1
-    print(full)
 
     ## chop off the monotone missing data pattern
     for(i in 1:d) {

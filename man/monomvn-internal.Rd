@@ -14,6 +14,6 @@
   waiting for proper documentation to be written :)).
 }
 %\references{
-%\url{http://www.ams.ucsc.edu/~rbgramacy/tgp.html}
+%\url{http://www.statslab.cam.ac.uk/~bobby/monomvn.html}
 %}
 \keyword{ internal }

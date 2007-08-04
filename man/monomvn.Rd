@@ -155,7 +155,7 @@ monomvn(y, pre = TRUE, method = c("plsr", "pcr"), p = 0.9,
   \emph{Statistical Analysis with Missing Data}, Second Edition.
   Wilely.
 
-  Bjorn-Helge and Mevik Ron Wehrens (2007).
+  Bjorn-Helge Mevik and Ron Wehrens (2007).
   \emph{The \pkg{pls} Package: Principal Component and Partial
     Least Squares Regression in R.} 
   Journal of Statistical Software \bold{18}(2)
@@ -163,6 +163,8 @@ monomvn(y, pre = TRUE, method = c("plsr", "pcr"), p = 0.9,
   Some of the code for \code{monomvn}, and its subroutines, was inspired
   by code found on the world wide web, written by Daniel Heitjan,
   \url{http://www.cceb.upenn.edu/pages/heitjan/courses/bsta782/examples/fcn.q}
+
+\url{http://www.statslab.cam.ac.uk/~bobby/monomvn.html}
 }
 \author{ Robert B. Gramacy \email{bobby@statslab.cam.ac.uk}
 
