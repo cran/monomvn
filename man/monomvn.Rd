@@ -13,9 +13,10 @@ this function can handle an (almost) arbitrary amount
 of missing data.
 }
 \usage{
-monomvn(y, pre = TRUE, method = c("plsr", "pcr"), p = 0.9, 
-	ncomp.max = Inf, validation = c("CV", "LOO"), obs = FALSE, 
-        verb = 0, quiet = TRUE)
+monomvn(y, pre = TRUE, method = c("plsr", "pcr", "lasso", "lar",
+                                  "forward.stagewise", "stepwise"),
+        p = 0.9, ncomp.max = Inf, validation = c("CV", "LOO"),
+        obs = FALSE, verb = 0, quiet = TRUE)
 }
 
 \arguments{
@@ -25,12 +26,18 @@ monomvn(y, pre = TRUE, method = c("plsr", "pcr"), p = 0.9,
   \item{pre}{ logical indicating whether pre-processing of the
     \code{y} is to be performed.  This sorts the columns so that the
     number of \code{NA}s is non-decreasing with the column index }
-  \item{method}{ describes the type of \emph{parsimonious} regression to
+  \item{method}{ describes the type of \emph{parsimonious}
+    (or \emph{shrinkage}) regression to
     be performed when standard least-squares regression fails.
-    \code{"plsr"} (the default) is partial least squares and \code{"pcr"}
-    is standard principal component regression.  See the
-    \pkg{pls} package, particularly the functions
-    \link[pls]{plsr} and \link[pls]{pcr}}
+    From the \pkg{pls} package we have \code{"plsr"}
+    (\link[pls]{plsr}, the default) for  partial least squares and
+    \code{"pcr"} (\link[pls]{pcr}) for standard principal
+    component regression.  From the \pkg{lars} package (see the
+    \code{"type"} argument to \link[lars]{lars})
+    we have \code{"lasso"} for L1-constrained regression, \code{"las"}
+    for least angle regression, \code{"forward.stagewise"} and
+    \code{"stepwise"} for fast implementation of classical forward
+    selection of covariates}
   \item{p}{ when performing regressions, \code{p} is the proportion of the
     number of columns to rows in the design matrix before an
     alternative regression \code{method} (those above) is performed as if
@@ -42,10 +49,11 @@ monomvn(y, pre = TRUE, method = c("plsr", "pcr"), p = 0.9,
     Intermediate settings of \code{p} allow the user to control when
     least-squares regressions stop and the \code{method} ones start}
   \item{ncomp.max}{ maximal number of (principal) components to include
-    in a \code{method}.  Large settings can cause the execution to be
+    in a \code{method}---only meaningful for the \code{"plsr"} or
+    \code{"pcr"} methods.  Large settings can cause the execution to be
     slow as it drastically increases the cross-validation (CV) time}
-  \item{validation}{ method for validation when applying 
-  \code{\link[pls]{plsr}} or \code{\link[pls]{pcr}}.  The default setting
+  \item{validation}{ method for cross validation when applying 
+  a \emph{parsimonious} regression method.  The default setting
   of \code{"CV"} (randomized 10-fold cross-validation) is the faster method, 
   but does not yield a deterministic result and does not apply for regressions
   on less than ten responses.  \code{"LOO"} (leave-one-out cross-validation)
@@ -94,28 +102,38 @@ monomvn(y, pre = TRUE, method = c("plsr", "pcr"), p = 0.9,
   \code{method = c("pcr", "plsr")}.  If ever a least-squares regression
   fails due to co-linearity the one of the other \code{method}s is tried.
   
-  Both \code{method}s require a scheme for estimating the amount of
-  variability explained by increasing numbers of (principal) components.
-  Towards this end, the \pkg{pls} package supports either cross
-  validation (CV) or leave-one-out (LOO) estimates of root mean squared
-  error (ERROR).  See \pkg{pls} for more details.  \code{monomvn} uses
+  All \code{method}s require a scheme for estimating the amount of
+  variability explained by increasing numbers of coefficients (or principal
+  components) in the model.
+  Towards this end, the \pkg{pls} and \pkg{lars} packages support
+  10-fold cross validation (CV) or leave-one-out (LOO) CV estimates of
+  root mean squared error (ERROR).  See \pkg{pls} and \pkg{lars} for
+  more details.  \code{monomvn} uses
   CV in all cases except when \code{nrow(y1) <= 10}, in which case CV fails and
   LOO is used.  Whenever \code{nrow(y1) <= 3} \code{\link[pls]{pcr}}
   fails,  so \code{\link[pls]{plsr}} is used instead.
   If \code{quiet = FALSE} then a \code{\link{warning}}
-  is given whenever the first choice for a regression fails.  RMSEs
+  is given whenever the first choice for a regression fails.
+  
+  For \pkg{pls} methods, RMSEs
   are calculated for a number of components in \code{1:ncomp.max} where
   \code{is.null(ncomp.max)} it is replaced with
 
   \code{ncomp.max <- min(ncomp.max, ncol(y2), nrow(y1)-1)}
 
   which is the max allowed by the \pkg{pls} package.
-  A simple heuristic is used to select a small number of components
-  (\code{ncomp}) which explains a large amount of the variability (RMSE).
+  
+  Simple heuristics are used to select a small number of components
+  (\code{ncomp} for \pkg{pls}), or number of coeffieents (for
+  \pkg{lars}) which explains a large amount of the variability (RMSE).
+  The \pkg{lars} methods use a \dQuote{one-standard error rule} outlined
+  in Section 7.10, page 216 of HTF, in the reference below.  ~The
+  \pkg{pls} package does not currently support the calculation of
+  standard errors for CV estimates of RMSE, so a slimpe linear penalty
+  for increasing \code{ncomp} is used instead.
 
   Based on the MLE \code{ncol(y1)+1} regression coefficients (including
-  intercept)
-  obtained for each of the
+  intercept) obtained for each of the
   columns of \code{y2}, and on the corresponding \code{matrix} of
   residual sum of squares, and on the previous \code{j-1} means
   and rows/cols of the covariance matrix, the \code{j:(j+k)} entries and
@@ -159,6 +177,15 @@ monomvn(y, pre = TRUE, method = c("plsr", "pcr"), p = 0.9,
   \emph{The \pkg{pls} Package: Principal Component and Partial
     Least Squares Regression in R.} 
   Journal of Statistical Software \bold{18}(2)
+
+  Bradley Efron, Trevor Hastie, Ian Johnstone and Robert Tibshirani
+  (2003).
+  \emph{Least Angle Regression (with discussion).}
+  Annals of Statistics; see also
+  \url{http://www-stat.stanford.edu/~hastie/Papers/LARS/LeastAngle_2002.pdf}
+  
+  Trevor Hastie, Robert Tibshirani and Jerome Friedman (2002).
+  \emph{Elements of Statistical Learning.} Springer, NY. [HTF]
   
   Some of the code for \code{monomvn}, and its subroutines, was inspired
   by code found on the world wide web, written by Daniel Heitjan,
@@ -189,7 +216,7 @@ out$mu
 out$S
 
 ##
-## A bigger example, comparing plsr to pcr
+## A bigger example, comparing the various methods
 ##
 
 ## generate N=1000 samples from a random MVN
@@ -207,6 +234,26 @@ kl.norm(out.plsr$mu, out.plsr$S, xmuS$mu, xmuS$S)
 out.pcr <- monomvn(xmiss, method="pcr")
 out.pcr
 kl.norm(out.pcr$mu, out.pcr$S, xmuS$mu, xmuS$S)
+
+## lasso
+out.lasso <- monomvn(xmiss, method="lasso")
+out.lasso
+kl.norm(out.lasso$mu, out.lasso$S, xmuS$mu, xmuS$S)
+
+## lar
+out.lar <- monomvn(xmiss, method="lar")
+out.lar
+kl.norm(out.lar$mu, out.lar$S, xmuS$mu, xmuS$S)
+
+## forward.stagewise
+out.fs <- monomvn(xmiss, method="forward.stagewise")
+out.fs
+kl.norm(out.fs$mu, out.fs$S, xmuS$mu, xmuS$S)
+
+## stepwise
+out.step <- monomvn(xmiss, method="stepwise")
+out.step
+kl.norm(out.step$mu, out.step$S, xmuS$mu, xmuS$S)
 }
 
 \keyword{ multivariate }
