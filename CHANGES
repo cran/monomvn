@@ -1,3 +1,15 @@
+1.1: (13 Aug 2007)
+----
+
+added lars package support for lasso, etc; ridge 
+regression does not seem to work for the big-p small-n
+problem
+
+another special case in addy len(m1)=1, possibly due
+to the s22.1 calculation that was modified in the last
+version
+
+
 1.0-3: (03 Aug 2007)
 ------
 

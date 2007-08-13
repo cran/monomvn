@@ -4,6 +4,10 @@
 %% <LIST>
 \alias{addy}
 \alias{regress}
+\alias{regress.ls}
+\alias{regress.lars}
+\alias{regress.pls}
+\alias{regress.ridge}
 
 \title{Internal Monomvn Functions}
 \description{

@@ -16,7 +16,7 @@ function(x, ...)
       cat(sum(m), "\t", u, sep="")
       if(u != "complete" && u != "lsr") {
         r <- range(x$ncomp[m])
-        cat(paste(", ncomp range: [", r[1], ",", r[2], "]", sep=""))
+        cat(paste(", ncomp range: [", signif(r[1],5), ",", signif(r[2],5), "]", sep=""))
       }
       cat("\n")
     }

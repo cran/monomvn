@@ -13,7 +13,9 @@
 
 
 `monomvn` <-
-function(y, pre=TRUE, method=c("plsr", "pcr"), p=0.9, ncomp.max=Inf,
+function(y, pre=TRUE,
+         method=c("plsr", "pcr", "lasso", "lar", "forward.stagewise",
+           "stepwise"), p=0.9, ncomp.max=Inf,
          validation=c("CV", "LOO"), obs=FALSE, verb=0, quiet=TRUE)
   {
     ##

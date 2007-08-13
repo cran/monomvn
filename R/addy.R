@@ -23,23 +23,23 @@ function(y1, y2, m1, s11, method="plsr", p=1.0, ncomp.max=Inf, validation="CV",
     
     ## separate out the intercept term from the regression coeffs
     b0 <- reg$b[1,]
-    b1 <- reg$b[-1,]
-    s22.1 <- reg$S
+    b1 <- matrix(reg$b[-1,], ncol=ncol(reg$b))
 
     ## Update the parameters
 
     ## mean
     if(length(m1) == 1) {
       m2 <- b0 + b1 * m1
-      s21 <- b1 * s11
+      s21 <- matrix(b1 * s11, nrow=ncol(reg$b))
     } else {
-      m2 <- b0+ t(b1) %*% m1
+      m2 <- b0 + t(b1) %*% m1
       s21 <- t(b1) %*% s11
     }
 
-    ## don't actually need to invert s11 here -- check this!
-    ## s22 <- s22.1 + s21 %*% solve(s11,t(s21))
-    s22 <- s22.1 + t(b1) %*% s11 %*% b1
+    ## don't actually need to invert s11 here
+    ## s22 <- reg$S + s21 %*% solve(s11,t(s21))
+    ## s22 <- reg$S + t(b1) %*% s11 %*% b1
+    s22 <- reg$S + s21 %*% b1
 
     ## return
     return(list(method=rep(reg$method, ncol(reg$b)), ncomp=reg$ncomp,
