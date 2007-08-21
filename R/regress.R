@@ -35,7 +35,7 @@ function(y1, y2, method="plsr", p=1.0, ncomp.max=Inf, validation="CV",
     ## make sure the regression was non-signuar.  If so,
     ## use force a pls (or maybe lars) regression and print a warning
     if(sum(S) == 0) {
-      if(actual.method != "lsr") stop(paste("singular", method, "regression"))
+      if(ret$method != "lsr") stop(paste("singular", method, "regression"))
       if(!quiet)
         warning(paste("singular least-squares ", nrow(y1), "x", numpred,
                     " regression, forcing pslr", sep=""))

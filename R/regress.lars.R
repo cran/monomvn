@@ -14,6 +14,7 @@
   numpred <- ncol(y1); if(is.null(numpred)) numpred <- 1
 
   ## decide on cross validation method depending on number of data points
+  if(validation == "Cp" && numobs <= numpred) validation <- "CV"
   if(numobs <= 10) validation <- "LOO";
   if(validation == "LOO") K <- numobs
   else K <- 10
@@ -31,34 +32,50 @@
   ## don't use gram matrix when m > 500
   use.Gram <- TRUE
   if(numpred > 500) use.Gram <- FALSE
-  
+
   if(numreg == 1) y2 <- matrix(y2, ncol=numreg)
   for(i in 1:numreg) {
-    
-    ## using "one-standard error rule"
-    ## num.fractions could be passed in same as ncomp.max
-    cv <- cv.lars(x=y1,y=y2[,i],type=method,K=K,intercept=TRUE,
-                  plot.it=FALSE, use.Gram=use.Gram)
-    wm <- which.min(cv$cv)
-    tf <- cv$cv < cv$cv[wm] + cv$cv.error[wm]
-    s <- (1:100)[tf][1]/100
-    ## abline(v=s)
 
-    ## first imterpretation of one-standard error rule
-    ## tf <- cv$cv - cv$cv.error < min(cv$cv)
-    ## s <- (1:100)[tf][1]/100
-    ## abline(v=s, col=2)
+    if(validation == "Cp") {
 
-    ## the simple line heuristic
-    ## s <- (1:100)[which.min(cv$cv + (max(cv$cv)-min(cv$cv))*seq(0,1,length=length(cv$cv)))][1]/100
-    ## abline(v=s, col=3, lty=3);
+      ## use (Mallows) Cp method
+      reglst <- lars(x=y1, y=y2[,i],type=method,intercept=TRUE, use.Gram=use.Gram)
+      if(sum(is.nan(reglst$Cp))) ## unsuccessful
+        return(y1, y2, method=method, validation="CV", verb=verb)
+      s <- as.numeric(names(which.min(reglst$Cp)))
+      co <- coef(reglst, s=s)
 
-    ## wait for next plot
-    ## readline("pr: ")
-    
-    ## get the lasso fit with fraction f
-    reglst <- lars(x=y1,y=y2[,i],type=method,intercept=TRUE, use.Gram=use.Gram)
-    co <- coef(reglst, s=s, mode="fraction")
+    } else {
+      
+      ## use Cross-Validation (possibly LOO)      
+      ## num.fractions could be passed in same as ncomp.max
+      cv <- cv.lars(x=y1,y=y2[,i],type=method,K=K,intercept=TRUE, use.Gram=use.Gram,
+                    plot.it=FALSE)
+
+      ## choose with with "one-standard error rule"
+      wm <- which.min(cv$cv)
+      tf <- cv$cv < cv$cv[wm] + cv$cv.error[wm]
+      s <- cv$fraction[(1:100)[tf][1]]
+      ## abline(v=s); readline("next: ")
+
+      ## simply choose the minimum one (taking error-bars into account
+      ## (note: seems to lead to non-posdef S)
+      ## s <- cv$fraction[which.min(cv$cv + cv$cv.error)]
+      ## abline(v=s); readline("next: ")
+      
+      ## first interpretation of one-standard error rule
+      ## tf <- cv$cv - cv$cv.error < min(cv$cv)
+      ## s <- (1:100)[tf][1]/100
+      ## abline(v=s, col=2); readline("next: ")
+      
+      ## the simple line heuristic
+      ## s <- (1:100)[which.min(cv$cv + (max(cv$cv)-min(cv$cv))*seq(0,1,length=length(cv$cv)))][1]/100
+      ## abline(v=s, col=3, lty=3); readline("next: ")
+      
+      ## get the lasso fit with fraction f
+      reglst <- lars(x=y1,y=y2[,i],type=method, intercept=TRUE, use.Gram=use.Gram)
+      co <- coef(reglst, s=s, mode="fraction")
+    }
     y1co <- drop(y1 %*% co)
     icept <- reglst$mu - mean(y1co)
     bvec[,i] <- c(icept, co)

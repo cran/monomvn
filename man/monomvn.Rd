@@ -7,15 +7,14 @@
 \description{
 Maximum likelihood estimation of the mean and covariance matrix of
 multivariate normal (MVN) distributed data with a monotone missingness pattern.
-Through the use of partial least squares and principal component
-regressions, where standard regressions fail,
-this function can handle an (almost) arbitrary amount
-of missing data.
+Through the use of parsimonious/shrinkage regressions (e.g., plsr, pcr,
+ridge, lasso, etc.), where standard regressions fail,
+this function can handle an (almost) arbitrary amount of missing data.
 }
 \usage{
 monomvn(y, pre = TRUE, method = c("plsr", "pcr", "lasso", "lar",
-                                  "forward.stagewise", "stepwise"),
-        p = 0.9, ncomp.max = Inf, validation = c("CV", "LOO"),
+        "forward.stagewise", "stepwise", "ridge"), p = 0.9,
+        ncomp.max = Inf, validation = c("CV", "LOO", "Cp"),
         obs = FALSE, verb = 0, quiet = TRUE)
 }
 
@@ -37,7 +36,9 @@ monomvn(y, pre = TRUE, method = c("plsr", "pcr", "lasso", "lar",
     we have \code{"lasso"} for L1-constrained regression, \code{"las"}
     for least angle regression, \code{"forward.stagewise"} and
     \code{"stepwise"} for fast implementation of classical forward
-    selection of covariates}
+    selection of covariates.  From the \pkg{MASS} package we have
+    \code{"ridge"} as implemented by the \code{\link{lm.ridge}}
+    function}
   \item{p}{ when performing regressions, \code{p} is the proportion of the
     number of columns to rows in the design matrix before an
     alternative regression \code{method} (those above) is performed as if
@@ -58,7 +59,12 @@ monomvn(y, pre = TRUE, method = c("plsr", "pcr", "lasso", "lar",
   but does not yield a deterministic result and does not apply for regressions
   on less than ten responses.  \code{"LOO"} (leave-one-out cross-validation)
   is deterministic, always applicable, and applied automatically whenever 
-  \code{"CV"} cannot be used}
+  \code{"CV"} cannot be used.  When standard least squares is
+  appropriate, the methods implemented the
+  \pkg{lars} package (e.g. lasso) support model choice via the
+  \code{"Cp"} statistic, which defaults to the \code{"CV"} method
+  when least squares fails.  This argument is ignored for the
+  \code{"ridge"} method, see details below}
   \item{obs}{ logical indicating whether or not to (additionally)
     compute a mean vector and covariance matrix based only on the observed
     data, without regressions.  I.e., means are calculated via averages of each
@@ -124,13 +130,15 @@ monomvn(y, pre = TRUE, method = c("plsr", "pcr", "lasso", "lar",
   which is the max allowed by the \pkg{pls} package.
   
   Simple heuristics are used to select a small number of components
-  (\code{ncomp} for \pkg{pls}), or number of coeffieents (for
+  (\code{ncomp} for \pkg{pls}), or number of coefficients (for
   \pkg{lars}) which explains a large amount of the variability (RMSE).
   The \pkg{lars} methods use a \dQuote{one-standard error rule} outlined
-  in Section 7.10, page 216 of HTF, in the reference below.  ~The
+  in Section 7.10, page 216 of HTF, in the reference below.  The
   \pkg{pls} package does not currently support the calculation of
-  standard errors for CV estimates of RMSE, so a slimpe linear penalty
-  for increasing \code{ncomp} is used instead.
+  standard errors for CV estimates of RMSE, so a simple linear penalty
+  for increasing \code{ncomp} is used instead.  The ridge constant
+  (lambda) for \code{\link{lm.ridge}} is set using the \code{\link{optimize}}
+  function on the \code{GCV} output.
 
   Based on the MLE \code{ncol(y1)+1} regression coefficients (including
   intercept) obtained for each of the
@@ -181,7 +189,7 @@ monomvn(y, pre = TRUE, method = c("plsr", "pcr", "lasso", "lar",
   Bradley Efron, Trevor Hastie, Ian Johnstone and Robert Tibshirani
   (2003).
   \emph{Least Angle Regression (with discussion).}
-  Annals of Statistics; see also
+  Annals of Statistics \bold{32}(2); see also
   \url{http://www-stat.stanford.edu/~hastie/Papers/LARS/LeastAngle_2002.pdf}
   
   Trevor Hastie, Robert Tibshirani and Jerome Friedman (2002).
@@ -200,9 +208,14 @@ monomvn(y, pre = TRUE, method = c("plsr", "pcr", "lasso", "lar",
   Note that the covariances uses throughout are the MLE, i.e., not
   unbiased ones which have an \code{N-1} in the denominator
 
-  The CV in \pkg{plsr} is random in nature, so whenever
-  \code{\link[pls]{plsr}} or \code{\link[pls]{pcr}} is used the results
-  can be dependent on the random seed
+  The CV in \pkg{plsr} and \pkg{lars} are random in nature, and so
+  can be dependent on the random seed.  Use \code{validation=LOO} for
+  deterministic (but slower) result
+
+  Be warned that the \pkg{lars} implementation of
+  \code{"forward.stagewise"} can sometimes get stuck in an infinte loop.
+  This is not a bug in the \code{monomvn} package;
+  the bug has been reported to the authors.
 }
 \seealso{ \link[norm]{em.norm} in the \pkg{norm} package, and
   \link[mvnmle]{mlest} in the \pkg{mvnmle} package}
@@ -232,27 +245,26 @@ kl.norm(out.plsr$mu, out.plsr$S, xmuS$mu, xmuS$S)
 
 ## plcr
 out.pcr <- monomvn(xmiss, method="pcr")
-out.pcr
 kl.norm(out.pcr$mu, out.pcr$S, xmuS$mu, xmuS$S)
+
+## ridge regression
+out.ridge <- monomvn(xmiss, method="ridge")
+kl.norm(out.ridge$mu, out.ridge$S, xmuS$mu, xmuS$S)
 
 ## lasso
 out.lasso <- monomvn(xmiss, method="lasso")
-out.lasso
 kl.norm(out.lasso$mu, out.lasso$S, xmuS$mu, xmuS$S)
 
 ## lar
 out.lar <- monomvn(xmiss, method="lar")
-out.lar
 kl.norm(out.lar$mu, out.lar$S, xmuS$mu, xmuS$S)
 
 ## forward.stagewise
 out.fs <- monomvn(xmiss, method="forward.stagewise")
-out.fs
 kl.norm(out.fs$mu, out.fs$S, xmuS$mu, xmuS$S)
 
 ## stepwise
 out.step <- monomvn(xmiss, method="stepwise")
-out.step
 kl.norm(out.step$mu, out.step$S, xmuS$mu, xmuS$S)
 }
 
