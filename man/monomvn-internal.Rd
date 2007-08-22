@@ -8,6 +8,7 @@
 \alias{regress.lars}
 \alias{regress.pls}
 \alias{regress.ridge}
+\alias{opt.ridge}
 
 \title{Internal Monomvn Functions}
 \description{

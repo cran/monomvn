@@ -1,3 +1,16 @@
+1.1-1 (21 Aug 2007)
+-----
+
+still having problems with the "forward.stagewise" 
+method -- have emailed Hastie
+
+added ridge regression with a silly heuristic on the lower
+lower bound for lambda when p>n
+
+added validation="Cp" for Mallows Cp method for choosing
+the best lars model
+
+
 1.1: (13 Aug 2007)
 ----
 

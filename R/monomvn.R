@@ -15,8 +15,8 @@
 `monomvn` <-
 function(y, pre=TRUE,
          method=c("plsr", "pcr", "lasso", "lar", "forward.stagewise",
-           "stepwise"), p=0.9, ncomp.max=Inf,
-         validation=c("CV", "LOO"), obs=FALSE, verb=0, quiet=TRUE)
+           "stepwise", "ridge"), p=0.9, ncomp.max=Inf,
+         validation=c("CV", "LOO", "Cp"), obs=FALSE, verb=0, quiet=TRUE)
   {
     ##
     ## Begin: pre-processing
@@ -39,6 +39,8 @@ function(y, pre=TRUE,
 
     ## check validation argument
     validation <- match.arg(validation)
+    if(validation == "Cp" && (method == "plsr" || method == "pcr"))
+      stop("Cp model selection is only valid for lars models, not plsr or pcr")
 
     ## check pre argument
     if(length(pre) != 1 || !is.logical(pre))
@@ -59,7 +61,7 @@ function(y, pre=TRUE,
     nam <- colnames(y)
     y <- as.matrix(y)
 
-    ## imput dimension and checks
+    ## input dimension and checks
     n <- nrow(y)
     m <- ncol(y)
     if (m < 2) stop('Need at least two columns')
@@ -156,8 +158,8 @@ function(y, pre=TRUE,
         ##if(sum(tousej) <= 3)
           ##stop(paste("variable ", nao[j], " has less than 4 non-NA entries", sep=""))
 
-        ## a are column indices processed alread, b are new indices
-        ## y1 are old columns, and y2 is new column
+        ## a are column indices processed already, b are new indices
+        ## y1 are old columns, and y2 are new columns
         a <- 1:(miss[i]-1);  b <- miss[i]:(miss[i+1]-1)
         y1<-y[tousej,a]; y2<-y[tousej,b]
         
@@ -165,7 +167,7 @@ function(y, pre=TRUE,
           ## save the observed means
           mu.obs[b] <- apply(as.matrix(y2), 2, mean)
         
-          ## more rows/cols to the observed covariance matrix
+          ## add next rows/cols to the observed covariance matrix
           lty <- nrow(y1); if(is.null(lty)) lty <- 1
           S.obs[a,b] <- (lty-1)*cov(y1,y2)/lty
           S.obs[b,a] <- t(S.obs[a,b])
@@ -226,7 +228,7 @@ function(y, pre=TRUE,
     }
 
     ## done, make initial class-list for return
-    r <- list(call=cl, methods=methods, ncomp=ncomp, mu=mu, S=S)
+    r <- list(call=cl, methods=methods, ncomp=ncomp, mu=mu, S=S, p=p)
 
     ## possibly add column permutation info from pre-processing
     if(pre) {
