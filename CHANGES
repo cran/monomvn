@@ -1,3 +1,21 @@
+1.1-2 (31 Oct 2007)
+-----
+
+summary.monomvn now calculates the number of zeros in
+the covariance matrix (& inv covar matrix) when using the
+lasso method -- for summarizing pairwise marginal (and
+conditional) independence
+
+a new plot.summary.monomvn function makes histograms of
+the numbers of zeros in each column of the covariance
+matrix and its inverse
+
+kl.norm now returns Inf with a warning if there is a 
+truly non-positive definite matrix
+
+increased minimum (m) number of observations in rmono
+
+
 1.1-1 (21 Aug 2007)
 -----
 

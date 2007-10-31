@@ -9,9 +9,7 @@ function(x, ...)
     cat("\nCall:\n")
     print(x$call)
 
-    cat("\nused p=", x$p, sep="")
-    
-    cat("\nMethods used:\n")
+    cat("\nMethods used (p=", x$p, "):\n", sep="")
     um <- sort(unique(x$methods))
     for(u in um) {
       m <- x$methods == u

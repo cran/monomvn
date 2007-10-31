@@ -30,9 +30,9 @@ function(mu1, S1, mu2, S2, quiet=FALSE)
 
   ## calculate the determinants in log space
   ld2 <- determinant(S2, logarithm=TRUE)
-  if(ld2$sign == -1) stop("S2 is not posdef")
+  if(ld2$sign == -1) { warning("S2 is not posdef"); return(Inf) }
   ld1 <- determinant(S1, logarithm=TRUE)
-  if(ld1$sign == -1) stop("S1 is not posdef")
+  if(ld1$sign == -1) { warning("S1 is not posdef"); return(Inf) }
   ldet <- ld2$modulus[1] - ld1$modulus[1]
 
   ## rest of the calculation

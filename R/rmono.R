@@ -9,7 +9,7 @@
 ## distribution with parameters alpha=ab[1] and beta=ab[2]
 
 'rmono' <-
-function(x, m=4, ab=NULL)
+function(x, m=7, ab=NULL)
   {
     N <- nrow(x)
     d <- ncol(x)

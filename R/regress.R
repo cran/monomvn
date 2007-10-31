@@ -33,7 +33,7 @@ function(y1, y2, method="plsr", p=1.0, ncomp.max=Inf, validation="CV",
     S <- (numobs-1)*cov(ret$res)/numobs
 
     ## make sure the regression was non-signuar.  If so,
-    ## use force a pls (or maybe lars) regression and print a warning
+    ## use force a pls (or maybe lars or ridge) regression & print a warning
     if(sum(S) == 0) {
       if(ret$method != "lsr") stop(paste("singular", method, "regression"))
       if(!quiet)

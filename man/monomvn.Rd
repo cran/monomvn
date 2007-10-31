@@ -1,6 +1,5 @@
 \name{monomvn}
 \alias{monomvn}
-\alias{print.monomvn}
 
 \title{ Estimation of Multivariate Normal Data with Monotone Missingness }
 
@@ -177,6 +176,11 @@ monomvn(y, pre = TRUE, method = c("plsr", "pcr", "lasso", "lar",
     usually not positive definite }
 }
 \references{
+  Robert B. Gramacy and Joo Hee Lee (2007).
+  \emph{On estimating covariances between many assets with histories 
+  of highly variable length}. Preprint available on arXiv:0710.5837:
+  \url{http://arxiv.org/abs/0710.5837}
+
   Roderick J.A. Little and Donald B. Rubin (2002).
   \emph{Statistical Analysis with Missing Data}, Second Edition.
   Wilely.
