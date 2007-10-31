@@ -7,7 +7,7 @@
   of each column of the input matrix by a random number of \code{NA}s
 }
 \usage{
-rmono(x, m = 4, ab = NULL)
+rmono(x, m = 7, ab = NULL)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{

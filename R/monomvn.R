@@ -173,7 +173,8 @@ function(y, pre=TRUE,
           S.obs[b,a] <- t(S.obs[a,b])
           S.obs[b,b] <- (lty-1)*cov(as.matrix(y2))/lty
         }
-        
+
+        ## here is where it all happens:
         ## regress to add a component to mu, and a row/col to S
         add <- addy(y1, y2, mu[a], S[a,a], method, p, ncomp.max, validation, 
                     verb, quiet)
