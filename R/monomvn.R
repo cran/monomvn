@@ -93,7 +93,7 @@ function(y, pre=TRUE,
     ## for holding the means and covars
     mu <- rep(0, m)
     S <- matrix(0, ncol=m, nrow=m)
-    
+
     ## for holding the observed means and covars
     if(obs) {
       mu.obs <- rep(0, m)
@@ -123,23 +123,33 @@ function(y, pre=TRUE,
     mu[fcol] <- matrix(apply(as.matrix(y[,fcol]),2,mean),length(fcol),1)
     S[fcol,fcol] <- matrix((n-1)*cov(as.matrix(y[,fcol]))/n,length(fcol),length(fcol))
 
+    ## print mu and S to the screen
+    if(verb >= 2) {
+       cat("\n** complete cases 1:", length(fcol), ", ", sep="")
+       cat("\n   covariate(s): "); cat(paste(nao[fcol])); cat("\n")
+       cat("\nmu = "); cat(paste(round(mu[fcol],2))); cat("\n")
+       cat("\nS = \n"); print(S[fcol,fcol])
+       cat("\n")
+       if(verb >= 3) { readline("press RETURN to continue: "); cat("\n") }
+    }
+
     ## save the observed means and covariances
     if(obs) {
       mu.obs[fcol] <- mu[fcol]
       S.obs[fcol,fcol] <- S[fcol,fcol]
     }
-    
+
     ##
     ## End: calculations based on complete data rows
     ## Begin: processing rows with increasing missingness
     ##
-    
+
     ## no missing data
     if(length(fcol) == m) {
       if(!quiet) warning("no missing data")
       
     } else { ## yes, there is missing data, so we need to do regressions
-    
+
       ## Now loop through the remaining columns, adding them one by one.
       ## for (j in (length(fcol)+1):m) {
       for (i in 2:(length(miss)-1)) {
@@ -162,6 +172,13 @@ function(y, pre=TRUE,
         ## y1 are old columns, and y2 are new columns
         a <- 1:(miss[i]-1);  b <- miss[i]:(miss[i+1]-1)
         y1<-y[tousej,a]; y2<-y[tousej,b]
+
+        ## print the columns that are being processed
+        if(verb >= 2) {
+          cat("** adding cols(s) ", b[1], ":", b[length(b)], ", ", sep="")
+          cat("\n   covariate(s): "); cat(paste(nao[b[1]:b[length(b)]]));
+          cat("\n\n")
+        }
         
         if(obs) {
           ## save the observed means
@@ -187,6 +204,16 @@ function(y, pre=TRUE,
         S[b,b] <- add$s22
         methods[b] <- add$method
         ncomp[b] <- add$ncomp
+
+        ## print mu and S to the screen
+        if(verb >= 2) {
+          cat("mu = "); cat(paste(round(mu[c(a,b)],2))); cat("\n")
+          cat("\nS = \n"); print(S[c(a,b),c(a,b)])
+          cat("\n")
+          if(verb >= 3 && b[length(b)] != m) {
+            readline("press RETURN to continue: "); cat("\n")
+          }
+        }
       }
     }
 

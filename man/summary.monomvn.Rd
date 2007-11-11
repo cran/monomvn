@@ -18,7 +18,8 @@
   \item{object}{ a \code{"monomvn"}-class object for that must be named
     \code{object} for the generic methods \code{\link{summary.monomvn}} }
   \item{x}{ a \code{"monomvn"}-class object that must be named \code{x}
-    for the generic methods \code{\link{print.summary.monomvn}} and
+    for the generic printing and plotting methods 
+    \code{\link{print.summary.monomvn}} and
     \code{\link{plot.summary.monomvn}} }
   \item{Si}{ boolean indicating whether \code{object$S} should be
     inverted within top look for zeros within

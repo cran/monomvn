@@ -48,4 +48,3 @@ function(y1, y2, method="plsr", p=1.0, ncomp.max=Inf, validation="CV",
     ## return method, mean vector, and mean-squared of residuals
     return(list(method=ret$method, ncomp=ret$ncomp, b=ret$b, S=S))
   }
-

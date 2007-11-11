@@ -44,14 +44,14 @@ opt.ridge <- function(lambda, y2, y1)
     
     ## actually get the ridge reggression constant (lambda)
     while(1) {
-      lambda <- optimize(opt.ridge, lower=lower, upper=upper,
+      lam <- optimize(opt.ridge, lower=lower, upper=upper,
                          y2=y2[,i], y1=y1)$minimum
-      if(round(lambda) != upper) break;
-      lower <- lambda; upper <- 2*upper
+      if(round(lam) != upper) break;
+      lower <- lam; upper <- 2*upper
     }
 
     ## use that lambda, and re-fit the model to get the coefficients
-    reglst <- lm.ridge(y2[,i] ~ y1, lambda=lambda)
+    reglst <- lm.ridge(y2[,i] ~ y1, lambda=lam)
     bvec[,i] <- coef(reglst)
     lambda[i] <- reglst$lambda
     if(verb > 0) cat(paste(" ", signif(lambda[i],5), sep=""))
