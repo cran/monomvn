@@ -18,7 +18,8 @@ function(x, ...)
         r <- range(x$ncomp[m])
         ncomp <- "ncomp"
         if(u == "ridge") ncomp <- "lambda"
-        cat(paste(", ncomp range: [", signif(r[1],5), ",", signif(r[2],5), "]", sep=""))
+        cat(paste(", ", ncomp, " range: [",
+                  signif(r[1],5), ",", signif(r[2],5), "]", sep=""))
       }
       cat("\n")
     }

@@ -25,6 +25,12 @@ function(y1, y2, m1, s11, method="plsr", p=1.0, ncomp.max=Inf, validation="CV",
     b0 <- reg$b[1,]
     b1 <- matrix(reg$b[-1,], ncol=ncol(reg$b))
 
+    ## print bhat and s2-hat to the screen
+    if(verb >= 2) {
+      cat("\n\nbhat =\n"); print(reg$b)
+      cat("\ns2hat =\n"); print(reg$S)
+    }
+    
     ## Update the parameters
 
     ## mean
@@ -41,6 +47,13 @@ function(y1, y2, m1, s11, method="plsr", p=1.0, ncomp.max=Inf, validation="CV",
     ## s22 <- reg$S + t(b1) %*% s11 %*% b1
     s22 <- reg$S + s21 %*% b1
 
+    if(verb >= 2) {
+      cat("\nnew components of mu: "); cat(paste(round(m2,2))); cat("\n")
+      cat("\nnew cols of S:\n")
+      print(rbind(t(s21), s22))
+      if(verb >= 3) readline("\npress RETURN to continue: ")      
+    }
+    
     ## return
     return(list(method=rep(reg$method, ncol(reg$b)), ncomp=reg$ncomp,
                 mu=m2, s21=s21, s22=s22))

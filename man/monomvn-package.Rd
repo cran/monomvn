@@ -24,10 +24,8 @@ Maintainer:
 Robert B. Gramacy \email{bobby@statslab.cam.ac.uk}
 }
 \references{
-Robert B. Gramacy and Joo Hee Lee (2007).
-\emph{On estimating covariances between many assets with histories 
-of highly variable length}. Preprint available on arXiv:0710.5837:
-\url{http://arxiv.org/abs/0710.5837}
+ \emph{Statistical Analysis with Missing Data}, Second Edition.
+   Roderick J.A. Little and Donald B. Rubin.  Wilely. (2002)
 
 \url{http://www.statslab.cam.ac.uk/~bobby/monomvn.html}
 }

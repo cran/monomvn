@@ -75,8 +75,11 @@ monomvn(y, pre = TRUE, method = c("plsr", "pcr", "lasso", "lar",
   \item{verb}{ whether or not to print progress indicators.  The default
     (\code{verb = 0}) keeps quiet, while any positive number causes brief
     statement about dimensions of each regression to print to
-    the screen as it happens.  Future versions will allow \code{verb}
-    more granular control of the level of verbosity}
+    the screen as it happens.  \code{verb = 2} causes each of the ML
+    regression estimators to be printed along with the corresponding
+    new entries of the mean and columns of the covariance matrix.
+    \code{verb = 3} requires that the RETURN key be pressed between
+    each print statement}
   \item{quiet}{ causes \code{\link{warning}}s about regressions to be silenced
     when \code{TRUE}}
 }
@@ -176,11 +179,6 @@ monomvn(y, pre = TRUE, method = c("plsr", "pcr", "lasso", "lar",
     usually not positive definite }
 }
 \references{
-  Robert B. Gramacy and Joo Hee Lee (2007).
-  \emph{On estimating covariances between many assets with histories 
-  of highly variable length}. Preprint available on arXiv:0710.5837:
-  \url{http://arxiv.org/abs/0710.5837}
-
   Roderick J.A. Little and Donald B. Rubin (2002).
   \emph{Statistical Analysis with Missing Data}, Second Edition.
   Wilely.
@@ -225,7 +223,8 @@ monomvn(y, pre = TRUE, method = c("plsr", "pcr", "lasso", "lar",
   \link[mvnmle]{mlest} in the \pkg{mvnmle} package}
 \examples{
 ## standard usage, duplicating the results in
-## Little and Rubin, section 7.4.3
+## Little and Rubin, section 7.4.3 -- try adding 
+## verb=3 argument for a step-by-step breakdown
 data(cement.miss)
 out <- monomvn(cement.miss)
 out

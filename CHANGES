@@ -1,3 +1,20 @@
+1.1-4 (11 Nov 2007)
+-----
+
+fixed lambda recording bug in regress.ridge and ncomp
+printing in print.monomvn
+
+removed verbose LGPL in DESCRIPTION
+
+
+1.1-3 (05 Nov 2007)
+-----
+
+added verb=2 and verb=3 arguments for printing each of
+the ML regression estimators, and new mu entries and 
+cols of S
+
+
 1.1-2 (31 Oct 2007)
 -----
 
