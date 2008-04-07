@@ -73,13 +73,19 @@ class Bmonomvn
   double *beta;              /* regression coefficients */
   double *tau2i;             /* latent vector of (inverse-) diagonal 
                                 component of beta prior */
+  double *omega2;            /* diagonal of the covariance matrix D of Y~N(Xb,s2*D) */
+  double theta;              /* Exp rate parameter to omegas for St errors */
+  double nu;                 /* degrees of freedom parameter in Student-t model */
+
+  bool onenu;                /* indicates if we should pool all the nu's from Blasso */
   double pi;                 /* prior parameter p in Bin(m|M,p) for model order m
                                 or indicates Unif[0,...,Mmax] when p=0 */
 
-  /* posterior probability */
+  /* posterior probability & likelihood */
   double lpost_bl;           /* regression (each i) log posterior probability */
   double lpost_map;          /* best total log posterior probability */
   int which_map;             /* the time index giving the MAP sample */
+  double llik_bl;            /* regression (each i) log likelihood */
   
   /* utility vectors for addy, used for all i */
   double *s21;               /* utility vector for calcing S from beta */
@@ -95,15 +101,19 @@ class Bmonomvn
   MVNsum *mom1;              /* retains the sum of mu and S samples */
   double *lambda2_sum;       /* retains the sum of lambda2 samples */
   double *m_sum;             /* retains the sum of m samples */
-  MVNsum *mom2;              /* retans the sum of mu^2 and S^2 samples */
+  MVNsum *mom2;              /* retains the sum of mu^2 and S^2 samples */
+  MVNsum *mu_mom;            /* retains the sum of mu and sum(mu_i * mu_j) */
   MVNsum *map;               /* Maximum a' Posteriori mu and S */
+  MVNsum *nzS;               /* retains the sum of sample indicators S != 0 */
+  MVNsum *nzSi;              /* retains the sum of sample indicators inv(S) != 0 */
 
   /* for collecting samples of w from via Quadratic Programming */
   QPsamp *qps;               /* as above */
 
  protected:
 
-  double Draw(const unsigned int thin, const bool economize, const bool burnin);
+  double Draw(const unsigned int thin, const bool economize, const bool burnin,
+	      double *llik);
   void DataAugment(unsigned int col, const double mu, double *beta, 
 		   const double s2);
 
@@ -111,7 +121,7 @@ class Bmonomvn
 
   /* constructors and destructors */
   Bmonomvn(const unsigned int M, const unsigned int N, double **Y, int *n,
-	   Rmiss *R, const double p, const unsigned int verb, 
+	   Rmiss *R, const double p, const double theta, const unsigned int verb, 
 	   const bool trace);
   ~Bmonomvn();
 
@@ -123,11 +133,12 @@ class Bmonomvn
 		   const bool economy, const bool trace);
 
   /* sampling from the posterior distribution */
-  void Rounds(const unsigned int T, const unsigned int thin, 
-	      const bool economy, const bool burnin);
+  void Rounds(const unsigned int T, const unsigned int thin, const bool economy, 
+	      const bool burnin, double *nu, double *ellik);
 
   /* printing and tracing */
   double LpostMAP(int *which);
+  double Ellik(unsigned int T);
   void InitBlassoTrace(unsigned int m);
   void InitBlassoTrace(const bool trace);
   void PrintTrace(unsigned int m);
@@ -137,7 +148,7 @@ class Bmonomvn
 
   /* setting pointers to allocated memory */
   void SetSums(MVNsum *mom1, MVNsum *mom2, double *lambda2_sum, double *m_sum, 
-	       MVNsum *map);
+	       MVNsum *map, MVNsum *mu_mom, MVNsum *nzS, MVNsum *nzSi);
   void SetQPsamp(QPsamp *qps);
 };
 

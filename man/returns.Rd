@@ -7,7 +7,7 @@
 \title{Financial Returns data from NYSE and AMEX}
 \description{
 Monthly returns of common domestic stocks traded on the NYSE and the
-AMEX from April 1968 until 1998l; also contains the return to the market
+AMEX from April 1968 until 1998; also contains the return to the market
 }
 \usage{
 data(returns)
@@ -72,7 +72,7 @@ data(returns)
 
 ## investigate the monotone missingness pattern
 returns.na <- is.na(returns)
-image(1:ncol(returns), 1:nrow(returns.na), t(returns.na))
+image(1:ncol(returns), 1:nrow(returns), t(returns.na))
 
 ## for a portfolio balancing exercise, see
 ## the example in the bmonomvn help file

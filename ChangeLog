@@ -1,4 +1,36 @@
-1.6-1 (11 Dec 2008)
+1.7 (6 April 2009)
+---
+
+now calculating the covariance of the mean vector in C 
+for the predictive covariance calculation in R 
+
+implemented Student-t via scale mixtures (Geweke, 1993),
+including the pooled-nu version in bmonomvn for
+multivariate-t inference
+
+added subset argument to plot.blasso in order to reduce
+clutter in tau2i and omega2 printing
+
+now calculating the likelihood for each sample saved 
+from the posterior in blasso
+
+propogated llik to Ellik calculation in bmonomvn
+
+capm = TRUE now default for bmonomvn, and now allowing
+capm = TRUE when method = "lasso"
+
+made RJ = "p" the default
+
+accumumating S != 0 and Si != 0 probabilities in 
+bmonomvn
+
+added pnz argument to randmvn to allow the specification
+of the number of non-zero betas in each round of the
+buildup of mu and S, thereby deternining the number of
+non-zero entries of S
+
+	
+1.6-1 (3 Dec 2008)
 -----
 
 valgrind found some errors and leaks in last version,

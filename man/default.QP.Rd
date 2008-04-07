@@ -127,29 +127,40 @@ xmiss <- rmono(xmuS$x)
 ## and sample from the posterior of the solution space
 qp1 <- default.QP(ncol(xmiss))
 obl1 <- bmonomvn(xmiss, QP=qp1)
-m1 <- monomvn.solve.QP(obl1$S, qp1) ## calculate mean
+bm1 <- monomvn.solve.QP(obl1$S, qp1) ## calculate mean
+oml1 <- monomvn(xmiss)
+mm1 <- monomvn.solve.QP(oml1$S, qp1) ## calculate MLE
 
 ## now obtain samples from the solution space of the
 ## mean-variance QP
 qp2 <- default.QP(ncol(xmiss), dmu=TRUE)
 obl2 <- bmonomvn(xmiss, QP=qp2)
-m2 <- monomvn.solve.QP(obl2$S, qp2, obl2$mu) ## calculate mean
+bm2 <- monomvn.solve.QP(obl2$S, qp2, obl2$mu) ## calculate mean
+oml2 <- monomvn(xmiss)
+mm2 <- monomvn.solve.QP(oml2$S, qp2, oml2$mu) ## calculate MLE
 
 ## now obtain samples from minimum variance solutions
 ## where the mean weighted (samples) are constrained to be
 ## greater one
 qp3 <- default.QP(ncol(xmiss), mu.constr=1)
 obl3 <- bmonomvn(xmiss, QP=qp3)
-m3 <- monomvn.solve.QP(obl3$S, qp3, obl3$mu) ## calculate mean
+bm3 <- monomvn.solve.QP(obl3$S, qp3, obl3$mu) ## calculate mean
+oml3 <- monomvn(xmiss)
+mm3 <- monomvn.solve.QP(oml3$S, qp3, oml2$mu) ## calculate MLE
 
 ## plot a comparison
 par(mfrow=c(3,1))
 plot(obl1, which="QP", xaxis="index", main="Minimum Variance")
-points(m1, col=3, pch=18) ## add mean
+points(bm1, col=3, pch=18, cex=1.5) ## add mean
+points(mm1, col=4, pch=17, cex=1.5) ## add MLE
+legend("topleft", c("MAP", "posterior mean", "MLE"), col=2:4,
+       pch=c(21,18,17), cex=1.5)
 plot(obl2, which="QP", xaxis="index", main="Mean Variance")
-points(m2, col=3, pch=18) ## add mean
+points(bm2, col=3, pch=18, cex=1.5) ## add mean
+points(mm2, col=4, pch=17, cex=1.5) ## add MLE
 plot(obl3, which="QP", xaxis="index", main="Minimum Variance, mean >= 1")
-points(m3, col=3, pch=18) ## add mean
+points(bm3, col=3, pch=18, cex=1.5) ## add mean
+points(bm3, col=4, pch=17, cex=1.5) ## add mean
 
 ## for a further comparison of samples of the QP solution
 ## w under Bayesian and non-Bayesian monomvn, see the

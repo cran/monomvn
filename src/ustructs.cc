@@ -104,7 +104,7 @@ void sum_of_each_col_miss_f(double *s, double **M, unsigned int *n1,
  * new_MVNsum_R:
  *
  * take pointers (allocated in R) and collect them into a
- * MVMsum object for tallying a mean or variance for the
+ * MVNsum object for tallying a mean or variance for the
  * MVN mean vector and covariance matrix
  */
 
@@ -144,15 +144,85 @@ void MVN_add(MVNsum *mom1, double *mu, double **S, const unsigned int m)
 {
   /* sanity check */
   assert(mom1->m == m);
+  assert(mom1->mu != NULL);
+  assert(mom1->S != NULL);
 
   /* add in the mean and covariance */
   add_vector(1.0, mom1->mu, 1.0, mu, m);
   add_matrix(1.0, mom1->S, 1.0, S, m, m);
   
-
   /* increment the counter of the number of things in the sum */
   (mom1->T)++;
 }
+
+
+/*
+ * MVN_add:
+ *
+ * add in the product of components of mu
+ * into the structure accumulating the first moment
+ * and the sum of the product of the components of mu
+ */
+
+void MVN_add(MVNsum *mu_mom, double *mu, const unsigned int m)
+{
+  /* sanity check */
+  assert(mu_mom->m == m);
+  assert(mu_mom->mu == NULL);
+  assert(mu_mom->S != NULL);
+
+  /* add in the mean and covariance */
+  for(unsigned int i=0; i<m; i++)
+    for(unsigned int j=0; j<m; j++)
+      mu_mom->S[i][j] += mu[i]*mu[j];
+  
+  /* increment the counter of the number of things in the sum */
+  (mu_mom->T)++;
+}
+
+
+/*
+ * MVN_add_nzS:
+ *
+ * add in the indicator that and S and inv(S) -- the cov 
+ * paramerers and inverse --  are nonzero into the structure 
+ */
+
+void MVN_add_nzS(MVNsum *nzS, MVNsum *nzSi, double **S, const unsigned int m)
+{
+  /* sanity check */
+  assert(nzS->m == m);
+  assert(nzS->mu == NULL);
+  assert(nzS->S != NULL);
+
+  /* add in the and covariance non-zeros */
+  for(unsigned int i=0; i<m; i++) 
+    for(unsigned int j=0; j<m; j++)
+      nzS->S[i][j] += S[i][j] != 0;
+
+  /* invert S and then add in the inv-coariance non-zeros */
+  /* Si = inv(S) */
+  double **Schol = new_dup_matrix(S, m, m);
+  double **Si = new_id_matrix(m);
+  linalg_dposv(m, Schol, Si);
+  /* now Schol = chol(S) */  
+  delete_matrix(Schol);
+
+  /* add in the and covariance non-zeros */
+  for(unsigned int i=0; i<m; i++) {
+    nzSi->S[i][i] += 1.0;
+    for(unsigned int j=i+1; j<m; j++) {
+      nzSi->S[j][i] += Si[j][i] != 0;
+      nzSi->S[i][j] = nzSi->S[j][i];
+    }
+  }
+  delete_matrix(Si);
+  
+  /* increment the counter of the number of things in the sum */
+  (nzS->T)++;
+  (nzSi->T)++;
+}
+
 
 /*
  * MVN_add:
@@ -168,6 +238,7 @@ void MVN_add2(MVNsum *mom2, double *mu, double **S, const unsigned int m)
 {
   /* sanity check */
   assert(mom2->m == m);
+  assert(mom2->mu != NULL);
 
   /* add in the square of the mean */
   for(unsigned int i=0; i<m; i++) 
@@ -197,7 +268,7 @@ void MVN_mean(MVNsum *mom1, const unsigned int T)
   assert(mom1->T == T);
 
   /* divite by T */
-  scalev(mom1->mu, mom1->m, 1.0/T);
+  if(mom1->mu != NULL) scalev(mom1->mu, mom1->m, 1.0/T);
   scalev(*(mom1->S), (mom1->m)*(mom1->m), 1.0/T);
 
   /* reset T */
@@ -206,7 +277,7 @@ void MVN_mean(MVNsum *mom1, const unsigned int T)
 
 
 /* 
- * MVn_var:
+ * MVN_var:
  * valculate the variance of mu and S -- the mean and covariance params --
  * from the mean and second moment, then reset T; result is in mom2
  */
@@ -230,6 +301,27 @@ void MVN_var(MVNsum *mom2, MVNsum *mean, const unsigned int T)
 
   /* reset T */
   mom2->T = 0;
+}
+
+
+/*
+ * MVN_mom2cov:
+ *
+ * convert the mean of E[mu_i * mu_j] into Cov(mu_i, mu_j)
+ */
+
+void MVN_mom2cov(MVNsum *cov, MVNsum *mean)
+{
+  /* sanity check */
+  assert(cov->m == mean->m);
+  assert(cov->mu == NULL);
+  assert(mean->mu != NULL);
+  assert(cov->S != NULL);
+
+  /* subtract off the product of means from the mean of products */
+  for(unsigned int i=0; i<cov->m; i++)
+    for(unsigned int j=0; j<cov->m; j++)
+      cov->S[i][j] -= mean->mu[i] * mean->mu[j];
 }
 
 

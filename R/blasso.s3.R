@@ -30,7 +30,9 @@
 ## model
 
 'plot.blasso' <-
-  function(x, which=c("coef", "s2", "lambda2", "tau2i", "m", "pi"), burnin=0, ...)
+  function(x, which=c("coef", "s2", "lambda2", "tau2i", "omega2",
+                "nu", "m", "pi"),
+           subset=NULL, burnin=0, ...)
 {
   ## check the burnin argument
   if(length(burnin) != 1 || burnin<0 || burnin >= x$T)
@@ -42,7 +44,8 @@
 
   ## make the appropriate kind of plot
   if(which == "coef") {
-    boxplot(data.frame(mu=x$mu[burnin:x$T], x$beta[burnin:x$T,]),
+    if(is.null(subset)) subset <- 1:x$M
+    boxplot(data.frame(mu=x$mu[burnin:x$T], x$beta[burnin:x$T,subset]),
             ylab="coef", main="Boxplots of regression coefficients", ...)
     m <- which.max(x$lpost)
     points(c(x$mu[m], x$beta[m,]), col=2, pch=21)
@@ -62,9 +65,20 @@
     hist(x$m[burnin:x$T], ...)
     plot(burnin:x$T, x$m[burnin:x$T], type="l", main="m chain", ...)
   } else if(which == "tau2i"){
+    if(is.null(subset)) subset <- 1:x$M
     if(is.null(x$tau2i)) stop("LASSO regression was not used")
-    boxplot(data.frame(x$tau2i[burnin:x$T,]),
+    boxplot(data.frame(x$tau2i[burnin:x$T,subset]),
             main="Boxplot of tau2i", ylab="tau2i", ...)
+  } else if(which == "omega2"){
+    if(is.null(subset)) subset <- 1:x$n
+    if(is.null(x$omega2)) stop("Student-t errors were not used")
+    boxplot(data.frame(x$omega2[burnin:x$T,subset]),
+            main="Boxplot of omega2", ylab="omega2", ...)
+  } else if(which == "nu") {
+    if(is.null(x$nu)) stop("Student-t errors were not used")
+    par(mfrow=c(2,1))
+    hist(x$nu[burnin:x$T], ...)
+    plot(burnin:x$T, x$nu[burnin:x$T], type="l", main="nu chain", ...)
   } else if(which == "pi"){
     if(is.null(x$pi)) stop("the prior held pi fixed")
     par(mfrow=c(2,1))
@@ -91,7 +105,7 @@ function(object, burnin=0, ...)
     burnin <- burnin+1
 
     ## make the list
-    rl <- list(call=object$call, B=burnin, T=object$T, thin=object$thin)
+    rl <- list(call=object$call, B=burnin-1, T=object$T, thin=object$thin)
     class(rl) <- "summary.blasso"
     
     ## call summary on each object
@@ -106,9 +120,20 @@ function(object, burnin=0, ...)
     if(!is.null(object$tau2i))
       rl$tau2i <- summary(data.frame(object$tau2i[burnin:object$T,]))
 
+    ## only do if Student-t errors
+    if(!is.null(object$omega2))
+      rl$omega2 <- summary(data.frame(object$omega2[burnin:object$T,]))
+    
+    ## only do if Student-t errors
+    if(!is.null(object$nu))
+      rl$nu <- summary(data.frame(object$nu[burnin:object$T]))
+    
     ## only do if RJ
-    rl$bn0 <- apply(object$beta[burnin:object$T,], 2,
-                   function(x){ sum(x != 0) })/(object$T-burnin+1)
+    if(object$RJ) {
+      rl$bn0 <- apply(object$beta[burnin:object$T,], 2,
+                      function(x){ sum(x != 0) })/(object$T-burnin+1)
+      rl$m <- summary(object$m[burnin:object$T])
+    }
 
     ## only do if pi not fixed
     if(!is.null(object$pi))

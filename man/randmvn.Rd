@@ -8,7 +8,7 @@
 }
 \usage{
 randmvn(N, d, method = c("normwish", "parsimonious"),
-        mup=list(mu = 0, s2 = 1), s2p=list(a = 0.5, b = 1))
+        mup=list(mu = 0, s2 = 1), s2p=list(a = 0.5, b = 1), pnz=0.1)
 }
 
 \arguments{
@@ -31,6 +31,11 @@ randmvn(N, d, method = c("normwish", "parsimonious"),
     for the regression variances (the actual parameter used for
     each column \code{i in 1:d} of the covariance matrix is
     \code{a + i - 1}); \code{$b >= 0} is the rate parameter}
+  \item{pnz}{ a scalar \code{0 <= pnz <= 1}, only valid for
+    \code{method = "parsimonious"}: determines the binomial
+    proportion of non-zero regression coefficients in the sequential
+    build-up of \code{mu} and \code{S}, thereby indirectly determining
+    the number of non-zero entries in \code{S}}
 }
 \details{
   In the direct method (\code{"normwish"}) the components of the

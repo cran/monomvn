@@ -14,8 +14,8 @@
 \usage{
 \method{print}{blasso}(x, ...)
 \method{summary}{blasso}(object, burnin = 0, ...)
-\method{plot}{blasso}(x, which=c("coef", "s2", "lambda2", "tau2i", "m", "pi"),
-     burnin = 0, ... )
+\method{plot}{blasso}(x, which=c("coef", "s2", "lambda2", "tau2i",
+    "omega2", "nu", "m", "pi"), subset = NULL, burnin = 0, ... )
 \method{print}{summary.blasso}(x, ...)
 }
 
@@ -26,6 +26,9 @@
     for the generic printing and plotting methods 
     \code{\link{print.summary.blasso}} and
     \code{\link{plot.blasso}} }
+  \item{subset}{ a vector of indicies that can be used to specify
+    the a subset of the columns of \code{tau2i} or \code{omega2} that
+    are plotted as boxplots in order to reduce clutter }
   \item{burnin}{ number of burn-in rounds to discard before
     reporting summaries and making plots.  Must be non-negative
     and less than \code{x$T}}
@@ -67,18 +70,25 @@
   \item{thin}{ number of MCMC samples to skip before a sample is
     collected (via thinning) from \code{x$T} }
   \item{coef}{ a joint \code{summary} of \code{x$mu} and
-    the columns of \code{x$beta}}
-  \item{s2}{ a \code{summary} of \code{x$s2}}
-  \item{lambda2}{ a \code{summary} of \code{x$lambda2} when lasso
-    or ridge regression is active }
-  \item{tau2}{ a \code{summary} of the columns of \code{x$tau2i} when
-    lasso is active }
+    the columns of \code{x$beta}, the regression coefficients }
+  \item{s2}{ a \code{summary} of \code{x$s2}, the variance parameter }
+  \item{lambda2}{ a \code{summary} of \code{x$lambda2}, the penalty
+    parameter, when lasso or ridge regression is active }
+  \item{tau2i}{ a \code{summary} of the columns of the latent
+    \code{x$tau2i} parameters when lasso is active }
+  \item{omega2}{ a \code{summary} of the columns of the latent
+    \code{x$omega2} parameters when Student-t errors are active }
+  \item{nu}{ a \code{summary} of \code{x$nu}, the degrees of freedom
+    parameter, when the Student-t model is active }
   \item{bn0}{ the estimated posterior probability that the individual
 	components of the regression coefficients \code{beta} is 
  	nonzero  }
+  \item{m}{ a \code{summary} the model order \code{x$m}: the
+	number of non-zero regression coefficients \code{beta} }
   \item{pi}{ the estimated Binomial proportion in the prior for
     the model order when 2-vector input is provided for
-    \code{mprior}}
+    \code{mprior}
+  }
 }
 
 \author{ Robert B. Gramacy \email{bobby@statslab.cam.ac.uk} }

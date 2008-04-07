@@ -101,8 +101,11 @@ typedef struct QPsamp
 MVNsum* new_MVNsum_R(const unsigned int m, double* mu, double* S);
 void delete_MVNsum_R(MVNsum *mvnsum);
 void MVN_add(MVNsum *mom1, double *mu, double **S, const unsigned int m);
+void MVN_add(MVNsum *mu_mom, double *mu, const unsigned int m);
+void MVN_add_nzS(MVNsum *nzS, MVNsum *nzSi, double **S, const unsigned int m);
 void MVN_add2(MVNsum *mom2, double *mu, double **S, const unsigned int m);
 void MVN_mean(MVNsum *mom1, const unsigned int T);
+void MVN_mom2cov(MVNsum *cov, MVNsum *mean);
 void MVN_var(MVNsum *mom2, MVNsum *mean, const unsigned int T);
 void MVN_copy(MVNsum *map, double *mu, double **S, const unsigned int m);
 

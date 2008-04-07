@@ -1,19 +1,20 @@
 \name{monomvn-package}
 \alias{monomvn-package}
 \docType{package}
-\title{Estimation for Multivariate Normal Data with Monotone Missingness}
-\description{
-  Estimation of multivariate normal data of arbitrary dimension
-  where the pattern of missing data is monotone. Through the use of
-  parsimonious/shrinkage regressions (plsr, pcr, lasso, ridge, etc.),
-  where standard regressions fail, the package can handle an 
-  (almost) arbitrary amount of missing data.  The current version 
-  supports maximum likelihood inference and implementation
-  of a Bayesian version employing a Bayesian lasso.  A fully 
-  functional stand-alone interface to the Bayesian lasso
-  (from Park & Casella) and ridge regression with model selection 
-  via Reversible Jump is also provided
-}
+\title{Estimation for Multivariate Normal and Student-t Data with Monotone Missingness}
+\description{Estimation of multivariate normal and student-t data of
+arbitrary dimension where the pattern of missing data is monotone.
+Through the use of parsimonious/shrinkage regressions
+(plsr, pcr, lasso, ridge,  etc.), where standard regressions fail, 
+the package can handle a nearly arbitrary amount of missing data.
+The current version supports maximum likelihood inference and
+a full Bayesian approach employing scale-mixtures for the
+lasso (double-exponential) prior and Student-t errors.  Monotone 
+data augmentation extends this Bayesian approach to arbitrary
+missingness patterns.  A fully functional standalone interface to the 
+Bayesian lasso (from Park & Casella) and ridge regression with model 
+selection via Reversible Jump, and student-t errors (from Geweke) is 
+also provided}
 \details{
 For a fuller overview including a complete list of functions, demos and
 vignettes, please use \code{help(package="monomvn")}.

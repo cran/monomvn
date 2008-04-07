@@ -8,7 +8,7 @@
   Quadratic Program
 }
 \usage{
-\method{plot}{monomvn}(x, which=c("mu", "S", "QP"),
+\method{plot}{monomvn}(x, which=c("mu", "S", "Snz", "Sinz", "QP"),
      xaxis=c("numna", "index"), main=NULL, uselog=FALSE, ...)
 }
 \arguments{
@@ -17,12 +17,12 @@
   \item{which}{ determines the parameter whose standard deviation
     to be visualized: the mean vector (\code{"mu"} for \code{sqrt($mu.var)});
     the covariance \code{matrix} (\code{"S"} for \code{sqrt($S.var)}),
-    which results in
+    or \code{"S{i}nz"} for \code{sqrt($S{i}.nz)}, which both result in
     an \code{\link{image}} plot; or the distribution of solutions
     \code{$W} to a Quadratic Program that may be obtained by
     supplying \code{QP = TRUE} as input to \code{\link{bmonomvn}} }
   \item{xaxis}{ indicates how x-axis (or x- and y-axis in the case
-    of \code{which = "S"}) should be displayed.  The default option
+    of \code{which = "S" || "S{i}nz"}) should be displayed.  The default option
     \code{"numna"} shows the (ordered) number of missing entries
     (\code{NA}s) in the corresponding column, whereas \code{"index"}
     simply uses the column index; see details below }

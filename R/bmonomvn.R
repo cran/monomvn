@@ -32,9 +32,9 @@
 'bmonomvn' <-
 function(y, pre=TRUE, p=0.9, B=100, T=200, thin=1, economy=FALSE,
          method=c("lasso", "ridge", "lsr", "factor"),
-         RJ=c("bpsn", "p", "none"),
-         capm=method!="lasso", start=NULL, mprior= 0, rd=NULL,
-         rao.s2=TRUE, QP=NULL, verb=1, trace=FALSE)
+         RJ=c("p", "bpsn", "none"), capm=TRUE, #capm=method!="lasso",
+         start=NULL, mprior= 0, rd=NULL, theta=0, rao.s2=TRUE, QP=NULL,
+         verb=1, trace=FALSE)
   {
     ## (quitely) double-check that blasso is clean before-hand
     bmonomvn.cleanup(1)
@@ -74,7 +74,7 @@ function(y, pre=TRUE, p=0.9, B=100, T=200, thin=1, economy=FALSE,
     if(length(economy) != 1 || !is.logical(economy))
       stop("economy must be a scalar logical")
 
-    ## check economy
+    ## check trace
     if(length(trace) != 1 || !is.logical(trace))
       stop("trace must be a scalar logical")
 
@@ -107,10 +107,8 @@ function(y, pre=TRUE, p=0.9, B=100, T=200, thin=1, economy=FALSE,
     ## check capm
     if(length(capm) != 1 || !is.logical(capm))
       stop("capm must be a scalar logical or \"p\"\n")
-    if(method == "lasso" && capm != FALSE) {
-      warning("capm must be FALSE for method=\"lasso\"", immediate.=TRUE)
-      capm <- FALSE
-    }
+    if(capm == TRUE && RJ == "none")
+      stop("capm = TRUE is invalid when RJ = \"none\"")
 
     ## check mprior
     if(any(mprior < 0)) stop("must have all(0 <= mprior)");
@@ -131,7 +129,11 @@ function(y, pre=TRUE, p=0.9, B=100, T=200, thin=1, economy=FALSE,
     }
     if(length(rd) != 2 || (method=="lasso" && any(rd <= 0)))
       stop("rd must be a positive 2-vector")
-        
+
+    ## check theta
+    if(length(theta) != 1)# || theta < 0)
+      stop("theta must be a non-negative scalar")
+    
     ## save the call
     cl <- match.call()
 
@@ -189,6 +191,7 @@ function(y, pre=TRUE, p=0.9, B=100, T=200, thin=1, economy=FALSE,
             slambda = as.double(start$lambda),
             mprior = as.double(mprior),
             rd = as.double(rd),
+            theta = as.double(theta),
             rao.s2 = as.integer(rao.s2),
             economy = as.integer(economy),
             verb = as.integer(verb),
@@ -207,14 +210,19 @@ function(y, pre=TRUE, p=0.9, B=100, T=200, thin=1, economy=FALSE,
             ## begin estimation outputs
             mu = double(M),
             mu.var = double(M),
+            mu.cov = double(M*M),
             S = double(M*M),
             S.var = double(M*M),
             mu.map = double(M),
             S.map = double(M*M),
+            S.nz = double(M*M),
+            Si.nz = double(M*M),
             lpost.map = double(1),
             which.map = integer(1),
+            llik = double(T),
             methods = integer(M),
             thin.act = integer(M),
+            nu = double(T*(theta < 0)),
             lambda2 = double(M),
             ncomp = double(M),
 
@@ -228,10 +236,13 @@ function(y, pre=TRUE, p=0.9, B=100, T=200, thin=1, economy=FALSE,
     if(sum(R == 2) == 0) r$R <- NULL
     else r$R <- R
 
-    ## make S into a matrix
+    ## make S and other covars into matrices
+    r$mu.cov <- matrix(r$mu.cov, ncol=M)
     r$S <- matrix(r$S, ncol=M)
     r$S.var <- matrix(r$S.var, ncol=M)
     r$S.map <- matrix(r$S.map, ncol=M)
+    r$S.nz <- matrix(r$S.nz, ncol=M)
+    r$Si.nz <- matrix(r$Si.nz, ncol=M)
 
     ## possibly add column permutation info from pre-processing
     if(pre) {
@@ -249,9 +260,11 @@ function(y, pre=TRUE, p=0.9, B=100, T=200, thin=1, economy=FALSE,
       r$mu <- r$mu[oo]
       r$mu.var <- r$mu.var[oo]
       r$mu.map <- r$mu.map[oo]
+      r$mu.cov <- r$mu.cov[oo,oo]
       r$S <- r$S[oo,oo]
       r$S.var <- r$S.var[oo,oo]
       r$S.map <- r$S.map[oo,oo]
+      r$Si.nz <- r$Si.nz[oo,oo]
       r$ncomp <- r$ncomp[oo]
       r$lambda2 <- r$lambda2[oo]
       r$methods <- r$methods[oo]
@@ -266,9 +279,11 @@ function(y, pre=TRUE, p=0.9, B=100, T=200, thin=1, economy=FALSE,
       rownames(r$mu.var) <- nam
       r$mu.map <- matrix(r$mu.map, nrow=length(r$mu.map))
       rownames(r$mu.map) <- nam
+      colnames(r$mu.cov) <- rownames(r$mu.cov) <- nam
       colnames(r$S) <- rownames(r$S) <- nam
       colnames(r$S.var) <- rownames(r$S.var) <- nam
       colnames(r$S.map) <- rownames(r$S.map) <- nam
+      colnames(r$Si.nz) <- rownames(r$Si.nz) <- nam
       r$ncomp <- matrix(r$ncomp, nrow=length(r$ncomp))
       rownames(r$ncomp) <- nam
       r$lambda2 <- matrix(r$lambda2, nrow=length(r$lambda2))
@@ -288,6 +303,8 @@ function(y, pre=TRUE, p=0.9, B=100, T=200, thin=1, economy=FALSE,
     r$n <- r$N <- r$M <- r$mi <- r$verb <- NULL
     r$smu <- r$sS <- r$sncomp <- r$slambda <- NULL
     r$thin.act <- NULL
+    if(r$theta == 0) r$theta <- NULL
+    else if(r$theta > 0) r$nu <- NULL
 
     ## change back to logicals or original inputs
     r$rao.s2 <- as.logical(r$rao.s2)

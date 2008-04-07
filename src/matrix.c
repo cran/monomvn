@@ -23,7 +23,7 @@
 
 
 #include "rhelp.h"
-/* #include "rand_draws.h" */
+
 #include "matrix.h"
 #include <assert.h>
 #include <math.h>
@@ -1379,17 +1379,18 @@ void matrix_t_to_file(const char* file_str, double** matrix, unsigned int n1,
  */
 
 void sub_p_matrix(double **V, int *p, double **v, 
-		unsigned int nrows, unsigned int lenp)
+		  unsigned int nrows, unsigned int lenp, 
+		  unsigned int col_offset)
 {
   int i,j;
   assert(V); assert(p); assert(v); assert(nrows > 0 && lenp > 0);
   for(i=0; i<nrows; i++) for(j=0; j<lenp; j++) 
-    V[i][j] = v[i][p[j]];
+    V[i][j+col_offset] = v[i][p[j]];
 }
 
 
 /*
- * new_p_matrix::
+ * new_p_submatrix:
  *
  * create a new matrix from the columns of v, specified
  * by p.  Must have have nrow(v) == nrow(V) and ncol(V) >= ncols
@@ -1397,13 +1398,12 @@ void sub_p_matrix(double **V, int *p, double **v,
  */
 
 double **new_p_submatrix(int *p, double **v, unsigned int nrows, 
-			 unsigned int ncols)
+			 unsigned int ncols, unsigned int col_offset)
 {
   double **V;
-  if(nrows == 0 || ncols == 0) return NULL;
-  assert(p); assert(v);
-  V = new_matrix(nrows, ncols);
-  sub_p_matrix(V, p, v, nrows, ncols);
+  if(nrows == 0 || ncols+col_offset == 0) return NULL;
+  V = new_matrix(nrows, ncols + col_offset);
+  if(ncols > 0) sub_p_matrix(V, p, v, nrows, ncols, col_offset);
   return(V);
 }
 
@@ -1614,7 +1614,9 @@ void normalize(double **X, double **rect, int N, int d, double normscale)
       else
 	X[j][i] = (X[j][i] - rect[0][i]) / norm;
       X[j][i] = normscale * X[j][i];
-      assert(X[j][i] >=0 && X[j][i] <= normscale);
+      /* if(!(X[j][i] >=0 && X[j][i] <= normscale))
+	myprintf(stdout, "X[%d][%d] = %g, normscale = %g\n", j, i, X[j][i], normscale);
+	assert(X[j][i] >=0 && X[j][i] <= normscale); */
     }
   }
 }

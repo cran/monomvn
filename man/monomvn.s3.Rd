@@ -68,7 +68,7 @@
   functions do not return values.
 
   \item{obj}{ the \code{"monomvn"}-class \code{object} }
-  \code{marg}{ the proportion of zeros in \code{object$S} }
+  \item{marg}{ the proportion of zeros in \code{object$S} }
   \item{S0}{ a vector containing the number of zeros in each column
     of \code{object$S} }
   \item{cond}{ if input \code{Si = TRUE} this field contains the
