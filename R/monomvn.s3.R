@@ -1,3 +1,27 @@
+#******************************************************************************* 
+#
+# Estimation for Multivariate Normal Data with Monotone Missingness
+# Copyright (C) 2007, University of Cambridge
+# 
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+# 
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+# 
+# You should have received a copy of the GNU Lesser General Public
+# License along with this library; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+#
+# Questions? Contact Robert B. Gramacy (bobby@statslab.cam.ac.uk)
+#
+#*******************************************************************************
+
+
 ## summary.monomvn
 ##
 ## generic summary method for monomvn class objects,
@@ -114,3 +138,53 @@ function(object, Si=FALSE, ...)
   
   if(p == 0) warning("nothing to plot")
 }
+
+
+## print.monomvn
+##
+## generic print method for monomvn class objects,
+## summarizing the results of a monomvn call
+
+`print.monomvn` <-
+function(x, ...)
+  {
+
+    ## print information about the call
+    cat("\nCall:\n")
+    print(x$call)
+
+    ## print information about the methods used
+    cat("\nMethods used (p=", x$p, "):\n", sep="")
+    um <- sort(unique(x$methods))
+    for(u in um) {
+      m <- x$methods == u
+      cat(sum(m), "\t", u, sep="")
+      if(u != "complete" && u != "bcomplete"
+         && u != "lsr" && u != "blsr") {
+        r <- range(x$ncomp[m])
+        ncomp <- "ncomp"
+        if(u == "ridge") ncomp <- "lambda"
+        else if(u == "blasso") ncomp <- "lambda2"
+        cat(paste(", ", ncomp, " range: [",
+                  signif(r[1],5), ",", signif(r[2],5), "]", sep=""))
+      }
+      cat("\n")
+    }
+    cat("\n")
+
+    ## in the case of Bayesian regressions
+    if(!is.null(x$B)) {
+      cat("Bayesian regressions were used with B=", x$B, "\n", sep="")
+      cat("burn-in rounds and T=", x$T, " total sampling rounds\n", sep="")
+      cat("with thin=", x$thin, " rounds between each sample.\n", sep="")
+      if(x$rao.s2) cat("Rao-Blackwellized s2 draws were used\n")
+      else cat("Standard Park & Casella s2 full-conditional draws were used\n")
+      cat("\n")
+
+      ## check if there are traces
+      if(!is.null(x$trace)) {
+        cat("Traces are recorded in the $trace field\n")
+        cat("\n")
+      }
+    }
+  }

@@ -8,7 +8,7 @@
   covariance matrix
 }
 \usage{
-kl.norm(mu1, S1, mu2, S2, quiet=FALSE)
+kl.norm(mu1, S1, mu2, S2, quiet=FALSE, symm=FALSE)
 }
 
 \arguments{
@@ -19,6 +19,8 @@ kl.norm(mu1, S1, mu2, S2, quiet=FALSE)
   \item{quiet}{ when \code{FALSE} (default), gives a warning if
     \code{\link{posdef.approx}} finds a non-positive definite
     covariance matrix}
+  \item{symm}{ when \code{TRUE} a symmetrized version of the
+  K-L divergence is used.  See the note below }
 }
 \details{
   The KL divergence is given by the formula:
@@ -51,6 +53,8 @@ kl.norm(mu1, S1, mu2, S2, quiet=FALSE)
   But a symmetric metric can be constructed from
 
   \code{0.5 * (kl.norm(mu1,S1,mu2,S2) + kl.norm(mu2,S2,mu1,S1))}
+
+  which is the default (when \code{symm = TRUE})
 }
 \references{
 \url{http://www.statslab.cam.ac.uk/~bobby/monomvn.html}

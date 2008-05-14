@@ -1,4 +1,4 @@
-\name{summary.monomvn}
+\name{monomvn.s3}
 \alias{print.monomvn}
 \alias{summary.monomvn}
 \alias{print.summary.monomvn}
@@ -78,6 +78,5 @@
 \url{http://www.statslab.cam.ac.uk/~bobby/monomvn.html}
 }
 \seealso{ \code{\link{monomvn}} }
-}
 \keyword{ methods }
 \keyword{ hplot }

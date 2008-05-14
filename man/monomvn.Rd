@@ -1,7 +1,8 @@
 \name{monomvn}
 \alias{monomvn}
 
-\title{ Estimation of Multivariate Normal Data with Monotone Missingness }
+\title{ Maximum Likelihood Estimation for Multivariate Normal
+  Data with Monotone Missingness }
 
 \description{
 Maximum likelihood estimation of the mean and covariance matrix of
@@ -26,17 +27,17 @@ monomvn(y, pre = TRUE, method = c("plsr", "pcr", "lasso", "lar",
     number of \code{NA}s is non-decreasing with the column index }
   \item{method}{ describes the type of \emph{parsimonious}
     (or \emph{shrinkage}) regression to
-    be performed when standard least-squares regression fails.
+    be performed when standard least squares regression fails.
     From the \pkg{pls} package we have \code{"plsr"}
     (\link[pls]{plsr}, the default) for  partial least squares and
     \code{"pcr"} (\link[pls]{pcr}) for standard principal
     component regression.  From the \pkg{lars} package (see the
     \code{"type"} argument to \link[lars]{lars})
-    we have \code{"lasso"} for L1-constrained regression, \code{"las"}
+    we have \code{"lasso"} for L1-constrained regression, \code{"lar"}
     for least angle regression, \code{"forward.stagewise"} and
     \code{"stepwise"} for fast implementation of classical forward
     selection of covariates.  From the \pkg{MASS} package we have
-    \code{"ridge"} as implemented by the \code{\link{lm.ridge}}
+    \code{"ridge"} as implemented by the \code{\link[MASS]{lm.ridge}}
     function}
   \item{p}{ when performing regressions, \code{p} is the proportion of the
     number of columns to rows in the design matrix before an
@@ -139,7 +140,7 @@ monomvn(y, pre = TRUE, method = c("plsr", "pcr", "lasso", "lar",
   \pkg{pls} package does not currently support the calculation of
   standard errors for CV estimates of RMSE, so a simple linear penalty
   for increasing \code{ncomp} is used instead.  The ridge constant
-  (lambda) for \code{\link{lm.ridge}} is set using the \code{\link{optimize}}
+  (lambda) for \code{\link[MASS]{lm.ridge}} is set using the \code{\link{optimize}}
   function on the \code{GCV} output.
 
   Based on the MLE \code{ncol(y1)+1} regression coefficients (including
@@ -170,8 +171,9 @@ monomvn(y, pre = TRUE, method = c("plsr", "pcr", "lasso", "lar",
   \item{method }{method of regression used on each column, or
     \code{"complete"} indicating that no regression was necessary}
   \item{ncomp }{number of components in a \code{\link[pls]{plsr}} or
-    \code{\link[pls]{pcr}} regression, or \code{NA} such a method was
-    not used}
+    \code{\link[pls]{pcr}} regression, or \code{NA} if such a method was
+    not used.  This field is used to record \eqn{\lambda}{lambda}
+    when \code{\link[MASS]{lm.ridge}} is used }
   \item{mu.obs }{when \code{obs = TRUE} this is the \dQuote{observed}
     mean vector}
   \item{S.obs }{when \code{obs = TRUE} this is the \dQuote{observed}
@@ -179,6 +181,11 @@ monomvn(y, pre = TRUE, method = c("plsr", "pcr", "lasso", "lar",
     usually not positive definite }
 }
 \references{
+  Robert B. Gramacy and Joo Hee Lee (2007).
+  \emph{On estimating covariances between many assets with histories 
+  of highly variable length}. Preprint available on arXiv:0710.5837:
+  \url{http://arxiv.org/abs/0710.5837}
+
   Roderick J.A. Little and Donald B. Rubin (2002).
   \emph{Statistical Analysis with Missing Data}, Second Edition.
   Wilely.
@@ -203,11 +210,10 @@ monomvn(y, pre = TRUE, method = c("plsr", "pcr", "lasso", "lar",
 
 \url{http://www.statslab.cam.ac.uk/~bobby/monomvn.html}
 }
-\author{ Robert B. Gramacy \email{bobby@statslab.cam.ac.uk}
+\author{ Robert B. Gramacy \email{bobby@statslab.cam.ac.uk}}
 
-}
 \note{
-  Note that the covariances uses throughout are the MLE, i.e., not
+  Note that the covariances used throughout are the MLE, i.e., not
   unbiased ones which have an \code{N-1} in the denominator
 
   The CV in \pkg{plsr} and \pkg{lars} are random in nature, and so
@@ -215,12 +221,16 @@ monomvn(y, pre = TRUE, method = c("plsr", "pcr", "lasso", "lar",
   deterministic (but slower) result
 
   Be warned that the \pkg{lars} implementation of
-  \code{"forward.stagewise"} can sometimes get stuck in an infinte loop.
+  \code{"forward.stagewise"} can sometimes get stuck in
+  (what seems like) an infinite loop.
   This is not a bug in the \code{monomvn} package;
   the bug has been reported to the authors.
 }
-\seealso{ \link[norm]{em.norm} in the \pkg{norm} package, and
-  \link[mvnmle]{mlest} in the \pkg{mvnmle} package}
+
+\seealso{ \code{\link{bmonomvn}}, \code{\link[norm]{em.norm}}
+  in the \pkg{norm} package, and \code{\link[mvnmle]{mlest}}
+  in the \pkg{mvnmle} package}
+
 \examples{
 ## standard usage, duplicating the results in
 ## Little and Rubin, section 7.4.3 -- try adding 

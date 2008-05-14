@@ -2,8 +2,9 @@
 %% Part of the sensible export list but (currently?) documented as
 %% internal (or waiting for documentation to be written):
 %% <LIST>
+\alias{my.Igamma.inv}
+\alias{bmonomvn.read.traces}
 \alias{addy}
-\alias{regress}
 \alias{regress.ls}
 \alias{regress.lars}
 \alias{regress.pls}
