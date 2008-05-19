@@ -1,10 +1,21 @@
+1.2 (8 May 2008)
+---
+
+fixed syntax errors in the documentation files and filled
+out the INDEX file
+
+Implemented Bayesian Lasso version resulting in a new 
+function called bmonomvn.  A standalone interface to
+the Bayesian Lasso is also provided via a blasso
+function
+
+added a symmetric option to kl.norm
+
+
 1.1-4 (11 Nov 2007)
 -----
 
-fixed lambda recording bug in regress.ridge and ncomp
-printing in print.monomvn
-
-removed verbose LGPL in DESCRIPTION
+fixed lambda recording bug in regress.ridge
 
 
 1.1-3 (05 Nov 2007)
@@ -13,6 +24,8 @@ removed verbose LGPL in DESCRIPTION
 added verb=2 and verb=3 arguments for printing each of
 the ML regression estimators, and new mu entries and 
 cols of S
+
+removed verbose LGPL in DESCRIPTION
 
 
 1.1-2 (31 Oct 2007)

@@ -10,7 +10,7 @@
   approximate covariance matrix which is positive definite.
 }
 \usage{
-posdef.approx(S, name = "S", quiet=FALSE) }
+posdef.approx(S, name = "S", quiet=FALSE)
 }
 \arguments{
   \item{S}{ square \code{matrix} which is supposed to be positive

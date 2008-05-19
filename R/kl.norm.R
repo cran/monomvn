@@ -1,3 +1,27 @@
+#******************************************************************************* 
+#
+# Estimation for Multivariate Normal Data with Monotone Missingness
+# Copyright (C) 2007, University of Cambridge
+# 
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+# 
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+# 
+# You should have received a copy of the GNU Lesser General Public
+# License along with this library; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+#
+# Questions? Contact Robert B. Gramacy (bobby@statslab.cam.ac.uk)
+#
+#*******************************************************************************
+
+
 ## kl.norm
 ##
 ## Kulback-Leibler divergence between two multivariate normal
@@ -7,7 +31,7 @@
 ## used in the distance calculation
 
 `kl.norm` <-
-function(mu1, S1, mu2, S2, quiet=FALSE)
+function(mu1, S1, mu2, S2, quiet=FALSE, symm=FALSE)
 {
   N <- length(mu1)
 
@@ -42,6 +66,8 @@ function(mu1, S1, mu2, S2, quiet=FALSE)
   qf <- as.numeric(t(m2mm1) %*% S2i %*% m2mm1)
 
   ## return the correct combination of the parts
-  return(0.5*(ldet + tr + qf - N))
+  r <- 0.5*(ldet + tr + qf - N)
+  if(symm) return(0.5*(r + kl.norm(mu2, S2, mu1, S1, quiet, symm=FALSE)))
+  else return(r)
 }
 
