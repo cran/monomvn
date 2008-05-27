@@ -32,7 +32,8 @@
 
 'randmvn' <-
 function(N, d, method=c("normwish", "parsimonious"),
-         mup=list(mu=0, s2=1), s2p=list(a=0.5, b=1), pnz=0.1)
+         mup=list(mu=0, s2=1), s2p=list(a=0.5, b=1),
+         pnz=0.1, nu=Inf)
   {
     ## check N
     if(length(N) != 1 || N < 0)
@@ -56,6 +57,10 @@ function(N, d, method=c("normwish", "parsimonious"),
 
     ## check method
     method <- match.arg(method)
+
+    ## check nu
+    if(length(nu) != 1 || d < 1)
+      stop("nu should be a scalar >= 1")
 
     ## load mvtnorm
     if(require(mvtnorm, quietly=TRUE) == FALSE)
@@ -98,7 +103,11 @@ function(N, d, method=c("normwish", "parsimonious"),
     ## don't draw if N=0
     if(N == 0) return(list(mu=mu, S=S))
       
-    ## draw N samples from the MVN
-    x <- rmvnorm(N, mu, S)#, method="chol")
+    ## draw N samples from the MVN or Student-t
+    if(is.infinite(nu)) x <- rmvnorm(N, mu, S)#, method="chol")
+    else {
+      x <- rmvt(N, S, nu)
+      x <- t(t(x) + mu)
+    }
     return(list(x=x, mu=mu, S=S))
   }

@@ -14,7 +14,8 @@ bridge(X, y, T = 1000, thin = NULL, RJ = TRUE, M = NULL,
        rd = NULL, ab = NULL, theta=0, rao.s2 = TRUE, normalize = TRUE,
        verb = 1)
 blasso(X, y, T = 1000, thin = NULL, RJ = TRUE, M = NULL,
-       beta = NULL, lambda2 = 1, s2 = var(y-mean(y)), ridge = FALSE,
+       beta = NULL, lambda2 = 1, s2 = var(y-mean(y)),
+       case = c("default", "ridge", "hs"),
        mprior = 0, rd = NULL, ab = NULL, theta=0, rao.s2 = TRUE,
        normalize = TRUE, verb = 1)
 }
@@ -27,7 +28,8 @@ blasso(X, y, T = 1000, thin = NULL, RJ = TRUE, M = NULL,
   \item{thin}{ number of MCMC samples to skip before a sample is
     collected (via thinning).  If \code{NULL} (default), then
     \code{thin} is determined based on the regression model implied
-    by \code{RJ}, \code{lambda2}, and \code{ncol(X)} }
+    by \code{RJ}, \code{lambda2}, and \code{ncol(X)}; and also
+    on the errors model implied by \code{theta} and \code{nrow(X)} }
   \item{RJ}{ if \code{TRUE} then model selection on the columns of the
     design matrix (and thus the parameter \code{beta} in the model) is
     performed by Reversible Jump (RJ) MCMC.  The initial model is
@@ -47,7 +49,7 @@ blasso(X, y, T = 1000, thin = NULL, RJ = TRUE, M = NULL,
   \item{lambda2}{ square of the initial lasso penalty parameter.  If
     zero, then least squares regressions are used }
   \item{s2}{ initial variance parameter }
-  \item{ridge}{ specifies if ridge regression should be done instead
+  \item{case}{ specifies if ridge regression should be done instead
     of the lasso; only meaningful when \code{lambda2 > 0} }
   \item{mprior}{ prior on the number of non-zero regression coefficients
     (and therefore covariates) \code{m} in the model. The default
@@ -69,8 +71,8 @@ blasso(X, y, T = 1000, thin = NULL, RJ = TRUE, M = NULL,
    on the special settings for ridge regression }
  \item{ab}{ \code{=c(a, b)}, the \eqn{\alpha}{alpha} (shape)
    parameter and the \eqn{\beta}{beta} (scale) parameter for the
-   inverse-gamma distribution prior \code{IG(a,b)} for the variance parameter
-   \code{s2}.  A default of \code{NULL} generates appropriate
+   inverse-gamma distribution prior \code{IG(a,b)} for the variance
+   parameter \code{s2}.  A default of \code{NULL} generates appropriate
    non-informative values depending on the nature of the regression }
  \item{theta}{ the rate parameter (\code{> 0}) to the exponential prior
    on the degrees of freedom paramter \code{nu} under a model with
@@ -80,8 +82,9 @@ blasso(X, y, T = 1000, thin = NULL, RJ = TRUE, M = NULL,
   \item{rao.s2 }{indicates whether Rao-Blackwellized samples for
     \eqn{\sigma^2}{s^2} should be used (default \code{TRUE}); see
     below for more details }
-  \item{normalize}{ if \code{TRUE}, each variable is standardized to have unit
-    L2-norm, otherwise it is left alone; default is \code{TRUE} }
+  \item{normalize}{ if \code{TRUE}, each variable is standardized
+    to have unit L2-norm, otherwise it is left alone; default is
+    \code{TRUE} }
   \item{verb}{ verbosity level; currently only \code{verb = 0} and
     \code{verb = 1} are supported }
 }
@@ -89,8 +92,8 @@ blasso(X, y, T = 1000, thin = NULL, RJ = TRUE, M = NULL,
   The Bayesian lasso model and Gibbs Sampling algorithm is described
   in detail in Park \& Casella (2008).  The algorithm implemented
   by this function is identical to that described therein, with
-  the exception of an added \dQuote{option} to use a Rao-Blackwellized sample
-  of \eqn{\sigma^2}{s^2} (with \eqn{\beta}{beta} integrated out)
+  the exception of an added \dQuote{option} to use a Rao-Blackwellized
+  sample of \eqn{\sigma^2}{s^2} (with \eqn{\beta}{beta} integrated out)
   for improved mixing, and the model selections by RJ described below.
   When input argument \code{lambda2 = 0} is
   supplied, the model is a simple hierarchical linear model where
@@ -118,18 +121,24 @@ blasso(X, y, T = 1000, thin = NULL, RJ = TRUE, M = NULL,
   does proceed component-wise, but the acceptance rates are high due
   due to marginalized between-model moves (Troughton \& Godsill, 1997).
 
+  When the lasso prior or RJ is used, the automatic thinning level
+  (unless \code{thin != NULL}) is determined by the number of columns
+  of \code{X} since this many latent variables are introduced
+
   Bayesian ridge regression is implemented as a special case via the
   \code{bridge} function.  This essentially calls \code{blasso}
-  with \code{ridge = TRUE} and \code{RJ = FALSE} (by default).
-  A default setting of \code{rd = c(0,0)} is implied by \code{rd =
-    NULL}, giving the Jeffery's prior for the penalty parameter
-  \eqn{\lambda^2}{lambda^2} unless \code{ncol(X) >= length(y)} in
-  which case the proper specification of \code{rd = c(5,10)} is used
-  instead
+  with \code{case = "ridge"}. A default setting of \code{rd = c(0,0)} is
+  implied by \code{rd = NULL}, giving the Jeffery's prior for the
+  penalty parameter \eqn{\lambda^2}{lambda^2} unless \code{ncol(X) >=
+    length(y)} in which case the proper specification of \code{rd =
+    c(5,10)} is used instead.
 
   When \code{theta > 0} then the Student-t errors via scale mixtures
   (and thereby extra latent variables \code{omega2}) of Geweke (1993)
   is applied as an extension to the Bayesian lasso/ridge model.
+  If Student-t errors are used the automatic thinning level
+  is augmented (unless \code{thin != NULL}) by the number of rows
+  in \code{X} since this many latent variables are introduced
 }
 \value{
   \code{blasso} returns an object of class \code{"blasso"}, which is a
@@ -161,8 +170,12 @@ blasso(X, y, T = 1000, thin = NULL, RJ = TRUE, M = NULL,
     2-vector version of the \code{mprior} input}
   \item{lpost}{ the log posterior probability of each (saved) sample of the
     joint parameters }
-  \item{llik}{ the log likelihood of each (saved) sample of the joint
-    parameter }
+  \item{llik}{ the log likelihood of each (saved) sample of the
+    parameters }
+  \item{llik.norm}{ the log likelihood of each (saved) sample of the
+    parameters under the Normal errors model when sampling under the
+    Student-t model; i.e., it is not present
+    unless \code{theta > 0} }
 }
 \note{
   Whenever \code{ncol(X) >= nrow(X)} it must be that either \code{RJ = TRUE}
@@ -250,11 +263,15 @@ plot(reg.blas, burnin=200, which="lambda2")
 s$lambda2
 
 ## fit with Student-t errors
+## (~400-times slower due to automatic thinning level)
 regt.blas <- blasso(x, y, theta=0.1)
 
 ## plotting some information about nu, and quantiles
 plot(regt.blas, "nu", burnin=200)
 quantile(regt.blas$nu[-(1:200)], c(0.05, 0.95))
+
+## Bayes Factor shows strong evidence for Student-t model
+mean(exp(regt.blas$llik[-(1:200)] - regt.blas$llik.norm[-(1:200)]))
 
 ## clean up
 detach(diabetes)

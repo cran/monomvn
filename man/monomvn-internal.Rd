@@ -26,6 +26,7 @@
 \alias{table2blasso}
 \alias{da.perm}
 \alias{add.pe.QP}
+\alias{bhs}
 
 \title{Internal Monomvn Functions}
 \description{

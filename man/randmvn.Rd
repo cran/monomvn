@@ -8,7 +8,8 @@
 }
 \usage{
 randmvn(N, d, method = c("normwish", "parsimonious"),
-        mup=list(mu = 0, s2 = 1), s2p=list(a = 0.5, b = 1), pnz=0.1)
+        mup=list(mu = 0, s2 = 1), s2p=list(a = 0.5, b = 1),
+        pnz=0.1, nu=Inf)
 }
 
 \arguments{
@@ -36,6 +37,9 @@ randmvn(N, d, method = c("normwish", "parsimonious"),
     proportion of non-zero regression coefficients in the sequential
     build-up of \code{mu} and \code{S}, thereby indirectly determining
     the number of non-zero entries in \code{S}}
+  \item{nu}{ a scalar \code{>= 1} indicating the degrees of freedom
+    of a Student-t distribution to be used instead of an MVN
+    when not infinite }
 }
 \details{
   In the direct method (\code{"normwish"}) the components of the

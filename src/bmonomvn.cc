@@ -115,7 +115,7 @@ Bmonomvn::Bmonomvn(const unsigned int M, const unsigned int N, double **Y,
   /* initialize posterior probabilities and likelihoods */
   lpost_bl = lpost_map = -1e300*1e300;
   which_map = -1;
-  llik_bl = 0;
+  llik_bl = llik_norm_bl = 0.0;
 
   /* initialize trace files to NULL */
   trace_DA = trace_mu = trace_S = NULL;
@@ -330,6 +330,7 @@ void Bmonomvn::InitBlassoTrace(unsigned int i)
     if(R) ni -= R->n2[i];
      for(int j=0; j<ni; j++)
 	fprintf(trace_lasso[i], "omega2.%d ", j);
+     fprintf(trace_lasso[i], "llik.norm ");
   }
 
   /* maybe add the pi parameter */
@@ -375,6 +376,7 @@ void Bmonomvn::PrintTrace(unsigned int i)
     if(R) ni -= R->n2[i];
      for(int j=0; j<ni; j++)
 	fprintf(trace_lasso[i], "%.20f ", omega2[j]);
+     fprintf(trace_lasso[i], "%.20f ", llik_norm_bl);
   }
 
   /* maybe add the pi param to the file */
@@ -393,9 +395,9 @@ void Bmonomvn::PrintTrace(unsigned int i)
  * Only record samples if burnin - FALSE.
  */
 
-void Bmonomvn::Rounds(const unsigned int T, const unsigned int thin, 
+void Bmonomvn::Rounds(const unsigned int T, const double thin, 
 		      const bool economy, const bool burnin, double *nu,
-		      double *llik)
+		      double *llik, double *llik_norm)
 {
   /* sanity check */
   if(!burnin) assert(mom1 && mom2 && nzS && nzSi && llik &&
@@ -412,8 +414,8 @@ void Bmonomvn::Rounds(const unsigned int T, const unsigned int thin,
       myprintf(stdout, "t=%d\n", t+1);
 
     /* take one draw after thinning */
-    double llik_temp;
-    double lpost = Draw(thin, economy, burnin, &llik_temp);
+    double llik_temp, llik_norm_temp;
+    double lpost = Draw(thin, economy, burnin, &llik_temp, &llik_norm_temp);
 
     /* record samples unless burning in */
     if(! burnin) {
@@ -431,6 +433,7 @@ void Bmonomvn::Rounds(const unsigned int T, const unsigned int thin,
 
       /* save log likelihood */
       llik[t] = llik_temp;
+      if(llik_norm) llik_norm[t] = llik_norm_temp;
 
       /* save a nu sample if using pooled nu */
       if(onenu) nu[t] = this->nu;
@@ -462,20 +465,19 @@ void Bmonomvn::Rounds(const unsigned int T, const unsigned int thin,
  * and the other calculations are skipped.
  */
 
-double Bmonomvn::Draw(const unsigned int thin, const bool economy, 
-		    const bool burnin, double *llik)
+double Bmonomvn::Draw(const double thin, const bool economy, 
+		      const bool burnin, double *llik, double *llik_norm)
 {
   /* sanity checks */
   if(!burnin) assert(lambda2_sum && m_sum);
 
   /* for accumulating log posterior probability */
   double lpost = 0.0;
-  *llik = 0.0;
+  *llik = *llik_norm = 0.0;
 
   /* for accumulating eta if pooling nu*/
   double eta = theta;
   int neta = 0;
-  // if(onenu) myprintf(stderr, "global nu = %g\n", nu);
 
   /* for each column of Y */
   for(unsigned int i=0; i<M; i++) {
@@ -485,7 +487,8 @@ double Bmonomvn::Draw(const unsigned int thin, const bool economy,
     
     /* obtain a draw from the i-th Bayesian lasso parameters */
     blasso[i]->Draw(thin, onenu, &mu_s, beta, &m, &s2, tau2i, 
-		    &lambda2, omega2, &nu, &pi, &lpost_bl, &llik_bl);
+		    &lambda2, omega2, &nu, &pi, &lpost_bl, 
+		    &llik_bl, &llik_norm_bl);
 
     /* accumulate eta for a global nu draw */
     if(onenu) {
@@ -499,7 +502,7 @@ double Bmonomvn::Draw(const unsigned int thin, const bool economy,
     }
 
     /* perform data augmentation */
-    DataAugment(i, mu_s, beta, s2);
+    DataAugment(i, mu_s, beta, s2, nu);
 
     /* now un-init if economizing */
     if(economy) blasso[i]->Economize();
@@ -510,6 +513,7 @@ double Bmonomvn::Draw(const unsigned int thin, const bool economy,
     /* tally log posterior probability */
     lpost += lpost_bl;
     *llik += llik_bl;
+    *llik_norm += llik_norm_bl;
 
     /* possibly add a line to the trace file */
     if(trace_lasso) PrintTrace(i);
@@ -546,8 +550,6 @@ double Bmonomvn::Draw(const unsigned int thin, const bool economy,
   /* update the single, pooled eta, nu */
   if(onenu) nu = draw_nu_reject(neta, eta, theta);  
 
-  // if(!burnin) myprintf(stdout, ", lpost = %g\n", lpost);
-
   /* return the log posterior probability of the draw */
   return lpost;
 }
@@ -565,7 +567,8 @@ double Bmonomvn::Draw(const unsigned int thin, const bool economy,
  */
 
 void Bmonomvn::DataAugment(unsigned int col, const double mu, 
-			   double *beta, const double s2)
+			   double *beta, const double s2, 
+                           const double nu)
 {
   /* sanity checks */
   assert(col <= M);
@@ -610,7 +613,7 @@ void Bmonomvn::Methods(int *methods)
  * model encoded as an integer 
  */
 
-void Bmonomvn::Thin(const unsigned int thin, int *thin_out)
+void Bmonomvn::Thin(const double thin, int *thin_out)
 {
   assert(thin_out);
   for(unsigned int i=0; i<M; i++)
@@ -784,7 +787,7 @@ double **S_start = NULL;
 
 void bmonomvn_R(
 		/* estimation inputs */
-		int *B, int *T, int *thin, int *M, int *N, double *Y_in, 
+		int *B, int *T, double *thin, int *M, int *N, double *Y_in, 
 		int *n, int *R_in, double *p, int *method, int *facts,
 		int *RJ, int *capm, double *mu_start, double *S_start_in, 
 		int *ncomp_start, double *lambda_start, double *mprior, 
@@ -801,9 +804,9 @@ void bmonomvn_R(
 		double *S_map, double *S_nz, double *Si_nz,
 
 		/* estimation outputs: other */
-		double *lpost_map, int *which_map, double *llik, 
-		int *methods, int *thin_out, double *nu, 
-		double *lambda2_mean, double *m_mean,
+		double *lpost_map, int *which_map, double *llik,
+		double *llik_norm,  int *methods, int *thin_out, 
+		double *nu, double *lambda2_mean, double *m_mean,
 
 		/* Quadratic Programming outputs */
 		double *w)
@@ -842,7 +845,7 @@ void bmonomvn_R(
 
   /* do burn-in rounds */
   if(*verb) myprintf(stdout, "%d burnin rounds\n", *B);
-  bmonomvn->Rounds(*B, *thin, (bool) *economy, true, NULL, NULL);
+  bmonomvn->Rounds(*B, *thin, (bool) *economy, true, NULL, NULL, NULL);
   
   /* set up the mu and S sums for calculating means and variances */
   bmonomvn->SetSums(MVNmean, MVNvar, lambda2_mean, m_mean, MVNmap,
@@ -852,7 +855,7 @@ void bmonomvn_R(
 
   /* and now sampling rounds */
   if(*verb) myprintf(stdout, "%d sampling rounds\n", *T);
-  bmonomvn->Rounds(*T, *thin, (bool) *economy, false, nu, llik);
+  bmonomvn->Rounds(*T, *thin, (bool) *economy, false, nu, llik, llik_norm);
 
   /* copy back the mean and variance(s) of mu and S */
   MVN_mean(MVNmean, *T);

@@ -44,9 +44,12 @@
 
   ## make the appropriate kind of plot
   if(which == "coef") {
-    if(is.null(subset)) subset <- 1:x$M
-    boxplot(data.frame(mu=x$mu[burnin:x$T], x$beta[burnin:x$T,subset]),
-            ylab="coef", main="Boxplots of regression coefficients", ...)
+    if(is.null(subset) && x$M > 0) if(x$M > 0) subset <- 1:x$M
+    if(!is.null(subset)) {
+      beta <- x$beta[burnin:x$T,subset]
+      df <- data.frame(mu=x$mu[burnin:x$T], beta)
+    } else df <- data.frame(mu=x$mu[burnin:x$T])
+    boxplot(df, ylab="coef", main="Boxplots of regression coefficients", ...)
     m <- which.max(x$lpost)
     points(c(x$mu[m], x$beta[m,]), col=2, pch=21)
     abline(h=0, lty=2, lwd=2)
@@ -130,7 +133,7 @@ function(object, burnin=0, ...)
     
     ## only do if RJ
     if(object$RJ) {
-      rl$bn0 <- apply(object$beta[burnin:object$T,], 2,
+      rl$bn0 <- apply(as.matrix(object$beta[burnin:object$T,]), 2,
                       function(x){ sum(x != 0) })/(object$T-burnin+1)
       rl$m <- summary(object$m[burnin:object$T])
     }

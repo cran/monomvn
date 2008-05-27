@@ -32,6 +32,7 @@ extern "C"
 #include "R.h"
 #include "assert.h"
 #include "nu.h"
+#include "hshoe.h"
 }
 #include "blasso.h"
 
@@ -57,8 +58,9 @@ Blasso::Blasso(const unsigned int M, const unsigned int N, double **Xorig,
 	       const unsigned int verb)
 {
   /* sanity checks */
-  if(Mmax >= N) assert(RJ || reg_model == LASSO || reg_model == RIDGE ||
-		       (reg_model == FACTOR && nf < N));
+  if(Mmax >= N) 
+    assert(RJ || reg_model == LASSO || reg_model == LASSO 
+	   || reg_model == RIDGE || (reg_model == FACTOR && nf < N));
 
   /* copy RJ setting */
   this->RJ = RJ;
@@ -126,7 +128,7 @@ Blasso::Blasso(const unsigned int M, const unsigned int N, double **Xorig,
 Blasso::Blasso(const unsigned int M, const unsigned int n, double **X, 
 	       double *Y, const bool RJ, const unsigned int Mmax, 
 	       double *beta, const double lambda2, const double s2, 
-	       double *tau2i, double *omega2, const double nu, 
+	       double *tau2i, const bool hs, double *omega2, const double nu, 
 	       double *mprior, const double r,  const double delta, 
 	       const double a, const double b, const double theta, 
 	       const bool rao_s2, const bool normalize, const unsigned int verb)
@@ -163,7 +165,7 @@ Blasso::Blasso(const unsigned int M, const unsigned int n, double **X,
 
   /* this function will be modified to depend on whether OLS 
      must become lasso */
-  InitParams(beta, lambda2, s2, tau2i, omega2, nu); 
+  InitParams(beta, lambda2, s2, tau2i, hs, omega2, nu); 
 
   /* Y initization must come after InitParams */
   InitY(N, Y);
@@ -701,7 +703,9 @@ void Blasso::InitParams(REG_MODEL reg_model, double *beta, double s2,
   assert(this->tau2i == NULL && this->beta == NULL && this->omega2 == NULL);
   assert(reg_model == this->reg_model);
 
-  /* set the LASSO & RIDGE lambda2 and tau2i initial values */
+  assert(reg_model != HORSESHOE); // NOT HANDLED YET 
+
+  /* set the LASSO/HORSESHOE & RIDGE lambda2 and tau2i initial values */
   if(reg_model != OLS) {
 
     /* assign starting lambda2 value */
@@ -768,8 +772,8 @@ void Blasso::InitParams(REG_MODEL reg_model, double *beta, double s2,
  */
 
 void Blasso::InitParams(double *beta, const double lambda2, 
-			const double s2, double *tau2i, double *omega2,
-			double nu)
+			const double s2, double *tau2i, const bool hs, 
+			double *omega2, double nu)
 {
   this->lambda2 = lambda2;
   this->s2 = s2;
@@ -802,7 +806,8 @@ void Blasso::InitParams(double *beta, const double lambda2,
   } else if(tau2i == NULL) reg_model = RIDGE;
   else {
     if(m > 0) assert(sumv(this->tau2i, m+icept) != 0);
-    reg_model = LASSO;
+    if(hs) reg_model = HORSESHOE;
+    else reg_model = LASSO;
   }
 
   /* set lambda2 to zero if m == 0  && RIDGE */
@@ -917,7 +922,7 @@ void Blasso::GetParams(double *mu, double *beta, int *m, double *s2,
 
   /* copy back the beta error structure and laplace prior */
   *s2 = this->s2;
-  if(tau2i && (reg_model == LASSO)) {
+  if(tau2i && (reg_model == LASSO || reg_model == HORSESHOE)) {
     for(unsigned int i=0; i<M; i++) tau2i[i] = -1.0;
     if(this->m > 0 && this->tau2i)
       copy_p_vector(tau2i, pin, (this->tau2i)+icept, this->m);
@@ -967,7 +972,8 @@ void Blasso::PrintParams(FILE *outfile) const
 void Blasso::Rounds(const unsigned int T, const unsigned int thin, 
 		    double *mu, double **beta, int *m, double *s2, 
 		    double **tau2i, double *lambda2, double **omega2, 
-		    double *nu, double *pi, double *lpost, double *llik)
+		    double *nu, double *pi, double *lpost, 
+		    double *llik, double *llik_norm)
 {
   /* sanity check */
   assert(breg);
@@ -984,7 +990,10 @@ void Blasso::Rounds(const unsigned int T, const unsigned int thin,
 
     /* if LASSO then get t-th tau2i */
     double *tau2i_samp = NULL;
-    if(tau2i) { assert(reg_model == LASSO); tau2i_samp = tau2i[t]; }
+    if(tau2i) { 
+      assert(reg_model == LASSO || reg_model == HORSESHOE); 
+      tau2i_samp = tau2i[t]; 
+    }
 
     /* if doing Student-t scale mixcures then get t-th omega2 */
     double *omega2_samp = NULL;
@@ -995,7 +1004,7 @@ void Blasso::Rounds(const unsigned int T, const unsigned int thin,
       nu_samp = &(nu[t]);
     }
 
-    /* if LASSO or ridge */
+    /* if LASSO, horseshoe or ridge */
     double *lambda2_samp = NULL;
     if(lambda2) { 
       assert(m == 0 || reg_model != OLS); 
@@ -1013,7 +1022,8 @@ void Blasso::Rounds(const unsigned int T, const unsigned int thin,
     /* get the log posterior */
     lpost[t] = this->lpost;
     llik[t] = this->llik;
-
+    if(omega2) llik_norm[t] = this->llik_norm;
+    
     /* print progress meter */
     if(verb && t > 0 && ((t+1) % 100 == 0))
       myprintf(stdout, "t=%d, m=%d\n", t+1, this->m);
@@ -1071,10 +1081,10 @@ void Blasso::Draw(const unsigned int thin, const bool fixnu)
     if(RJ) DrawPi();
 
     /* draw the latent Student-t variables */
-    if(omega2) DrawOmega2();
+    if(omega2 && !isinf(nu)) DrawOmega2();
 
     /* draw latent lasso variables, and update Bmu and Vb, etc. */
-    if(reg_model == LASSO) DrawTau2i();
+    if(reg_model == LASSO || reg_model == HORSESHOE) DrawTau2i();
     else assert(tau2i == NULL);
 
     /* recompute the BayesReg module since omega and/or tau2i have changed */
@@ -1086,9 +1096,9 @@ void Blasso::Draw(const unsigned int thin, const bool fixnu)
       error("ill-posed regression in DrawTau2i");
     
     /* draw nu based on the omega2s */
-    if(omega2 && !fixnu) DrawNu();
+    if(!isinf(nu) && omega2 && !fixnu) DrawNu();
 
-    /* only depends on tau2i for LASSO and beta for RIDGE */
+    /* only depends on tau2i for LASSO & HORSESHOE, and beta for RIDGE */
     if(reg_model != OLS) DrawLambda2();
     else { /* is OLS */
       assert(lambda2 == 0 && tau2i == NULL);
@@ -1101,7 +1111,8 @@ void Blasso::Draw(const unsigned int thin, const bool fixnu)
 
     /* resid = X*beta - Y */
     dupv(resid, Y, n);
-    if(m+icept > 0) linalg_dgemv(CblasTrans,m+icept,n,-1.0,Xp,m+icept,beta,1,1.0,resid,1);
+    if(m+icept > 0) linalg_dgemv(CblasTrans,m+icept,n,-1.0,Xp,m+icept,
+				 beta,1,1.0,resid,1);
 
     /* choose the type of s2 GS update */
     if(rao_s2) {
@@ -1132,10 +1143,11 @@ void Blasso::Draw(const unsigned int thin, const bool fixnu)
  * Bmonomvn::Rounds 
  */
 
-void Blasso::Draw(const unsigned int thin, const bool usenu, 
+void Blasso::Draw(const double thin, const bool usenu, 
 		  double *mu, double *beta, int *m, double *s2, 
 		  double *tau2i, double *lambda2, double *omega2, 
-		  double *nu, double *pi, double *lpost, double *llik)
+		  double *nu, double *pi, double *lpost,
+		  double *llik, double *llik_norm)
 {
   /* sanity check */
   assert(breg && Xbeta_v);
@@ -1182,6 +1194,7 @@ void Blasso::Draw(const unsigned int thin, const bool usenu,
 
   /* return the log likelihood */
   *llik = this->llik;
+  *llik_norm = this->llik_norm;
 }
 
 
@@ -1289,7 +1302,8 @@ void Blasso::RJup(double qratio)
   } else { /* reject */
     
     /* realloc vectors */
-    if(reg_model == LASSO) tau2i = (double*) realloc(tau2i, sizeof(double)*(m+icept));
+    if(reg_model == LASSO || reg_model == HORSESHOE) 
+      tau2i = (double*) realloc(tau2i, sizeof(double)*(m+icept));
     else if(reg_model == RIDGE && m == 0) lambda2 = 0;
     XtY = (double*) realloc(XtY, sizeof(double)*(m+icept));
     
@@ -1305,11 +1319,11 @@ void Blasso::RJup(double qratio)
 /*
  * ProposeTau2i:
  *
- * randomly propose a new tau2i-component for LASSO, or
+ * randomly propose a new tau2i-component for LASSO/HORSESHOE, or
  * new lambda2 component for RIDGE when m == 0;  this function
- * would be called exclusively by RJup().  For LASSO, the tau2i
- * vector is increased in length by one.  Also calculates the
- * (log) ratio of prior to proposal probabilities
+ * would be called exclusively by RJup().  For LASSO/HORSESHOE, 
+ * the tau2i vector is increased in length by one.  Also calculates 
+ * the (log) ratio of prior to proposal probabilities
  */
 
 double Blasso::ProposeTau2i(double *lpq_ratio)
@@ -1318,10 +1332,16 @@ double Blasso::ProposeTau2i(double *lpq_ratio)
   *lpq_ratio = 0.0;           /* log ratio of prior to proposal probabilities */
 
   /* switch over model choices */
-  if(reg_model == LASSO) { /* propose new m-th component of tau2i */
+  if(reg_model == LASSO || reg_model == HORSESHOE) { 
+    /* propose new m-th component of tau2i */
     tau2i = (double*) realloc(tau2i, sizeof(double)*(m+icept+1));  /* grow tau2i */
-    prop = rexp(2.0/lambda2);                /* sample tau2 from the prior */
-    tau2i[m+icept] = 1.0 / prop;        /* assign to the new last entry of tau2i */
+
+    /* sample tau2 from the prior: under horseshoe or lasso  */
+    if(reg_model == HORSESHOE) prop = LambdaCPS_prior_draw(lambda2); 
+    else  prop = rexp(2.0/lambda2);     
+
+    /* assign to the new last entry of tau2i */    
+    tau2i[m+icept] = 1.0 / prop;        
     /* then prior and proposal probabilites cancel */
 
   } else if(reg_model == RIDGE && m == 0) { /* randomly propose a new lambda */   
@@ -1359,7 +1379,8 @@ double Blasso::UnproposeTau2i(double *lqp_ratio, unsigned int iin)
   *lqp_ratio = 0.0;         /* proposal to prior ratio */
 
   /* switch over model choices */
-  if(reg_model == LASSO) {  /* unpropose the iin-th component of tau2i */
+  if(reg_model == LASSO || reg_model == HORSESHOE) {  
+    /* unpropose the iin-th component of tau2i */
     prop = 1.0/tau2i[iin+icept];          /* remove from the iin-th position */
     tau2i[iin+icept] = tau2i[m+icept-1];
     tau2i = (double*) realloc(tau2i, sizeof(double)*(m+icept-1));
@@ -1457,7 +1478,7 @@ void Blasso::RJdown(double qratio)
   } else { /* reject */
 
     /* realloc vectors */
-    if(reg_model == LASSO) { 
+    if(reg_model == LASSO || reg_model == HORSESHOE) { 
       tau2i = (double*) realloc(tau2i, sizeof(double)*(m+icept));
       tau2i[m+icept-1] = tau2i[iin+icept]; tau2i[iin+icept] = 1.0/prop;
     } else if(reg_model == RIDGE && m == 1) lambda2 = prop;
@@ -1831,7 +1852,7 @@ void Blasso::DrawS2(void)
 
   /* BtDB = beta'D beta/tau2 as long as lambda != 0 */
   double BtDiB;
-  if(m+icept > 0 && reg_model == LASSO) {
+  if(m+icept > 0 && (reg_model == LASSO || reg_model == HORSESHOE)) {
     dupv(BtDi, beta, m);
     if(tau2i) scalev2(BtDi, m+icept, tau2i);
     else scalev(BtDi, m+icept, 1.0/lambda2);
@@ -1871,24 +1892,30 @@ void Blasso::DrawTau2i(void)
   /* sanity checks */
   assert(lambda2 > 0 && tau2i != NULL);
 
-  /* part of the mu parameter to the inv-gauss distribution */
-  l_numer = log(lambda2) + log(s2);
+  /* special kludgy version of horseshoe */
+  if(reg_model == HORSESHOE) UpdateLambdaCPS(m, beta, lambda2, s2, tau2i);
+  else { /* regular lasso update of latents */
+    assert(reg_model == LASSO);
 
-  for(unsigned int j=icept; j<m+icept; j++) {
+    /* part of the mu parameter to the inv-gauss distribution */
+    l_numer = log(lambda2) + log(s2);
+    
+    for(unsigned int j=icept; j<m+icept; j++) {
       
-    /* the rest of the mu parameter */
-    l_mup = 0.5*l_numer - log(fabs(beta[j])); 
-    
-    /* sample from the inv-gauss distn */
-    tau2i[j] = rinvgauss(exp(l_mup), lambda2);    
-    
-    /* check to make sure there were no numerical problems */
-    if(tau2i[j] <= 0) {
+      /* the rest of the mu parameter */
+      l_mup = 0.5*l_numer - log(fabs(beta[j])); 
+      
+      /* sample from the inv-gauss distn */
+      tau2i[j] = rinvgauss(exp(l_mup), lambda2);    
+      
+      /* check to make sure there were no numerical problems */
+      if(tau2i[j] <= 0) {
 #ifdef DEBUG
-      myprintf(stdout, "j=%d, m=%d, n=%d, l2=%g, s2=%g, beta=%g, tau2i=%g\n", 
-	       j-icept, m, n, lambda2, s2, beta[j], tau2i[j]);
+	myprintf(stdout, "j=%d, m=%d, n=%d, l2=%g, s2=%g, beta=%g, tau2i=%g\n", 
+		 j-icept, m, n, lambda2, s2, beta[j], tau2i[j]);
 #endif
-      tau2i[j] = 0;
+	tau2i[j] = 0;
+      }
     }
   }
 
@@ -1963,22 +1990,27 @@ void Blasso::DrawLambda2(void)
   assert(reg_model != OLS);
 
   /* see if we're doing lasso or ridge */
-  if(reg_model == LASSO) { /* lasso */
+  if(reg_model == LASSO || reg_model == HORSESHOE) { /* lasso */
    
     /* sanity check */
     if(tau2i == NULL) assert(m+icept == 0);
-  
-    /* set up gamma distribution parameters */
-    double shape = (double) m + r;
-    double rate = 0.0;
-    for(unsigned int j=icept; j<m+icept; j++) {
-      if(tau2i[j] == 0) {shape--; continue;}  /* for numerical problems */
-      rate += 1.0/tau2i[j];
+
+    /* special kludgy version of horseshoe */  
+    if(reg_model == HORSESHOE) UpdateTauCPS(m, beta, tau2i, s2, &lambda2);
+    else { /* regular LASSO update of lambda2 */
+
+      /* set up gamma distribution parameters */
+      double shape = (double) m + r;
+      double rate = 0.0;
+      for(unsigned int j=icept; j<m+icept; j++) {
+	if(tau2i[j] == 0) {shape--; continue;}  /* for numerical problems */
+	rate += 1.0/tau2i[j];
+      }
+      rate = rate/2.0 + delta;
+      
+      /* draw from a gamma distribution */
+      lambda2 = rgamma(shape, 1.0/rate);
     }
-    rate = rate/2.0 + delta;
-  
-    /* draw from a gamma distribution */
-    lambda2 = rgamma(shape, 1.0/rate);
 
   } else { /* ridge */
 
@@ -2039,11 +2071,17 @@ void Blasso::logPosterior(void)
   double *tau2i = this->tau2i;
   
   /* calculate the log likelihood */
-  lpost = llik = log_likelihood(n, resid, s2, omega2);
+  lpost = llik = log_likelihood(n, resid, s2, nu);//, omega2);
+
+  /* calculate the likelihood under the Normal model if we are in the 
+     Student-t model */
+  if(omega2) llik_norm = log_likelihood(n, resid, s2, 1e300*1e300);
+  else llik_norm = llik;
   
   /* calculate the log prior */
-  lpost += log_prior(n, m+icept, beta, s2, tau2i, lambda2, omega2, 
-		     nu, a, b, r, delta, theta, Mmax, pi, mprior);
+  lpost += log_prior(n, m+icept, beta, s2, tau2i, reg_model == HORSESHOE,
+		     lambda2, omega2, nu, a, b, r, delta, theta, Mmax, 
+		     pi, mprior);
 
   /* the code below is not in log_prior because of m and icept */
 
@@ -2067,8 +2105,8 @@ void Blasso::logPosterior(void)
  * passes the log likelihood back via llik, if not NULL
  */
 
-double log_likelihood(const unsigned int n, double *resid, const double s2, 
-		      double *omega2)
+double log_likelihood(const unsigned int n, double *resid, const double s2,
+		      const double nu)//, double *omega2)
 {
   /* for summing in the (log) posterior */
   double llik = 0.0;
@@ -2076,8 +2114,10 @@ double log_likelihood(const unsigned int n, double *resid, const double s2,
   /* calculate the likelihood prod[N(resid | 0, s2)] in log space */
   double sd = sqrt(s2);	
   unsigned int i;
-  if(!omega2) for(i=0; i<n; i++) llik += dnorm(resid[i], 0.0, sd, 1);
-  else for(i=0; i<n; i++) llik += dnorm(resid[i], 0.0, sd*sqrt(omega2[i]), 1);
+  // if(!omega2) 
+  if(isinf(nu)) for(i=0; i<n; i++) llik += dnorm(resid[i], 0.0, sd, 1);
+  // else for(i=0; i<n; i++) llik += dnorm(resid[i], 0.0, sd*sqrt(omega2[i]), 1);
+  else for(i=0; i<n; i++) llik += dt(resid[i]/sd, nu, 1);
   assert(!isinf(llik));
  
    /* return the log likelihood */
@@ -2094,7 +2134,7 @@ double log_likelihood(const unsigned int n, double *resid, const double s2,
  */
 
 double log_prior(const unsigned int n, const unsigned int m, double *beta, 
-		 const double s2, double *tau2i, const double lambda2, 
+		 const double s2, double *tau2i, bool hs, const double lambda2, 
 		 double *omega2, const double nu, const double a, const double b, 
 		 const double r, const double delta, const double theta, 
 		 const unsigned int Mmax, double pi, double *mprior)
@@ -2122,15 +2162,18 @@ double log_prior(const unsigned int n, const unsigned int m, double *beta,
 
   /* add in the prior for tau2 */
   if(tau2i && lambda2 != 0)
-    for(unsigned int i=0; i<m; i++)
-      if(tau2i[i] > 0)
-	lprior += dexp(1.0/tau2i[i], 2.0/lambda2, 1);
+    if(hs) lprior += LambdaCPS_lprior(m, tau2i, lambda2); /* under horseshoe */
+    else { /* otherwise is exponential for lasso */
+      for(unsigned int i=0; i<m; i++)
+	if(tau2i[i] > 0) lprior += dexp(1.0/tau2i[i], 2.0/lambda2, 1);
+    }
   assert(!isinf(lprior));
   
   /* add in the lambda prior */
   if(tau2i) { /* lasso */
     if(lambda2 != 0 && r != 0 && delta != 0) 
-      lprior += dgamma(lambda2, r, 1.0/delta, 1); /* is Gamma */
+      if(hs) lprior += TauCPS_lprior(lambda2); /* under horseshoe */
+      else lprior += dgamma(lambda2, r, 1.0/delta, 1); /* or is Gamma for lasso */
   } else if(lambda2 != 0) { /* ridge */
     if(r != 0 && delta != 0) 
       lprior += dgamma(1.0/lambda2, r, 1.0/delta, 1); /* is Inv-gamma */
@@ -2140,13 +2183,13 @@ double log_prior(const unsigned int n, const unsigned int m, double *beta,
 
   /* add in the Student-t prior */
   if(omega2) { /* add in the components of omega2 */
-    for(unsigned int i=0; i<n; i++) {
+    /* for(unsigned int i=0; i<n; i++) {
       lprior += dgamma(1.0/omega2[i], 0.5*nu, 2.0/nu, 1);
-    }
+      } */
 
     /* add in the prior for nu */
     assert(theta > 0);
-    lprior += dexp(nu, theta, 1);
+    lprior += dexp(nu, 1.0/theta, 1);
   }
 
   /* return the log prior */
@@ -2264,13 +2307,13 @@ int Blasso::Method(void)
 
   if(RJ) { /* reversible jump */
     
-    if(reg_model == LASSO) return 2;  /* rjlasso */
+    if(reg_model == LASSO || reg_model == HORSESHOE) return 2;  /* rjlasso */
     else if(reg_model == RIDGE) return 3;  /* rjridge */
     else return 4;
 
   } else { /* no RJ */
 
-    if(reg_model == LASSO) return 5; /* lasso */
+    if(reg_model == LASSO || reg_model == HORSESHOE) return 5; /* lasso */
     if(reg_model == RIDGE) return 6;
     else return 7; /* ols */
   }
@@ -2305,15 +2348,25 @@ int Blasso::Verb(void)
  * Thin:
  *
  * Dynamically calculate a number of thinning MCMC rounds
- * by taking RJ and LASSO into account
+ * by taking RJ and LASSO/HORSESHOE into account -- and
+ * taking the Student-t latents into account
  */
 
-unsigned int Blasso::Thin(unsigned int thin)
+unsigned int Blasso::Thin(const double thin)
 {
-  if(RJ || reg_model == LASSO) thin = thin*Mmax;
-  else if(reg_model == RIDGE) thin *= 2;
-  if(thin == 0) thin++;
-  return thin;
+  unsigned int adjusted_thin = 0;
+
+  /* adjust the thinning level for lasso latents */
+  if(RJ || reg_model == LASSO || reg_model == HORSESHOE) 
+    adjusted_thin = (unsigned) ceil(thin*Mmax);
+  else if(reg_model == RIDGE) adjusted_thin = (unsigned) ceil(thin*2);
+  
+  /* adjust the thinning level for the Student-t latents */
+  if(omega2) adjusted_thin += (unsigned) ceil(thin*n);
+
+  /* make sure thin is positive */
+  if(adjusted_thin == 0) adjusted_thin++;
+  return adjusted_thin;
 }
 
 
@@ -2512,9 +2565,9 @@ int blasso_seed_set;
 void blasso_R(int *T, int *thin, int *M, int *n, double *X_in, 
 	      double *Y, double *lambda2, double *mu, int *RJ, 
 	      int *Mmax, double *beta, int *m, double *s2, 
-	      double *tau2i, double *omega2, double *nu, double *pi, 
-	      double *lpost, double *llik, double *mprior, double *r, 
-	      double *delta, double *a, double *b, double *theta, 
+	      double *tau2i, int *hs, double *omega2, double *nu, double *pi, 
+	      double *lpost, double *llik, double *llik_norm, double *mprior, 
+	      double *r, double *delta, double *a, double *b, double *theta, 
 	      int *rao_s2, int *normalize, int *verb)
 {
   /* sanity check */
@@ -2553,8 +2606,8 @@ void blasso_R(int *T, int *thin, int *M, int *n, double *X_in,
 
   /* create a new Bayesian lasso regression */
   blasso =  new Blasso(*M, *n, X, Y, (bool) *RJ, *Mmax, beta_mat[0], 
-		       lambda2_start, s2[0], tau2i, omega2, nu_start, 
-		       mprior, *r, *delta, *a, *b, *theta, 
+		       lambda2_start, s2[0], tau2i, (bool) *hs, omega2, 
+		       nu_start, mprior, *r, *delta, *a, *b, *theta, 
 		       (bool) *rao_s2, (bool) *normalize, *verb);
 
   /* part of the constructor which could fail has been moved outside */
@@ -2563,7 +2616,8 @@ void blasso_R(int *T, int *thin, int *M, int *n, double *X_in,
   /* Gibbs draws for the parameters */
   blasso->Rounds((*T)-1, *thin, &(mu[1]), &(beta_mat[1]), &(m[1]), 
 		 &(s2[1]), tau2i_mat, lambda2_samps, omega2_mat, 
-		 &(nu[1]), &(pi[1]), &(lpost[1]), &(llik[1]));
+		 &(nu[1]), &(pi[1]), &(lpost[1]), &(llik[1]), 
+		 &(llik_norm[1]));
 
   delete blasso;
   blasso = NULL;
