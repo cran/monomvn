@@ -80,6 +80,8 @@ void sum_of_each_column_f(double *s, double **M, unsigned int *n1,
 			  unsigned int n2, double(*f)(double));
 void wmean_of_columns(double *mean, double **M, unsigned int n1, unsigned int n2, 
 		      double *weight);
+void wvar_of_columns(double *var, double **M, unsigned int n1, unsigned int n2,
+		     double *weight);
 void wmean_of_columns_f(double *mean, double **M, unsigned int n1, unsigned int n2, 
 			double *weight, double(*f)(double));
 void wmean_of_rows(double *mean, double **M, unsigned int n1, unsigned int n2, 
