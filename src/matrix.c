@@ -189,7 +189,7 @@ void dup_matrix(double** M1, double **M2, unsigned int n1, unsigned int n2)
 
 void swap_matrix(double **M1, double **M2, unsigned int n1, unsigned int n2)
 {
-  unsigned int  i;
+  unsigned int i;
   double *temp;
   temp = M1[0];
   M1[0] = M2[0];
@@ -1266,6 +1266,44 @@ void matrix_t_to_file(const char* file_str, double** matrix, unsigned int n1,
 
 
 /*
+ * sub_pcols_matrix:
+ *
+ * copy the cols v[1:n1][p[n2]] to V.  
+ * must have nrow(v) == nrow(V) and ncol(V) >= lenp
+ * and ncol(v) >= max(p)
+ */
+
+void sub_p_matrix(double **V, int *p, double **v, 
+		unsigned int nrows, unsigned int lenp)
+{
+  int i,j;
+  assert(V); assert(p); assert(v); assert(nrows > 0 && lenp > 0);
+  for(i=0; i<nrows; i++) for(j=0; j<lenp; j++) 
+    V[i][j] = v[i][p[j]];
+}
+
+
+/*
+ * new_p_matrix::
+ *
+ * create a new matrix from the columns of v, specified
+ * by p.  Must have have nrow(v) == nrow(V) and ncol(V) >= ncols
+ * and ncol(v) >= max(p)
+ */
+
+double **new_p_submatrix(int *p, double **v, unsigned int nrows, 
+			 unsigned int ncols)
+{
+  double **V;
+  if(nrows == 0 || ncols == 0) return NULL;
+  assert(p); assert(v);
+  V = new_matrix(nrows, ncols);
+  sub_p_matrix(V, p, v, nrows, ncols);
+  return(V);
+}
+
+
+/*
  * copy_p_matrix:
  *
  * copy v[n1][n2] to V into the positions specified by p1[n1] and p2[n2]
@@ -1547,6 +1585,18 @@ void dupv(double *v, double* vold, unsigned int n)
 {
   unsigned int i;
   for(i=0; i<n; i++) v[i] = vold[i];
+}
+
+
+/*
+ * copies v into the col-th column of M
+ * (assumes M and v are properly allocated already)
+ */
+
+void dup_col(double **M, unsigned int col, double *v, unsigned int n)
+{
+  unsigned int i;
+  for(i=0; i<n; i++) M[i][col] = v[i];
 }
 
 

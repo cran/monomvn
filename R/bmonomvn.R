@@ -30,19 +30,11 @@
 ## give a monotone appearance, but the pattern must be monotone.
 
 'bmonomvn' <-
-function(y, pre=TRUE, p=0.9, B=100, T=100, thin=10, r=1, delta=1,
-         rao.s2=TRUE, verb=1, trace=FALSE)
+function(y, pre=TRUE, p=0.9, B=100, T=200, thin=5,
+         method=c("default", "rjlasso", "rjlsr", "lasso"),
+         capm=method!="lasso", r=2, delta=0.1, rao.s2=TRUE,
+         verb=1, trace=FALSE)
   {
-
-    ## check p argument
-    if(length(p) != 1 || p > 1 || p < 0) {
-      warning("should have scalar 0 <= p <= 1, using default p=1")
-      p <- 1
-    }
-
-    ## save the call
-    cl <- match.call()
-    
     ## save column namings in a data frame, and then work with a matrix
     nam <- colnames(y)
     y <- as.matrix(y)
@@ -50,9 +42,48 @@ function(y, pre=TRUE, p=0.9, B=100, T=100, thin=10, r=1, delta=1,
     ## dimensions of the inputs
     M <- ncol(y)
     N <- nrow(y)
+    
+    ## check p argument
+    if(length(p) != 1 || p > 1 || p < 0) {
+      warning("should have scalar 0 <= p <= 1, using default p=1")
+      p <- 1
+    }
 
+    ## check B
+    if(length(B) != 1 || B < 0)
+      stop("B must be a scalar integer >= 0")
+    
+    ## check T
+    if(length(T) != 1 || T <= 1)
+      stop("T must be a scalar integer > 1")
+
+    ## check thin
+    if(length(thin) != 1 || thin < 1)
+      stop("thin must be a scalar integer >= 1")
+
+    ## check method
+    method <- match.arg(method)
+
+    ## check capm
+    if(length(capm) != 1 || !is.logical(capm))
+      stop("capm must be a scalar logical or \"p\"\n")
+    if(method == "lasso" && capm != FALSE) {
+      warning("capm must be FALSE for method=\"lasso\"", immediate.=TRUE)
+      capm <- FALSE
+    }
+
+    ## change method into an integer
+    mi <- 0
+    if(method == "rjlsr") mi <- 1
+    else if(method == "lasso") mi <- 2
+    else if(method == "default") mi <- 3
+
+    ## save the call
+    cl <- match.call()
+    
     ## get the number of nas in each column
-    nas <- apply(y, 2, function(x) {sum(is.na(x))} )
+    nas <- apply(y, 2, function(x) {sum(is.na(x))})
+
     
     ## check for cols with all NAs
     if(sum(nas == N) > 0) {
@@ -72,6 +103,13 @@ function(y, pre=TRUE, p=0.9, B=100, T=100, thin=10, r=1, delta=1,
     ## number of non-nas in each column
     n <- N - nas[nao]
 
+    ## check for big-p-small-n problems
+    if(any(n >= 0:(length(n)-1))){
+      if(method == "rjlsr" || method == "lasso")
+        warning("methods \"rjlsr\" and \"lasso\" not ideal if any n[i] >= i",
+                immediate.=TRUE)
+    }
+
     ## replace NAs with zeros
     Y <- y
     Y[is.na(Y)] <- 0
@@ -88,6 +126,8 @@ function(y, pre=TRUE, p=0.9, B=100, T=100, thin=10, r=1, delta=1,
             Y = as.double(t(Y)),
             n = as.integer(n),
             p = as.double(p),
+            mi = as.integer(mi),
+            capm = as.integer(capm),
             r = as.double(r),
             delta = as.double(delta),
             rao.s2 = as.integer(rao.s2), 
@@ -96,6 +136,8 @@ function(y, pre=TRUE, p=0.9, B=100, T=100, thin=10, r=1, delta=1,
             mu = double(M),
             mu.var = double(M),
             S = double(M*M),
+            methods = integer(M),
+            lambda2 = double(M),
             ncomp = double(M),
             PACKAGE = "monomvn")
 
@@ -113,11 +155,12 @@ function(y, pre=TRUE, p=0.9, B=100, T=100, thin=10, r=1, delta=1,
     } else r$pre <- FALSE
 
     ## extract the methods
-    r$methods <- rep(NA, length(r$ncomp))
-    z <- r$ncomp == 0
-    r$methods[z] <- "blsr"
-    r$methods[1] <- "bcomplete"
-    r$methods[!z] <- "blasso"
+    mnames <- c("bcomplete", "brjlasso", "brjlsr", "blasso", "blsr")
+    r$methods <- mnames[r$methods]
+    ##z <- r$lambda2 == 0a
+    ##r$methods[z] <- "blsr"
+    ##r$methods[1] <- "bcomplete"
+    ##r$methods[!z] <- "blasso"
     
     ## put the original ordering back
     if(pre) {
@@ -126,6 +169,7 @@ function(y, pre=TRUE, p=0.9, B=100, T=100, thin=10, r=1, delta=1,
       r$mu.var <- r$mu.var[oo]
       r$S <- r$S[oo,oo]
       r$ncomp <- r$ncomp[oo]
+      r$lambda2 <- r$lambda2[oo]
       r$methods <- r$methods[oo]
     } else oo <- NULL
 
@@ -138,21 +182,23 @@ function(y, pre=TRUE, p=0.9, B=100, T=100, thin=10, r=1, delta=1,
       colnames(r$S) <- rownames(r$S) <- nam
       r$ncomp <- matrix(r$ncomp, nrow=length(r$ncomp))
       rownames(r$ncomp) <- nam
+      r$lambda2 <- matrix(r$lambda2, nrow=length(r$lambda2))
+      rownames(r$lambda2) <- nam
     }
 
     ## read the trace in the output files, and then delete them
-    if(trace) r$trace <- bmonomvn.read.traces(r$N, r$n, r$M, oo, nam, r$verb)
+    if(trace) r$trace <- bmonomvn.read.traces(r$N, r$n, r$m, oo, nam, r$verb)
     else r$trace <- NULL
     
     ## final line
     if(verb >= 1) cat("\n")
 
     ## null-out redundancies
-    r$n <- r$N <- r$M <- r$verb <- NULL
+    r$n <- r$N <- r$M <- r$mi <- r$verb <- NULL
 
-    ## change back to logicals
-    if(r$rao.s2) r$rao.s2 <- TRUE
-    else r$rau.s2 <- FALSE
+    ## change back to logicals or original inputs
+    r$rao.s2 <- as.logical(r$rao.s2)
+    r$capm <- as.logical(r$capm)
     
     ## assign class, call and methods, and return
     r$call <- cl
@@ -213,8 +259,8 @@ function(y, pre=TRUE, p=0.9, B=100, T=100, thin=10, r=1, delta=1,
 
   ## read the blasso regression traces
   for(i in 1:length(n)) {
-    fname <- paste("blasso_m", i, "_n", n[i], ".trace", sep="")
-    lname <- paste("m", i, ".n", n[i], sep="")
+    fname <- paste("blasso_m", i-1, "_n", n[i], ".trace", sep="")
+    lname <- paste("m", i-1, ".n", n[i], sep="")
     trace$reg[[lname]] <- read.table(fname, header=TRUE)
     if(rmfiles) unlink(fname)
 
@@ -225,6 +271,9 @@ function(y, pre=TRUE, p=0.9, B=100, T=100, thin=10, r=1, delta=1,
                      "% done   \r", sep=""))
     }
   }
+
+  ## cap off with a final newline
+  if(verb >= 1) cat("\n")
 
   return(trace)
 }

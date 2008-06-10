@@ -14,7 +14,7 @@
 \usage{
 \method{print}{blasso}(x, ...)
 \method{summary}{blasso}(object, burnin = 0, ...)
-\method{plot}{blasso}(x, which=c("coef", "s2", "lambda2", "tau2i"),
+\method{plot}{blasso}(x, which=c("coef", "s2", "lambda2", "tau2i", "m"),
      burnin = 0, ... )
 \method{print}{summary.blasso}(x, ...)
 }
@@ -29,7 +29,8 @@
   \item{burnin}{ number of burn-in rounds to discard before
     reporting summaries and making plots.  Must be non-negative
     and less than \code{x$T}}
-  \item{which}{ indicates the parameter whose summary should be plotted}
+  \item{which}{ indicates the parameter whose summary should be plotted;
+     does not apply to the summary }
   \item{...}{ passed to \code{\link{print.blasso}}, or
       \code{\link{plot.default}}}
   }
@@ -68,8 +69,11 @@
   \item{coef}{ a joint \code{summary} of \code{x$mu} and
     the columns of \code{x$beta}}
   \item{s2}{ a \code{summary} of \code{x$s2}}
-  \item{lambda2}{ a \code{summary} of \code{x$lambda2}}
-  \item{tau2}{ a \code{summary} of the columns of \code{x$tau2i}}
+  \item{lambda2}{ a \code{summary} of \code{x$lambda2} when lasso is
+    active }
+  \item{tau2}{ a \code{summary} of the columns of \code{x$tau2i} when
+    lasso is active }
+  \item{b0}{ NEED TO DOCUMENT THIS }
 }
 
 \author{ Robert B. Gramacy \email{bobby@statslab.cam.ac.uk} }

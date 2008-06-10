@@ -14,8 +14,10 @@
 }
 
 \usage{
-bmonomvn(y, pre = TRUE, p = 0.9, B = 100, T = 100, thin = 10,
-         r = 1, delta = 1, rao.s2 = TRUE, verb = 1, trace = FALSE)
+bmonomvn(y, pre = TRUE, p = 0.9, B = 100, T = 200, thin = 5,
+         method = c("default", "rjlasso", "rjlsr", "lasso"),
+         capm = method!="lasso", r = 2, delta = 0.1, rao.s2 = TRUE,
+         verb = 1, trace = FALSE)
 }
 
 \arguments{
@@ -41,6 +43,20 @@ bmonomvn(y, pre = TRUE, p = 0.9, B = 100, T = 100, thin = 10,
     place after burn-in, during which samples are saved }
   \item{thin}{ level of thinning in the MCMC, i.e., the number of MCMC
     rounds must be collected before a sample is saved }
+  \item{method}{ indicates the specific lasso regression specification
+    to be used.  The \code{"default"} uses the Trevor & Park formulation
+    until \eqn{p \geq n}{p >= n} at which point a Reversible Jump (RJ)
+    is turned on in order to keep the number of non-zero regression
+    coefficients \eqn{\beta}{beta} at most \eqn{n}{n} (when \code{capm =
+      TRUE}.  The \code{"rjlasso"} method uses RJ at all times that
+    the lasso is used, whereas \code{"rjlsr"} uses RJ without the
+    lasso prior.  Finally, the \code{"lasso"} method never uses RJ.
+    See \code{\link{blasso}} and note below for more details}
+  \item{capm}{ when \code{TRUE} this argument indicates that the
+    number of components of
+    \eqn{\beta}{beta} should not exceed \eqn{n}{n}, the number of
+    response variables in a particular regression.  This argument
+    is ignored when using \code{method = "lasso"} }
   \item{r}{ alpha (shape) parameter to the gamma distribution prior for
   the lasso parameter lambda }
   \item{delta}{ beta (rate) parameter to the gamma distribution prior
@@ -72,9 +88,10 @@ bmonomvn(y, pre = TRUE, p = 0.9, B = 100, T = 100, thin = 10,
   Whenever the regression model is ill--posed (i.e., when there are
   more  covariates than  responses, or a
   \dQuote{big \code{p} small \code{n}} problem) then
-  Bayesian Lasso regressions are used instead.
-  See the Park \& Casella reference below.
-  The \code{p} argument
+  Bayesian Lasso regressions -- possibly augmented with Reversible
+  Jump (RJ) for model selection -- are used instead.
+  See the Park \& Casella reference below, and the \code{\link{blasso}}
+  documentation.  The \code{p} argument
   can be used to turn on Lasso regressions at other times.
 
   One difference between the Bayesian and MLE approach is that the
@@ -142,20 +159,23 @@ bmonomvn(y, pre = TRUE, p = 0.9, B = 100, T = 100, thin = 10,
 
 \author{ Robert B. Gramacy \email{bobby@statslab.cam.ac.uk} }
 
-%  \note{
-%   ~~further notes~~ 
+\note{
+  Whenever the \code{bmonomvn} algorithm requires a regression
+  where \code{p >= n}, i.e., if any of the columns in the \code{Y}
+  matrix have fewer non--\code{NA} elements than the number of
+  columns with more non--\code{NA} elements. then it is helpful
+  to employ both lasso and RJ method.  Therefore, should this
+  case be detected and one of the \code{"rjlsr"} or \code{"lasso"}
+  methods is specified, a warning will be printed
+}
 
- %~Make other sections like Warning with \section{Warning }{....} ~
-% }
-
-\seealso{ \code{\link{monomvn}}, \code{\link[norm]{em.norm}}
-  in the \pkg{norm} package, and \code{\link[mvnmle]{mlest}}
-  in the \pkg{mvnmle} package}
+\seealso{ \code{\link{blasso}}, \code{\link{monomvn}},
+  \code{\link[norm]{em.norm}} in the \pkg{norm} package,
+  and \code{\link[mvnmle]{mlest}} in the \pkg{mvnmle} package}
 
 \examples{
 ## standard usage, duplicating the results in
-## Little and Rubin, section 7.4.3 -- try adding 
-## verb=3 argument for a step-by-step breakdown
+## Little and Rubin, section 7.4.3
 data(cement.miss)
 out <- bmonomvn(cement.miss)
 out
@@ -170,20 +190,20 @@ out$S
 xmuS <- randmvn(1000, 100)
 
 ## randomly impose monotone missingness
-xmiss <- rmono(xmuS$x, m=110)
+xmiss <- rmono(xmuS$x)
 
 ## using least squares only when necessary
 out.b <- bmonomvn(xmiss)
 out.b
-kl.norm(out.b$mu, out.b$S, xmuS$mu, xmuS$S)
+kl.norm(out.b$mu, out.b$S, xmuS$mu, xmuS$S, symm=TRUE)
 out.mle <- monomvn(xmiss)
-kl.norm(out.mle$mu, out.mle$S, xmuS$mu, xmuS$S)
+kl.norm(out.mle$mu, out.mle$S, xmuS$mu, xmuS$S, symm=TRUE)
 
 ## using least squares sparingly
 out.b.s <- bmonomvn(xmiss, p=0.25)
-kl.norm(out.b.s$mu, out.b.s$S, xmuS$mu, xmuS$S)
+kl.norm(out.b.s$mu, out.b.s$S, xmuS$mu, xmuS$S, symm=TRUE)
 out.mle.s <- monomvn(xmiss, p=0.25)
-kl.norm(out.mle.s$mu, out.mle.s$S, xmuS$mu, xmuS$S)
+kl.norm(out.mle.s$mu, out.mle.s$S, xmuS$mu, xmuS$S, symm=TRUE)
 }
 
 % Add one or more standard keywords, see file 'KEYWORDS' in the

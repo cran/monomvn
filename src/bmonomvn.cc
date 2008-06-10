@@ -35,7 +35,8 @@ extern "C"
 #include "blasso.h"
 
 Bmonomvn::Bmonomvn(const unsigned int M, const unsigned int N, double **Y, 
-		   int *n, const double p, const double r, const double delta, 
+		   int *n, const double p, const unsigned int method, 
+		   const bool capm, const double r, const double delta, 
 		   const bool rao_s2, const unsigned int verb, const bool trace)
 {
   /* copy inputs */
@@ -55,13 +56,15 @@ Bmonomvn::Bmonomvn(const unsigned int M, const unsigned int N, double **Y,
   mu2_sum = new_zero_vector(M);
   S_sum = new_zero_matrix(M, M);
 
-  /* allocate the lamdba2 averages */
+  /* allocate the lamdba2 and m averages */
   lambda2_sum = new_zero_vector(M);
+  m_sum = new_zero_vector(M);
 
   /* allocate blasso array */
   blasso = (Blasso**) malloc(sizeof(Blasso*) * M);
 
   /* initize the Bayesian Lassos */
+  /* PERHAPS MAKE THIS ITS OWN FUNCTION */
   double *y = new_vector(N);
   for(unsigned int i=0; i<M; i++) {
     
@@ -71,11 +74,31 @@ Bmonomvn::Bmonomvn(const unsigned int M, const unsigned int N, double **Y,
     /*myprintf(stdout, "p=%g, n[%d]=%d, p*n[%d]=%g\n", 
       p, i, n[i], i, ((double)p)*n[i]);*/
 
+    /* choose regression model */
+    REG_MODEL rm = LASSO;
+    bool RJ = true;
+
+    /* rjlsr: uses only lsr wih RJ except when big-p-small-n */
+    if(method == 1) {
+      if(n[i] > (int) i) rm = OLS;
+      else rm = LASSO;
+    }
+
+    /* rjlasso and default: involves RJ at some stage */
+    if(method == 2 || (method == 3 && n[i] > (int) i)) 
+      RJ = false;
+
+    /* choose the maximum number of columns */
+    unsigned int mmax = i;
+    if(RJ && capm && n[i] <= (int) i) mmax = n[i]-1;
+
     /* set up the j-th regression, with initial params */
     if(p*((double)n[i]) > i) { /* using standard linear regression */
-      blasso[i] = new Blasso(i, n[i], Y, y, r, delta, OLS, rao_s2, verb-1);
+      blasso[i] = new Blasso(i, n[i], Y, y, false, mmax, r, 
+			     delta, OLS, rao_s2, verb-1);
     } else { /* using lasso */
-      blasso[i] = new Blasso(i, n[i], Y, y, r, delta, LASSO, rao_s2, verb-1);
+      blasso[i] = new Blasso(i, n[i], Y, y, RJ, mmax, r, 
+			     delta, rm, rao_s2, verb-1);
     }
   }
   free(y);
@@ -121,6 +144,7 @@ Bmonomvn::~Bmonomvn(void)
   free(tau2i);
   free(s21);
   free(lambda2_sum);
+  free(m_sum);
   if(trace_lasso) {
     fclose(trace_mu);
     fclose(trace_S);
@@ -138,32 +162,32 @@ Bmonomvn::~Bmonomvn(void)
  * appropriate header in the file 
  */
 
-void Bmonomvn::InitTrace(unsigned int m)
+void Bmonomvn::InitTrace(unsigned int i)
 {
   /* sanity checks */
-  assert(m < M);
-  assert(trace_lasso && (trace_lasso[m] == NULL));
+  assert(i < M);
+  assert(trace_lasso && (trace_lasso[i] == NULL));
 
   /* create the filename and open the file */
   char fname[256];
-  sprintf(fname, "blasso_m%d_n%d.trace", m+1, n[m]);
-  trace_lasso[m] = fopen(fname, "w");
-  assert(trace_lasso[m]);
+  sprintf(fname, "blasso_M%d_n%d.trace", i, n[i]);
+  trace_lasso[i] = fopen(fname, "w");
+  assert(trace_lasso[i]);
 
   /* add the R-type header */
-  fprintf(trace_lasso[m], "s2 mu ");
-  for(unsigned int i=0; i<m; i++)
-    fprintf(trace_lasso[m], "beta.%d ", i);
+  fprintf(trace_lasso[i], "s2 mu m ");
+  for(unsigned int j=0; j<i; j++)
+    fprintf(trace_lasso[i], "beta.%d ", j);
   
   /* maybe add lasso params to the header */
-  if(blasso[m]->RegModel() == LASSO) {
-    fprintf(trace_lasso[m], "lambda2 ");
-    for(unsigned int i=0; i<m; i++)
-      fprintf(trace_lasso[m], "tau2i.%d ", i);
+  if(blasso[i]->RegModel() == LASSO) {
+    fprintf(trace_lasso[i], "lambda2 ");
+    for(unsigned int j=0; j<i; j++)
+      fprintf(trace_lasso[i], "tau2i.%d ", j);
   }
 
   /* finish off the header */
-  fprintf(trace_lasso[m], "\n");
+  fprintf(trace_lasso[i], "\n");
 }
 
 
@@ -173,26 +197,26 @@ void Bmonomvn::InitTrace(unsigned int m)
  * print a line to the trace file of the m-th regression
  */
 
-void Bmonomvn::PrintTrace(unsigned int m)
+void Bmonomvn::PrintTrace(unsigned int i)
 {
-  assert(trace_lasso && trace_lasso[m]);
+  assert(trace_lasso && trace_lasso[i]);
   
   /* add the mean and variance to the line */
-  fprintf(trace_lasso[m], "%.20f %.20f ", s2, mu_s);
+  fprintf(trace_lasso[i], "%.20f %.20f %d ", s2, mu_s, m);
 
   /* add the regression coeffs to the file */
-  for(unsigned int i=0; i<m; i++)
-    fprintf(trace_lasso[m], "%.20f ", beta[i]);
+  for(unsigned int j=0; j<i; j++)
+    fprintf(trace_lasso[i], "%.20f ", beta[j]);
 
   /* maybe add lasso params to the file */
-  if(blasso[m]->RegModel() == LASSO) {
-    fprintf(trace_lasso[m], "%.20f ", lambda2);
-    for(unsigned int i=0; i<m; i++)
-      fprintf(trace_lasso[m], "%.20f ", tau2i[i]);
+  if(blasso[i]->RegModel() == LASSO) {
+    fprintf(trace_lasso[i], "%.20f ", lambda2);
+    for(unsigned int j=0; j<i; j++)
+      fprintf(trace_lasso[i], "%.20f ", tau2i[j]);
   }
 
   /* finish printing the line */
-  fprintf(trace_lasso[m], "\n");
+  fprintf(trace_lasso[i], "\n");
 }
 
 
@@ -264,7 +288,7 @@ void Bmonomvn::Draw(const unsigned int thin, const bool burnin)
   /* for each column of Y */
   for(unsigned int i=0; i<M; i++) {
     
-    blasso[i]->Draw(thin, &lambda2, &mu_s, beta, &s2, tau2i);
+    blasso[i]->Draw(thin, &lambda2, &mu_s, beta, &m, &s2, tau2i, &lpost);
 
     /* nothing more to do when burning in */
     if(burnin) continue;
@@ -273,6 +297,7 @@ void Bmonomvn::Draw(const unsigned int thin, const bool burnin)
     if(trace_lasso) PrintTrace(i);
 
     lambda2_sum[i] += lambda2;
+    m_sum[i] += m;
 
     /* update next component of the mean vector */
     this->mu[i] = mu_s;
@@ -303,6 +328,14 @@ void Bmonomvn::Draw(const unsigned int thin, const bool burnin)
 }
 
 
+void Bmonomvn::Methods(int *methods)
+{
+  assert(methods);
+  for(unsigned int i=0; i<M; i++)
+    methods[i] = blasso[i]->Method();
+}
+
+
 extern "C"
 {
 /*
@@ -313,9 +346,10 @@ extern "C"
  */
 
 void bmonomvn_R(int *B, int *T, int *thin, int *M, int *N, double *Y_in, 
-		int *n,	double *p, double *r, double *delta, int *rao_s2, 
-		int *verb, int *trace, double *mu, double *mu_var, double *S, 
-		double *lambda2_mean)
+		int *n,	double *p, int *method, int *capm, double *r, 
+		double *delta, int *rao_s2, int *verb, int *trace, 
+		double *mu, double *mu_var, double *S, int *methods,
+		double *lambda2_mean, double *m_mean)
 {
   double **Y;
   int i;
@@ -328,11 +362,11 @@ void bmonomvn_R(int *B, int *T, int *thin, int *M, int *N, double *Y_in,
   /* get the random number generator state from R */
   GetRNGstate();
 
-  Bmonomvn *bmonomvn = new Bmonomvn(*M, *N, Y, n, *p, *r, *delta, 
-				    (bool) (*rao_s2), *verb, (bool) (*trace));
+  Bmonomvn *bmonomvn = new Bmonomvn(*M, *N, Y, n, *p, *method, (bool) (*capm), 
+				    *r, *delta, (bool) (*rao_s2), *verb, 
+				    (bool) (*trace));
 
   // bmonomvn->PrintRegressions(stdout);
-
   if(*verb) myprintf(stdout, "%d burnin rounds\n", *B);
   bmonomvn->Rounds(*B, *thin, true);
   if(*verb) myprintf(stdout, "%d sampling rounds\n", *T);
@@ -351,9 +385,16 @@ void bmonomvn_R(int *B, int *T, int *thin, int *M, int *N, double *Y_in,
   dupv(S, *(bmonomvn->S_sum), (*M)*(*M));
   scalev(S, (*M)*(*M), 1.0/(*T));
 
-  /* bopy back the mean lambdas */
+  /* bopy back the mean lambda2s */
   dupv(lambda2_mean, bmonomvn->lambda2_sum, *M);
   scalev(lambda2_mean, *M, 1.0/(*T));
+
+  /* bopy back the mean ms */
+  dupv(m_mean, bmonomvn->m_sum, *M);
+  scalev(m_mean, *M, 1.0/(*T));
+
+  /* get the actual methods used for each regression */
+  bmonomvn->Methods(methods);
 
   delete bmonomvn;
 

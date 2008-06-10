@@ -40,49 +40,57 @@ class Bmonomvn
  private:
 
   /* inputs */
-  unsigned int M;
-  unsigned int N;
-  int *n;
-  double **Y;
-  double p;
+  unsigned int M;            /* ncol(Y) */
+  unsigned int N;            /* nrow(Y) */
+  int *n;                    /* number of non-NA in each col of Y */
+  double **Y;                /* the data matrix */
+  double p;                  /* the parsimony proportion */
 
   /* model parameters */
-  double *mu;
-  double **S;
+  double *mu;                /* estimated mean vector (in round t) */
+  double **S;                /* estimated covariance matrix (in round t) */
 
   /* for the Bayesian regressions */
-  Blasso **blasso;
+  Blasso **blasso;           /* pointer to M Bayesian lasso regressions,
+                                one for each column: n=n[i], m=i */
 
   /* printing */
-  unsigned int verb;
+  unsigned int verb;         /* verbosity argument */
   
-  /* utility vectors for addy */
-  double mu_s, lambda2, s2;
-  double *beta;
-  double *tau2i;
-  double *s21;
+  /* utility vectors for addy, used for all i */
+  int m;                     /* number of non-zero components of beta */
+  double mu_s;               /* intercept term in the regression */
+  double lambda2;            /* lasso penalty parameter */
+  double s2;                 /* regression error variance */
+  double lpost;              /* regression log posterior probability */
+  double *beta;              /* regression coefficients */
+  double *tau2i;             /* latent vector of (inverse-) diagonal 
+                                component of beta prior */
+  double *s21;               /* utility vector for calcing S from beta */
   
   /* for printing traces */
-  FILE *trace_mu;
-  FILE *trace_S;
-  FILE **trace_lasso;
+  FILE *trace_mu;            /* traces of the mean */
+  FILE *trace_S;             /* traces of the covariance */
+  FILE **trace_lasso;        /* traces of the individual regressions */
 
  protected:
 
  public:
 
   /* means */
-  double *mu_sum;
-  double **S_sum;
-  double *lambda2_sum;
+  double *mu_sum;            /* retains the sum of mu samples  */
+  double **S_sum;            /* retains the sum of S samples */
+  double *lambda2_sum;       /* retains the sum of lambda2 samples */
+  double *m_sum;             /* retains the sum of m samples */
 
   /* variances */
-  double *mu2_sum;
+  double *mu2_sum;           /* retains the sum of mu^2 samples */
 
   /* constructors and destructors */
   Bmonomvn(const unsigned int M, const unsigned int N, double **Y, int *n,
-	   const double p, const double r, const double delta, 
-	   const bool rao_S2, const unsigned int verb, const bool trace);
+	   const double p, const unsigned int RJ, const bool capm, 
+	   const double r, const double delta, const bool rao_S2, 
+	   const unsigned int verb, const bool trace);
   ~Bmonomvn();
 
   /* sampling from the posterior distribution */
@@ -94,6 +102,7 @@ class Bmonomvn
   void PrintRegressions(FILE *outfile);
   void InitTrace(unsigned int m);
   void PrintTrace(unsigned int m);
+  void Methods(int *methods);
 };
 
 
