@@ -1,3 +1,28 @@
+1.3-1 (19 June 2008)
+-----
+
+added cleanup feature to allow interupts within C code
+to blasso and bmonomvn
+
+also fixed a bug involving reading in the traces of
+bmonomvn regressions
+
+RJ models start in 90% saturate model now, instead of
+100% saturated
+
+added the ability to specify starting mu, S and lambda
+values for bmonomvn (where appropriate)
+	
+now extracting lambda from lars and ridge methods for
+use as starting values in bmonomvn
+
+now providing estimats of the variance of the estimates
+for S, via the output S.var
+
+added batch option to monomvn function in order to 
+force a regression for each column (when FALSE)
+	
+
 1.3 (9 June 2008)
 ---
 

@@ -27,7 +27,7 @@ posdef.approx(S, name = "S", quiet=FALSE)
 \references{
     Micah Altman, Jeff Gill and Michael McDonald (2003).
   \emph{Numerical Issues in Statistical Computing for the Social
-    Scientist.} John Wiley and Sons, New York.
+    Scientist.} John Wiley and Sons, New York.\cr
   \url{http://www.hmdc.harvard.edu/micah\_altman/numal/}
 
 \url{http://www.statslab.cam.ac.uk/~bobby/monomvn.html}
@@ -37,7 +37,7 @@ posdef.approx(S, name = "S", quiet=FALSE)
   Requires the \pkg{accuracy} package.  If \code{S} is far from positive
   definite, then the method may fail.
 }
-\seealso{ \code{link[accuracy]{sechol}} }
+\seealso{ \code{\link[accuracy]{sechol}} }
 \examples{
 ## most likely generates a matrix which is close to positive definite
 ## but not quite

@@ -46,18 +46,20 @@ extern "C"
 
 Blasso::Blasso(const unsigned int M, const unsigned int n, double **X, 
 	       double *Y, const bool RJ, const unsigned int Mmax, 
-	       const double r, const double delta, 
-	       const REG_MODEL reg_model, const bool rao_s2, 
-	       const unsigned int verb)
+	       double *beta_start, const double s2_start, 
+	       const double lambda2_start, const double r, 
+	       const double delta, const REG_MODEL reg_model, 
+	       const bool rao_s2, const unsigned int verb)
 {
   /* sanity checks */
   if(Mmax >= n) assert(RJ || reg_model == LASSO);
 
   /* copy RJ setting */
   this->RJ = RJ;
+  this->tau2i = NULL;
 
   /* initialize the active set of columns of X */
-  InitIndicators(M, Mmax, NULL, NULL);
+  InitIndicators(M, Mmax, beta_start);
 
   /* copy the Rao-Blackwell option for s2 */
   this->rao_s2 = rao_s2;
@@ -77,19 +79,16 @@ Blasso::Blasso(const unsigned int M, const unsigned int n, double **X,
 
   /* this function will be modified to depend on whether OLS 
      must become lasso */
-  InitParams(reg_model);
+  InitParams(reg_model, beta_start, s2_start, lambda2_start);
 
   /* initialize the residula vector */
   resid = new_dup_vector(Y, n);
 
-  /* calculate the initial linear mean and corellation matrix */
-  assert(Compute());
-
   /* only used by one ::Draw function */
   Xbeta_v = new_vector(n);
 
-  /* initialize beta so that it is non-zero */
-  for(unsigned int i=0; i<m; i++) breg->beta[i] = 1.0;
+  /* calculate the initial linear mean and corellation matrix */
+  if(!Compute()) error("ill-posed regression encountered");
 }
 
 
@@ -112,9 +111,10 @@ Blasso::Blasso(const unsigned int M, const unsigned int n, double **X,
 {
   /* copy RJ setting */
   this->RJ = RJ;
+  this->tau2i = NULL;
 
   /* initialize the active set of columns of X */
-  InitIndicators(M, Mmax, beta, tau2i);
+  InitIndicators(M, Mmax, beta);
 
   /* copy the Rao-Blackwell option for s2 */
   this->rao_s2 = rao_s2;
@@ -143,10 +143,25 @@ Blasso::Blasso(const unsigned int M, const unsigned int n, double **X,
   this->a = a;
   this->b = b;
 
-  /* calculate the initial linear mean and corellation matrix */
-  assert(Compute());
-
+  /* this utility vector is not used here */
   Xbeta_v = NULL;
+
+  /* must call ::Init function first thing */
+ }
+
+
+/*
+ * Init:
+ *
+ * part of the constructor that could result in an error
+ * so its contents are moved outside in case such an event
+ * happens which would always cause a segmentation fault
+ */
+
+void Blasso::Init()
+{
+ /* calculate the initial linear mean and corellation matrix */
+  if(!Compute()) error("ill-posed regression encountered");
 }
 
 
@@ -158,7 +173,7 @@ Blasso::Blasso(const unsigned int M, const unsigned int n, double **X,
  */
 
 void Blasso::InitIndicators(const unsigned int M, unsigned int Mmax, 
-			    double *beta, double *tau2i)
+			    double *beta)
 {
   /* copy the dimension parameters*/
   this->M = M;
@@ -171,21 +186,33 @@ void Blasso::InitIndicators(const unsigned int M, unsigned int Mmax,
   /* find out which betas are non-zero, thus setting m */
   pb = (bool*) malloc(sizeof(bool) * M);
 
+  /* check if model initialization is specified by 
+     an initial beta vector */
   if(beta != NULL) {
-    assert(tau2i != NULL);
+
+    /* fill in the indicators to true where beta[i] != NULL */
     m = 0;
     for(unsigned int i=0; i<M; i++) {
-      if(beta[i] != 0) { 
-	pb[i] = true; m++; 
-	// assert(tau2i[i] > 0);
-      }
+      if(beta[i] != 0) { pb[i] = true; m++; }
       else pb[i] = false;
       assert(m <= Mmax);
     }
-  } else {
-    for(unsigned int i=0; i<Mmax; i++) pb[i] = true;
-    m = Mmax;
-    for(unsigned int i=Mmax; i<M; i++) pb[i] = false;
+
+    /* see if we are starting in a non-saturated model when RJ
+       is false, and warn if so */
+    if(!RJ && m < M) 
+      warning("RJ=FALSE, but not in saturated model (m=%d, M=%d), try method=\"rjlasso\"",
+	      m, M);
+
+  } else { /* otherwise default depends on RJ */
+
+    /* if using RJ, then start nearly saturated */
+    if(RJ) m = (unsigned int) (0.9* Mmax);
+    else m = Mmax;  /* otherwise start saturated */
+
+    /* fill in the corresponding booleans */
+    for(unsigned int i=0; i<m; i++) pb[i] = true;
+    for(unsigned int i=m; i<M; i++) pb[i] = false;
   }
 
   /* allocate the column indicators and fill them */
@@ -307,21 +334,46 @@ BayesReg* new_BayesReg(unsigned int m, double **XtX)
  * of model
  */
 
-void Blasso::InitParams(const REG_MODEL reg_model)
+void Blasso::InitParams(const REG_MODEL reg_model, double *beta, double s2,
+			double lambda2)
 {
+  assert(tau2i == NULL);
   this->reg_model = reg_model;
 
   /* set the LASSO lambda2 and tau2i initial values */
   if(reg_model == LASSO) {
-    lambda2 = 1;
+
+    /* assign starting lambda2 value */
+    this->lambda2 = lambda2;
+    if(lambda2 <= 0) {
+      warning("starting lambda2 (%g) <= 0 is invalid (m=%d, M=%d)", 
+	      lambda2, m, M);
+      this->lambda2 = 1.0;
+    } else this->lambda2 = lambda2;
+
     tau2i = ones(m, 1.0);
   } else {
-    lambda2 = 0;
+    if(lambda2 != 0)
+      warning("starting lambda2 value (%g) must be zero (m=%d, M=%d)", 
+	      lambda2, m, M);
+    this->lambda2 = 0.0;
     tau2i = new_zero_vector(m);
   }
 
+  /* initialize the initial beta vector */
+  if(beta) {
+    /* norm the beta samples, like Efron and Hastie */
+    if(normalize && this->m > 0) scalev2(beta, M, Xnorm);
+    
+    /* copy in the beta vector */
+    copy_sub_vector(breg->beta, pin, beta, m);
+  } else {
+    /* initialize beta so that it is non-zero */
+    for(unsigned int i=0; i<m; i++) breg->beta[i] = 1.0;
+  }
+
   /* initialize regression coefficients */
-  s2 = 1;
+  this->s2 = s2;
 
   /* default setting when not big-p-small n */
   a = b = 0;
@@ -352,9 +404,17 @@ void Blasso::InitParams(double *beta, const double lambda2,
   this->lambda2 = lambda2;
   this->s2 = s2;
 
+  /* copy in the tau2i vector */
+  assert(this->tau2i == NULL);
   this->tau2i = new_sub_vector(pin, tau2i, m);
-  breg->beta = new_sub_vector(pin, beta, m);
- 
+
+  /* norm the beta samples, like Efron and Hastie */
+  if(normalize && this->m > 0) scalev2(beta, M, Xnorm);
+
+  /* copy in the beta vector */
+  copy_sub_vector(breg->beta, pin, beta, m);
+
+  /* determine the resulting regression model */
   if(lambda2 == 0 && sumv(tau2i, m) == 0) {
     reg_model = OLS;
   } else reg_model = LASSO;
@@ -465,6 +525,8 @@ void Blasso::Rounds(const unsigned int T, const unsigned int thin,
 		    double *lambda2, double *mu, double **beta, int *m,
 		    double *s2, double **tau2i, double *lpost)
 {
+  /* for helping with periodic interrupts */
+  time_t itime = time(NULL);
 
   /* assume that the initial values reside in position 0 */
   /* do T-1 MCMC rounds */
@@ -482,6 +544,9 @@ void Blasso::Rounds(const unsigned int T, const unsigned int thin,
     /* print progress meter */
     if(verb && t > 0 && ((t+1) % 100 == 0))
       myprintf(stdout, "t=%d, m=%d\n", t+1, this->m);
+
+    /* periodically check R for interrupts and flush console every second */
+    itime = my_r_process_events(itime);
   }
 
   /* (un)-norm the beta samples, like Efron and Hastie */
@@ -519,8 +584,9 @@ void Blasso::Rounds(const unsigned int T, const unsigned int thin,
 
 void Blasso::Draw(const unsigned int thin)
 {
-  /* sanity check */
-  assert(thin > 0);
+  /* do nothing if no draws */
+  if(thin == 0) return;
+
   for(unsigned int t=0; t<thin; t++) {
 
     /* draw latent variables, and update Bmu and Vb, etc. */
@@ -568,7 +634,8 @@ void Blasso::Draw(const unsigned int thin, double *lambda2, double *mu,
 		  double *beta, int *m, double *s2, double *tau2i, 
 		  double *lpost)
 {
-  // PrintInputs(stdout);
+  /* sanity check */
+  assert(Xbeta_v);
 
   /* do thin number of MCMC draws */
   Draw(thin);
@@ -588,13 +655,17 @@ void Blasso::Draw(const unsigned int thin, double *lambda2, double *mu,
   } else *mu = 0;
   
   /* mu = rnorm(Ymean, sqrt(s2/n)) - mean(Xbeta) */
-  double sd = sqrt((*s2)/n);
-  double mu_adj = rnorm(Ymean, sd);
+  double mu_adj = Ymean;
+  double sd = 0;
+  if(thin > 0) { /* no random draws if thin > 0 */
+    sd = sqrt((*s2)/n);
+    mu_adj = rnorm(Ymean, sd);
+  }
   *mu = mu_adj - (*mu);
 
   /* calculate the log posterior */
   *lpost = this->lpost;
-  *lpost += dnorm(mu_adj, Ymean, sd, 1);
+  if(thin > 0) *lpost += dnorm(mu_adj, Ymean, sd, 1);
 }
 
 
@@ -626,7 +697,7 @@ void Blasso::RJmove(void)
  * try to add another column to the model 
  */
 
-void Blasso::RJup(double q)
+void Blasso::RJup(double qratio)
 {
   /* sanity checks */
   assert(m != M);
@@ -636,7 +707,7 @@ void Blasso::RJup(double q)
   int col = pout[iout];
   double *xnew = new_vector(n);
   for(unsigned int i=0; i<n; i++) xnew[i] = X[i][col];
-  q *= ((double)(M-m))/(m+1);
+  qratio *= ((double)(M-m))/(m+1);
 
   /* randomly propose a new tau2i-component */
   tau2i = (double*) realloc(tau2i, sizeof(double)*(m+1));
@@ -697,7 +768,7 @@ void Blasso::RJup(double q)
   lalpha += breg->lprob;
 
   /* MH accept or reject */
-  if(unif_rand() < exp(lalpha)*q) { /* accept */
+  if(unif_rand() < exp(lalpha)*qratio) { /* accept */
 
     /* copy the new regression utility */
     delete_BayesReg(breg); breg = breg_new;
@@ -711,8 +782,8 @@ void Blasso::RJup(double q)
     /* add another column to the effective design matrix */
     Xp = new_bigger_matrix(Xp, n, m, n, m+1);
     dup_col(Xp, m, xnew, n);
-
     add_col(iout, col);
+    
     /* myprintf(stdout, "accepted RJ-up col=%d, pratio=%g, alpha=%g\n", 
        col, exp(lpost_new - lpost), exp(lalpha)); */
 
@@ -743,7 +814,7 @@ void Blasso::RJup(double q)
  * try to remove a column to the model 
  */
 
-void Blasso::RJdown(double q)
+void Blasso::RJdown(double qratio)
 {
  /* sanity checks */
   assert(m != 0);
@@ -751,7 +822,7 @@ void Blasso::RJdown(double q)
   /* select a column for deletion */
   int iin = (int) (m * unif_rand());
   int col = pin[iin];
-  q *= ((double)m)/(M-m+1);
+  qratio *= ((double)m)/(M-m+1);
 
   /* make the new design matrix with one fewer column */
   double **Xp_new = new_dup_matrix(Xp, n, m-1);
@@ -785,8 +856,8 @@ void Blasso::RJdown(double q)
 
   /* calculate new residual vector */
   double *resid_new = new_dup_vector(Y, n);
-  if(m-1 > 0)
-    linalg_dgemv(CblasTrans,m-1,n,-1.0,Xp_new,m-1,breg_new->beta,1,1.0,resid_new,1);
+  if(m-1 > 0) linalg_dgemv(CblasTrans,m-1,n,-1.0,Xp_new,m-1,
+			   breg_new->beta,1,1.0,resid_new,1);
 
   /* calculate the new log_posterior */
   double lpost_new = 
@@ -804,9 +875,9 @@ void Blasso::RJdown(double q)
   if(lambda2 != 0) lalpha += dexp(t2,2.0/lambda2,1);
 
   /* MH accept or reject */
-  if(unif_rand() < exp(lalpha)*q) { /* accept */
+  if(unif_rand() < exp(lalpha)*qratio) { /* accept */
 
-    /* myprintf(stdout, "accepted RJ-down, col=%d, lnew=%g, lold=%g, pr=%g, alpha=%g\n", 
+    /* myprintf(stdout, "accept RJ-down, col=%d, lnew=%g, lold=%g, pr=%g, A=%g\n", 
        col, lpost_new, lpost, exp(lpost_new - lpost), exp(lalpha)); */
 
     /* copy the new regression utility */
@@ -835,7 +906,7 @@ void Blasso::RJdown(double q)
     free(resid_new);
     delete_matrix(XtX_new); delete_matrix(Xp_new);
 
-    /* myprintf(stdout, "rejected RJ-down, col=%d, lnew=%g, lold=%g, prat=%g, alpha=%g\n", 
+    /* myprintf(stdout, "reject RJ-down, col=%d, lnew=%g, lold=%g, prat=%g, A=%g\n", 
        col, lpost_new, lpost, exp(lpost_new - lpost), exp(lalpha)); */
   }
 }
@@ -1109,7 +1180,7 @@ void Blasso::DrawTau2i(void)
   
   /* Since tau2i has changed, we need to recompute the linear
      parameters */
-  assert(Compute());
+  if(!Compute()) error("ill-posed regression encountered");
  }
 
 
@@ -1275,6 +1346,13 @@ void Blasso::remove_col(unsigned int i, unsigned int col)
 }
 
 
+/*
+ * Method:
+ *
+ * return an integer encoding of a summary of the
+ * typo of regression model employed by this model
+ */
+
 int Blasso::Method(void)
 {
   if(M == 0) return 1; /* complete */
@@ -1289,6 +1367,18 @@ int Blasso::Method(void)
     if(reg_model == LASSO) return 4; /* lasso */
     else return 5; /* ols */
   }
+}
+
+
+/*
+ * Verb:
+ *
+ * return the verbosity argument 
+ */
+
+int Blasso::Verb(void)
+{
+  return verb;
 }
 
 
@@ -1312,7 +1402,6 @@ void mvnrnd(double *x, double *mu, double **cov, double *rn,
     for(i=0;i<j+1;i++) x[j] += cov[j][i] * rn[i];
   }
 }
-
 
 
 /*
@@ -1346,7 +1435,6 @@ double mvnpdf_log(double *x, double *mu, double **cov_chol,
   discrim = linalg_ddot(n, xx, 1, xx, 1);
   free(xx);
   
-  /*myprintf(stderr, "discrim = %g, log(deg_sigma) = %g\n", discrim, log_det_sigma);*/
   return -0.5 * (discrim + log_det_sigma) - n*M_LN_SQRT_2PI;
 }
 
@@ -1483,13 +1571,19 @@ extern "C"
  * using R input and output
  */
 
+/* global variables, so they can be cleaned up */
+double **X = NULL;
+double **beta_mat;
+double  **tau2i_mat;
+Blasso *blasso = NULL;
+
 void blasso_R(int *T, int *thin, int *M, int *n, double *X_in, 
 	      double *Y, double *lambda2, double *mu, int *RJ, 
 	      int *Mmax, double *beta, int *m, double *s2, 
 	      double *tau2i, double *lpost, double *r, double *delta, 
 	      double *a, double *b, int *rao_s2, int *normalize, int *verb)
 {
-  double **X, **beta_mat, **tau2i_mat;
+
   int i;
 
   assert(*T > 1);
@@ -1513,24 +1607,48 @@ void blasso_R(int *T, int *thin, int *M, int *n, double *X_in,
   for(i=1; i<(*T); i++) tau2i_mat[i] = tau2i_mat[i-1] + (*M);
 
   /* create a new Bayesian lasso regression */
-  Blasso *blasso = 
-    new Blasso(*M, *n, X, Y, (bool) *RJ, *Mmax, beta_mat[0], 
-	       lambda2[0], s2[0], tau2i_mat[0], *r, *delta, *a, 
-	       *b, (bool) *rao_s2, (bool) *normalize, *verb);
+  blasso =  new Blasso(*M, *n, X, Y, (bool) *RJ, *Mmax, beta_mat[0], 
+		       lambda2[0], s2[0], tau2i_mat[0], *r, *delta, *a, 
+		       *b, (bool) *rao_s2, (bool) *normalize, *verb);
+
+  /* part of the constructor which could fail has been moved outside */
+  blasso->Init();
 
   /* Gibbs draws for the parameters */
   blasso->Rounds((*T)-1, *thin, &(lambda2[1]), &(mu[1]), &(beta_mat[1]), 
 		 &(m[1]), &(s2[1]), &(tau2i_mat[1]), &(lpost[1]));
 
   delete blasso;
+  blasso = NULL;
 
   /* give the random number generator state back to R */
   PutRNGstate();
 
   /* clean up */
-  free(X);
-  free(beta_mat);
-  free(tau2i_mat);
+  free(X); X = NULL;
+  free(beta_mat); beta_mat = NULL;
+  free(tau2i_mat); tau2i_mat = NULL;
+}
+
+
+/*
+ * blasso_cleanup
+ *
+ * function for freeing memory when blasso is interrupted
+ * by R, so that there won't be a (big) memory leak.  It frees
+ * the major chunks of memory, but does not guarentee to 
+ * free up everything
+ */
+
+void blasso_cleanup(void)
+{
+  /* free blasso model */
+  if(blasso) { 
+    if(blasso->Verb() >= 1)
+      myprintf(stderr, "INTERRUPT: blasso model leaked, is now destroyed\n");
+    delete blasso; 
+    blasso = NULL; 
+  }
 }
 
 

@@ -87,5 +87,5 @@ opt.ridge <- function(lambda, y2, y1)
   if(verb > 0) cat(paste(" in range [", signif(lmin,5),
                          ",", upper, "]", sep=""))
 
-  return(list(method=method, ncomp=lambda, b=bvec, res=res))
+  return(list(method=method, ncomp=lambda, lambda=lambda, b=bvec, res=res))
 }

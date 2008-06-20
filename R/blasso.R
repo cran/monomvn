@@ -29,10 +29,16 @@
 ## Bayesian Lasso linear model of Park & Casella
 
 'blasso' <-
-function(X, y, T=100, thin=5, RJ=TRUE, M=NULL, beta=NULL,
+function(X, y, T=100, thin=10, RJ=TRUE, M=NULL, beta=NULL,
          lambda2=1, s2=1, tau2i=NULL, rd=c(2,0.1), ab=NULL,
          rao.s2=TRUE, normalize=TRUE, verb=1)
   {
+    ## (quitely) double-check that blasso is clean before-hand
+    blasso.cleanup()
+    
+    ## what to do if fatally interrupted?
+    on.exit(blasso.cleanup())
+
     ## dimensions of the inputs
     m <- ncol(X)
     n <- nrow(X)
@@ -101,7 +107,7 @@ function(X, y, T=100, thin=5, RJ=TRUE, M=NULL, beta=NULL,
     ## check tau2i or default
     if(is.null(tau2i)) tau2i <- rep(lambda2!=0, m)
     if(length(tau2i) != m || (lambda2 && !all(tau2i > 0)))
-      stop("must have length(tau2i) == ncol(X) and all positive when lambda2 > 0")
+      stop("must have length(tau2i) == ncol(X) and all > 0 when lambda2 > 0")
     tau2i[beta == 0] <- -1
 
     ## check r and delta (rd)
@@ -113,7 +119,7 @@ function(X, y, T=100, thin=5, RJ=TRUE, M=NULL, beta=NULL,
       ab <- c(0,0)
       if(!RJ && lambda2 > 0 && m >= n) {
         ab[1] <- 3/2
-        ab[2] <- my.Igamma.inv(ab[1], 0.99*gamma(ab[1]), lower=FALSE) * sum(y^2)
+        ab[2] <- Igamma.inv(ab[1], 0.99*gamma(ab[1]), lower=FALSE)*sum(y^2)
       } 
     }
 
@@ -188,3 +194,15 @@ function(X, y, T=100, thin=5, RJ=TRUE, M=NULL, beta=NULL,
     
     return(r)
   }
+
+
+## blasso.cleanup
+##
+## gets called when the C-side is aborted by the R-side and enables
+## the R-side to clean up the memory still allocaed to the C-side,
+## as well as whatever files were left open on the C-side
+
+"blasso.cleanup" <-  function()
+{
+  .C("blasso_cleanup", PACKAGE="monomvn")
+}

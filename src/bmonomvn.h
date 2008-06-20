@@ -67,31 +67,37 @@ class Bmonomvn
   double *tau2i;             /* latent vector of (inverse-) diagonal 
                                 component of beta prior */
   double *s21;               /* utility vector for calcing S from beta */
+  double *y;                 /* for (temporarily) storing columns of y */
   
   /* for printing traces */
   FILE *trace_mu;            /* traces of the mean */
   FILE *trace_S;             /* traces of the covariance */
   FILE **trace_lasso;        /* traces of the individual regressions */
 
- protected:
-
- public:
-
-  /* means */
+  /* for collecting means -- allocated externally */
   double *mu_sum;            /* retains the sum of mu samples  */
   double **S_sum;            /* retains the sum of S samples */
   double *lambda2_sum;       /* retains the sum of lambda2 samples */
   double *m_sum;             /* retains the sum of m samples */
 
-  /* variances */
+  /* for collecting variances -- allocated externally */
   double *mu2_sum;           /* retains the sum of mu^2 samples */
+  double **S2_sum;           /* retains the sum of S^2 samples */
+
+ protected:
+
+ public:
 
   /* constructors and destructors */
   Bmonomvn(const unsigned int M, const unsigned int N, double **Y, int *n,
-	   const double p, const unsigned int RJ, const bool capm, 
-	   const double r, const double delta, const bool rao_S2, 
-	   const unsigned int verb, const bool trace);
+	   const double p, const unsigned int verb, const bool trace);
   ~Bmonomvn();
+
+  /* Initialization */
+  void InitBlassos(const unsigned int method, const bool capm, 
+		   double *mu_start, double ** S_start, int *ncomp_start,
+		   double *lambda_start, const double r, const double delta, 
+		   const bool rao_s2, const bool trace);
 
   /* sampling from the posterior distribution */
   void Draw(const unsigned int thin, const bool burnin);
@@ -103,7 +109,16 @@ class Bmonomvn
   void InitTrace(unsigned int m);
   void PrintTrace(unsigned int m);
   void Methods(int *methods);
+  int Verb(void);
+
+  /* setting pointers to allocated memory */
+  void SetSums(double *mu_sum, double *mu2_sum, double **S_sum, 
+	       double **S2_sum, double *lambda2_sum, double *m_sum);
 };
 
+
+void get_regress(const unsigned int m, double *mu, double *s21, double **s11, 
+		 const unsigned int ncomp, double *mu_out, double *beta_out, 
+		 double *s2_out);
 
 #endif

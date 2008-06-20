@@ -39,7 +39,7 @@
 `monomvn` <-
 function(y, pre=TRUE,
          method=c("plsr", "pcr", "lasso", "lar", "forward.stagewise",
-           "stepwise", "ridge"), p=0.9, ncomp.max=Inf,
+           "stepwise", "ridge"), p=0.9, ncomp.max=Inf, batch=TRUE,
          validation=c("CV", "LOO", "Cp"), obs=FALSE, verb=0, quiet=TRUE)
   {
     ##
@@ -69,6 +69,10 @@ function(y, pre=TRUE,
     ## check pre argument
     if(length(pre) != 1 || !is.logical(pre))
       stop("pre should be a logical scalar")
+
+    ## check batch argument
+    if(length(batch) != 1 || !is.logical(batch))
+      stop("batch should be a logical scalar")
 
     ## check obs argument
     if(length(obs) != 1 || !is.logical(obs))
@@ -114,9 +118,11 @@ function(y, pre=TRUE,
 
     ## get indices where the missingness pattern changes,
     ## in particular where the missingness increases
-    naso <- nas[nao]
-    miss <- (1:m)[duplicated(naso) == FALSE]
-    miss <- c(miss, m+1)
+    if(batch) {
+      naso <- nas[nao]
+      miss <- (1:m)[duplicated(naso) == FALSE]
+      miss <- c(miss, m+1)
+    } else miss <- 1:(m+1)
 
     ## for holding the means and covars
     mu <- rep(0, m)
@@ -131,6 +137,7 @@ function(y, pre=TRUE,
     ## for saving a trace of which regression methods were used
     methods <- rep("complete", length=ncol(y))
     ncomp <- rep(NA, length=ncol(y))
+    lambda <- rep(NA, length=ncol(y))
     
     ## First make sure column 1 is complete.
     touse <- 1*(!is.na(y[,1]))
@@ -149,7 +156,8 @@ function(y, pre=TRUE,
     
     ## Mean and variance for the first length(fcol) complete columns
     mu[fcol] <- matrix(apply(as.matrix(y[,fcol]),2,mean),length(fcol),1)
-    S[fcol,fcol] <- matrix((n-1)*cov(as.matrix(y[,fcol]))/n,length(fcol),length(fcol))
+    S[fcol,fcol] <- matrix((n-1)*cov(as.matrix(y[,fcol]))/n,
+                           length(fcol),length(fcol))
 
     ## print mu and S to the screen
     if(verb >= 2) {
@@ -192,10 +200,6 @@ function(y, pre=TRUE,
           if(max(diff) > 0) stop(paste("variable", nao[j], "violates monotonicity"))
         }
 
-        ## also check for minumum number of variables
-        ##if(sum(tousej) <= 3)
-          ##stop(paste("variable ", nao[j], " has less than 4 non-NA entries", sep=""))
-
         ## a are column indices processed already, b are new indices
         ## y1 are old columns, and y2 are new columns
         a <- 1:(miss[i]-1);  b <- miss[i]:(miss[i+1]-1)
@@ -232,6 +236,7 @@ function(y, pre=TRUE,
         S[b,b] <- add$s22
         methods[b] <- add$method
         ncomp[b] <- add$ncomp
+        if(!is.null(add$lambda)) lambda[b] <- add$lambda
 
         ## print mu and S to the screen
         if(verb >= 2) {
@@ -257,6 +262,7 @@ function(y, pre=TRUE,
       S <- S[oo,oo]
       methods <- methods[oo]
       ncomp <- ncomp[oo]
+      lambda <- lambda[oo]
 
       ## do the same for obs, if calculated
       if(obs) {
@@ -284,7 +290,8 @@ function(y, pre=TRUE,
     }
 
     ## done, make initial class-list for return
-    r <- list(call=cl, methods=methods, ncomp=ncomp, mu=mu, S=S, p=p)
+    r <- list(call=cl, methods=methods, ncomp=ncomp, lambda=lambda,
+              mu=mu, S=S, p=p)
 
     ## possibly add column permutation info from pre-processing
     if(pre) {

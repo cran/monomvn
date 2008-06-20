@@ -2,8 +2,11 @@
 %% Part of the sensible export list but (currently?) documented as
 %% internal (or waiting for documentation to be written):
 %% <LIST>
-\alias{my.Igamma.inv}
-\alias{my.mvnpdf}
+\alias{Igamma.inv}
+\alias{get.lambda}
+\alias{get.regress}
+\alias{get.regress.C}
+\alias{mvnpdf.C}
 \alias{bmonomvn.read.traces}
 \alias{addy}
 \alias{regress.ls}
@@ -11,6 +14,9 @@
 \alias{regress.pls}
 \alias{regress.ridge}
 \alias{opt.ridge}
+\alias{blasso.cleanup}
+\alias{bmonomvn.cleanup}
+\alias{check.start}
 
 \title{Internal Monomvn Functions}
 \description{

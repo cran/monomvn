@@ -73,7 +73,9 @@
     active }
   \item{tau2}{ a \code{summary} of the columns of \code{x$tau2i} when
     lasso is active }
-  \item{b0}{ NEED TO DOCUMENT THIS }
+  \item{bn0}{ the estimated posterior probability that the individual
+	componets of the regression coefficiets \code{beta} is 
+ 	nonzero  }
 }
 
 \author{ Robert B. Gramacy \email{bobby@statslab.cam.ac.uk} }
