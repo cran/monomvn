@@ -161,10 +161,14 @@ function(x, ...)
       cat(sum(m), "\t", u, sep="")
       if(u != "complete" && u != "bcomplete"
          && u != "lsr" && u != "blsr") {
-        r <- range(x$ncomp[m])
-        ncomp <- "ncomp"
+        if(u == "blasso") {
+          r <- range(x$lambda2[m])
+          ncomp <- "lambda2"
+        } else {
+          r <- range(x$ncomp[m])
+          ncomp <- "ncomp"
+        }
         if(u == "ridge") ncomp <- "lambda"
-        else if(u == "blasso") ncomp <- "lambda2"
         cat(paste(", ", ncomp, " range: [",
                   signif(r[1],5), ",", signif(r[2],5), "]", sep=""))
       }

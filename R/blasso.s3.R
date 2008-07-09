@@ -30,11 +30,12 @@
 ## model
 
 'plot.blasso' <-
-  function(x, which=c("coef", "s2", "lambda2", "tau2i"), burnin=0, ...)
+  function(x, which=c("coef", "s2", "lambda2", "tau2i", "m"), burnin=0, ...)
 {
   ## check the burnin argument
   if(length(burnin) != 1 || burnin<0 || burnin >= x$T)
     stop("burnin must be a non-negative scalar < x$T")
+  burnin <- burnin+1
   
   ## check the which argument
   which <- match.arg(which)
@@ -43,9 +44,23 @@
   if(which == "coef") {
     boxplot(data.frame(mu=x$mu[burnin:x$T], x$beta[burnin:x$T,]),
             ylab="coef", main="Boxplots of regression coefficients", ...)
-  } else if(which == "s2") hist(x$s2[burnin:x$T], ...)
-  else if(which == "lambda2") hist(x$lambda2[burnin:x$T], ...)
-  else if(which == "lambda2"){
+    m <- which.max(x$lpost)
+    points(c(x$mu[m], x$beta[m,]), col=2, pch=21)
+    abline(h=0, lty=2, lwd=2)
+  } else if(which == "s2") {
+    par(mfrow=c(2,1))
+    hist(x$s2[burnin:x$T], ...)
+    plot(burnin:x$T, x$s2[burnin:x$T], type="l", main="s2 chain", ...)
+  } else if(which == "lambda2") {
+    par(mfrow=c(2,1))
+    hist(x$lambda2[burnin:x$T], ...)
+    plot(burnin:x$T, x$lambda2[burnin:x$T], type="l", main="lambda2 chain", ...)
+  } else if(which == "m") {
+    par(mfrow=c(2,1))
+    hist(x$m[burnin:x$T], ...)
+    plot(burnin:x$T, x$m[burnin:x$T], type="l", main="m chain", ...)
+  }
+  else if(which == "tau2i"){
     boxplot(data.frame(x$tau2i[burnin:x$T,]),
             main="Boxplot of tau2i", ylab="tau2i", ...)
   }
@@ -76,9 +91,17 @@ function(object, burnin=0, ...)
                      object$beta[burnin:object$T,])
     rl$coef <- summary(df)
     rl$s2 <- summary(object$s2[burnin:object$T])
-    rl$lambda2 <- summary(object$lambda2[burnin:object$T])
-    rl$tau2i <- summary(data.frame(object$tau2i[burnin:object$T,]))
 
+    ## only do if lasso
+    if(object$lambda2[1] != 0) {
+      rl$lambda2 <- summary(object$lambda2[burnin:object$T])
+      rl$tau2i <- summary(data.frame(object$tau2i[burnin:object$T,]))
+    }
+
+    ## only do if RJ
+    rl$b0 <- apply(object$beta[burnin:object$T,], 2,
+                   function(x){ sum(x != 0) })/(object$T-burnin)
+    
     ## print it or return it
     rl
   }
@@ -113,14 +136,25 @@ function(object, burnin=0, ...)
   cat("\n")
 
   ## print lambda2
-  cat("lambda2:\n")
-  print(x$lambda2)
-  cat("\n")
+  if(!is.null(x$lambda2)) {
+    cat("lambda2:\n")
+    print(x$lambda2)
+    cat("\n")
+  }
 
   ## print tau2i
-  cat("tau2i:\n")
-  print(x$tau2i)
-  cat("\n")
+  if(!is.null(x$tau2i)) {
+    cat("tau2i:\n")
+    print(x$tau2i)
+    cat("\n")
+  }
+
+  ## print b0
+  if(!is.null(x$b0)) {
+    cat("probability of beta != 0:\n")
+    print(x$b0)
+    cat("\n")
+  }
 }
 
 
@@ -140,6 +174,14 @@ function(x, ...)
     cat("\nrun for T=", x$T, " MCMC samples, with thin=", x$thin,
         " rounds between\n", sep="")
     cat("each sample\n")
+
+    ## say something about lasso and RJ
+    if(x$lambda2[1] != 0)
+      cat("\nLasso was used to shrink regression coefficients\n")
+    if(x$RJ) {
+      cat("\nReversible Jump (RJ) was used to average over subsets\n")
+      cat("of columns in the design matrix, allowing a maximum of", x$M, "\n")
+    }
 
     ## suggestion
     cat("\nTry summary.blasso and plot.blasso on this object\n\n")

@@ -1,3 +1,25 @@
+1.3 (9 June 2008)
+---
+
+added calculations of log posterior in blasso
+
+added reversible jump (RJ) variable selection where
+proposals come from "full updating" a la Brooks & Ehlers.
+This directly effects the Bayesian Lasso -- adding a
+new RJ option among others.  Of course, this method is
+now available to the bmonomvn algorithm as well
+	
+added trace plots to plot.blasso for s2 and lambda2
+in addition to new model order option "m" when RJ=TRUE
+
+changed lamnda2 default prior setting from (r,d)=(1,1)
+to (2,0.1) to avoid singular regressions when RJ is used
+with the improper s2 prior with (a,b)=(0,0)
+
+changed the way bmonomvn and blasso take many of its
+hierarchical prior arguments
+
+
 1.2 (8 May 2008)
 ---
 

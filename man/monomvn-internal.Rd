@@ -3,6 +3,7 @@
 %% internal (or waiting for documentation to be written):
 %% <LIST>
 \alias{my.Igamma.inv}
+\alias{my.mvnpdf}
 \alias{bmonomvn.read.traces}
 \alias{addy}
 \alias{regress.ls}

@@ -87,6 +87,9 @@ void wcovx_of_columns(double **cov, double **M1, double **M2, double *mean1, dou
 
 void add_matrix(double a, double **M1, double b, double **M2, unsigned int n1, 
 		unsigned int n2);
+double **new_p_submatrix(int *p, double **v, unsigned int nrows, unsigned int ncols);
+void sub_p_matrix(double **V, int *p, double **v, 
+		  unsigned int nrows, unsigned int lenp);
 void copy_p_matrix(double **V, int *p1, int *p2, double **v, unsigned int n1, 
 		   unsigned int n2);
 void add_p_matrix(double a, double **V, int *p1, int *p2, double b, double **v, 
@@ -125,6 +128,7 @@ double* new_dup_vector(double* vold, unsigned int n);
 double* new_zero_vector(unsigned int n);
 double* new_vector(unsigned int n);
 void dupv(double *v, double* vold, unsigned int n);
+void dup_col(double **M, unsigned int col, double *v, unsigned int n);
 void swap_vector(double **v1, double **v2);
 void zerov(double*v, unsigned int n);
 void add_vector(double a, double *v1, double b, double *v2, unsigned int n);
