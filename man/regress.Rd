@@ -118,6 +118,9 @@ regress(X, y, method = c("lsr", "plsr", "pcr", "lasso", "lar",
     (\code{$b}, not counting the intercept) for any of the
     \code{\link[lars]{lars}} methods; and gives the chosen
     \eqn{\lambda}{lambda} penalty parameter for \code{method = "ridge"}}
+  \item{lambda }{if \code{method} is one of \code{c("lasso",
+      "forward.stagewise", "ridge")}, then this field records the
+    \eqn{\lambda}{lambda} penalty parameter used}
   \item{b }{matrix containing the estimated regression coefficients,
     with \code{ncol(b) = ncol(y)} and the intercept
     in the first row}
@@ -134,7 +137,7 @@ regress(X, y, method = c("lsr", "plsr", "pcr", "lasso", "lar",
   Bradley Efron, Trevor Hastie, Ian Johnstone and Robert Tibshirani
   (2003).
   \emph{Least Angle Regression (with discussion).}
-  Annals of Statistics \bold{32}(2); see also
+  Annals of Statistics \bold{32}(2); see also \cr
   \url{http://www-stat.stanford.edu/~hastie/Papers/LARS/LeastAngle_2002.pdf}
   
 \url{http://www.statslab.cam.ac.uk/~bobby/monomvn.html}

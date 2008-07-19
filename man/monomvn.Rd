@@ -14,7 +14,7 @@ this function can handle an (almost) arbitrary amount of missing data.
 \usage{
 monomvn(y, pre = TRUE, method = c("plsr", "pcr", "lasso", "lar",
         "forward.stagewise", "stepwise", "ridge"), p = 0.9,
-        ncomp.max = Inf, validation = c("CV", "LOO", "Cp"),
+        ncomp.max = Inf, batch = TRUE, validation = c("CV", "LOO", "Cp"),
         obs = FALSE, verb = 0, quiet = TRUE)
 }
 
@@ -53,17 +53,22 @@ monomvn(y, pre = TRUE, method = c("plsr", "pcr", "lasso", "lar",
     in a \code{method}---only meaningful for the \code{"plsr"} or
     \code{"pcr"} methods.  Large settings can cause the execution to be
     slow as it drastically increases the cross-validation (CV) time}
+  \item{batch}{ indicates whether the colulmns with equal missingness
+    should be processed together using a multi-response regression.
+    This is more efficient if many OLS regressions are used, but can
+    lead to slightly poorer, even unstable, fits when parsimonious
+    regressions are used}
   \item{validation}{ method for cross validation when applying 
-  a \emph{parsimonious} regression method.  The default setting
-  of \code{"CV"} (randomized 10-fold cross-validation) is the faster method, 
-  but does not yield a deterministic result and does not apply for regressions
-  on less than ten responses.  \code{"LOO"} (leave-one-out cross-validation)
-  is deterministic, always applicable, and applied automatically whenever 
-  \code{"CV"} cannot be used.  When standard least squares is
-  appropriate, the methods implemented the
-  \pkg{lars} package (e.g. lasso) support model choice via the
-  \code{"Cp"} statistic, which defaults to the \code{"CV"} method
-  when least squares fails.  This argument is ignored for the
+    a \emph{parsimonious} regression method.  The default setting
+    of \code{"CV"} (randomized 10-fold cross-validation) is the faster method, 
+    but does not yield a deterministic result and does not apply for regressions
+    on less than ten responses.  \code{"LOO"} (leave-one-out cross-validation)
+    is deterministic, always applicable, and applied automatically whenever 
+    \code{"CV"} cannot be used.  When standard least squares is
+    appropriate, the methods implemented the
+    \pkg{lars} package (e.g. lasso) support model choice via the
+    \code{"Cp"} statistic, which defaults to the \code{"CV"} method
+    when least squares fails.  This argument is ignored for the
   \code{"ridge"} method, see details below}
   \item{obs}{ logical indicating whether or not to (additionally)
     compute a mean vector and covariance matrix based only on the observed
@@ -174,6 +179,9 @@ monomvn(y, pre = TRUE, method = c("plsr", "pcr", "lasso", "lar",
     \code{\link[pls]{pcr}} regression, or \code{NA} if such a method was
     not used.  This field is used to record \eqn{\lambda}{lambda}
     when \code{\link[MASS]{lm.ridge}} is used }
+  \item{lambda }{if \code{method} is one of \code{c("lasso",
+      "forward.stagewise", "ridge")}, then this field records the
+    \eqn{\lambda}{lambda} penalty parameters used}
   \item{mu.obs }{when \code{obs = TRUE} this is the \dQuote{observed}
     mean vector}
   \item{S.obs }{when \code{obs = TRUE} this is the \dQuote{observed}
@@ -183,7 +191,7 @@ monomvn(y, pre = TRUE, method = c("plsr", "pcr", "lasso", "lar",
 \references{
   Robert B. Gramacy and Joo Hee Lee (2007).
   \emph{On estimating covariances between many assets with histories 
-  of highly variable length}. Preprint available on arXiv:0710.5837:
+  of highly variable length}. Preprint available on arXiv:0710.5837:\cr
   \url{http://arxiv.org/abs/0710.5837}
 
   Roderick J.A. Little and Donald B. Rubin (2002).
@@ -198,14 +206,14 @@ monomvn(y, pre = TRUE, method = c("plsr", "pcr", "lasso", "lar",
   Bradley Efron, Trevor Hastie, Ian Johnstone and Robert Tibshirani
   (2003).
   \emph{Least Angle Regression (with discussion).}
-  Annals of Statistics \bold{32}(2); see also
+  Annals of Statistics \bold{32}(2); see also\cr
   \url{http://www-stat.stanford.edu/~hastie/Papers/LARS/LeastAngle_2002.pdf}
   
   Trevor Hastie, Robert Tibshirani and Jerome Friedman (2002).
   \emph{Elements of Statistical Learning.} Springer, NY. [HTF]
   
   Some of the code for \code{monomvn}, and its subroutines, was inspired
-  by code found on the world wide web, written by Daniel Heitjan,
+  by code found on the world wide web, written by Daniel Heitjan,\cr
   \url{http://www.cceb.upenn.edu/pages/heitjan/courses/bsta782/examples/fcn.q}
 
 \url{http://www.statslab.cam.ac.uk/~bobby/monomvn.html}

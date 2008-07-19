@@ -48,7 +48,9 @@
   if(verb > 0) cat(paste("using ", method, " (", validation, ") ", sep=""))
 
   ## choose lambda (could be different for each response)
-  nzb<- rep(NA, numreg)
+  nzb <- rep(NA, numreg)
+  if(method != "lars" && method != "stepwise") lambda <- rep(NA, numreg)
+  else lambda <- NULL
   bvec <- matrix(NA, nrow=numpred+1, ncol=numreg)
   res <- matrix(NA, nrow=numobs, ncol=numreg)
   if(verb > 0) cat("ncomp:")
@@ -80,30 +82,18 @@
       wm <- which.min(cv$cv)
       tf <- cv$cv < cv$cv[wm] + cv$cv.error[wm]
       s <- cv$fraction[(1:100)[tf][1]]
-      ## abline(v=s); readline("next: ")
-
-      ## simply choose the minimum one (taking error-bars into account
-      ## (note: seems to lead to non-posdef S)
-      ## s <- cv$fraction[which.min(cv$cv + cv$cv.error)]
-      ## abline(v=s); readline("next: ")
-      
-      ## first interpretation of one-standard error rule
-      ## tf <- cv$cv - cv$cv.error < min(cv$cv)
-      ## s <- (1:100)[tf][1]/100
-      ## abline(v=s, col=2); readline("next: ")
-      
-      ## the simple line heuristic
-      ## s <- (1:100)[which.min(cv$cv + (max(cv$cv)-min(cv$cv))*seq(0,1,length=length(cv$cv)))][1]/100
-      ## abline(v=s, col=3, lty=3); readline("next: ")
-      
+        
       ## get the lasso fit with fraction f
       reglst <- lars(x=y1,y=y2[,i],type=method, intercept=TRUE, use.Gram=use.Gram)
       co <- coef(reglst, s=s, mode="fraction")
     }
+
+    ## extract regression coefficients and parameters
     y1co <- drop(y1 %*% co)
     icept <- reglst$mu - mean(y1co)
     bvec[,i] <- c(icept, co)
     nzb[i] <- sum(co != 0)
+    if(!is.null(lambda)) lambda[i] <- get.lambda(reglst, s)
     if(verb > 0) cat(paste(" ", nzb[i], sep=""))
     
     ## use predict to get the residuals
@@ -112,5 +102,53 @@
   }
   if(verb > 0) cat(paste(" of ", min(numobs, numpred), sep=""))
 
-  return(list(method=actual.method, ncomp=nzb, b=bvec, res=res))
+  return(list(method=actual.method, ncomp=nzb, b=bvec, res=res, lambda=lambda))
 }
+
+
+## get.lambda:
+##
+## function to extract the lambda penalization parameter
+## from the lars object (obj) corresponding to the
+## fraction setting (s).  No checking of inputs is
+## currently provided
+
+get.lambda <- function(obj, s)
+  {
+    ## base case
+    if(s == 0) return(max(obj$lambda))
+    
+    ## extract the regression coefficients for the desired fraction
+    beta <- coef(obj, s=s, mode="fraction")
+
+    ## get the non-zero entries and their count
+    bnz <- beta != 0
+    lbnz <- sum(bnz)
+
+    ## extract the first non-zero coefficient
+    nz <- ((1:length(beta))[beta != 0])[1]
+    b <- beta[nz]
+
+    ## extract the norm of OLS coefficients
+    bls2 <- sum(coef(obj, s=0, mode="lambda")^2)#[nz]
+
+    ## objective function to be minimized for x
+    of <- function(x, obj, lbnz, nz, b, bls2)
+      {
+        beta <- coef(obj, s=x, mode="lambda")
+        zdiff2 <- (lbnz - sum(beta != 0))^2
+        bdiff2 <- (b - beta[nz])^2/bls2
+        r <- bdiff2 + zdiff2
+        return(r)
+      }
+
+    ## range of lambda values to optimize over
+    lrange <- c(0, max(obj$lambda))
+
+    ## find the corresponding lambda
+    r <- optimize(of, interval=lrange, obj=obj, lbnz=lbnz,
+             nz=nz, b=b, bls=bls2)$minimum
+
+    ## return the lambda that was found
+    return(r)
+  }

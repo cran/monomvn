@@ -8,7 +8,7 @@
   and Reversible Jump for model selection
 }
 \usage{
-blasso(X, y, T = 100, thin = 5, RJ = TRUE, M = NULL,
+blasso(X, y, T = 100, thin = 10, RJ = TRUE, M = NULL,
        beta = NULL, lambda2 = 1, s2 = 1, tau2i = NULL,
        rd = c(2,0.1), ab = NULL, rao.s2 = TRUE,
        normalize = TRUE, verb = 1)
@@ -82,7 +82,7 @@ blasso(X, y, T = 100, thin = 5, RJ = TRUE, M = NULL,
   model selection method described by Hans (2008), which is based on
   Geweke (1996).  Those methods require departing from the Park \& Casella
   (2008) to sample sampling from each conditional
-  \eqn{\beta_i | beta_{(-i)}, \dots}{beta[i] | beta[-i], ...} for all
+  \eqn{\beta_i | \beta_{(-i)}, \dots}{beta[i] | beta[-i], ...} for all
   \eqn{i}{i}, and that a mixture prior with a point-mass at zero be
   placed on each \eqn{\beta_i}{beta[i]}.  The method implemented
   here requires no such special prior and retains the joint sampling
@@ -130,12 +130,12 @@ blasso(X, y, T = 100, thin = 5, RJ = TRUE, M = NULL,
 
 \references{
   Park, T., Casella, G. (2008).
-  \emph{The Bayesian Lasso}, (unpublished)
+  \emph{The Bayesian Lasso}, (unpublished)\cr
   \url{http://www.stat.ufl.edu/~casella/Papers/bayeslasso.pdf}
 
   Chris Hans. (2008). \emph{Bayesian Lasso regression.}
   Technical Report No. 810, Department of Statistics,
-  The Ohio State University, Columbus, OH 43210.
+  The Ohio State University, Columbus, OH 43210.\cr
   \url{http://www.stat.osu.edu/~hans/Papers/blasso.pdf}
 
   Geweke, J. (1996). \emph{Variable selection and model comparison
@@ -144,7 +144,7 @@ blasso(X, y, T = 100, thin = 5, RJ = TRUE, M = NULL,
   
   Ehlers, R.S. and Brooks, S.P. (2005).
   \emph{Efficient Construction of Reversible Jump MCMC Proposals for
-    Autoregressive Time Series Models.} (unpublished)
+    Autoregressive Time Series Models.} (unpublished)\cr
   \url{http://www.statslab.cam.ac.uk/~steve/mypapers/ehlb02.ps}
   
   \url{http://www.statslab.cam.ac.uk/~bobby/monomvn.html}
@@ -187,7 +187,7 @@ plot(reg.blas, burnin=200, which="m")
 s <- summary(reg.blas)
 
 ## calculate the probability that each beta coef != zero
-s$b0
+s$bn0
 
 ## summarize s2
 plot(reg.blas, burnin=200, which="s2")

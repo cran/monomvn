@@ -130,6 +130,22 @@ double ** new_matrix(unsigned int n1, unsigned int n2)
 
 
 /*
+ * create a double ** Matrix from a double * vector
+ * should be freed with the free command, rather than
+ * delete_matrix
+ */
+
+double ** new_matrix_bones(double *v, unsigned int n1, unsigned int n2)
+{
+  double **M;
+  M = (double **)  malloc(sizeof(double*) * n1);
+  M[0] = v;
+  for(int i=1; i<n1; i++) M[i] = M[i-1] + n2;
+  return(M);
+}
+
+
+/*
  * create a new n1 x n2 matrix which is allocated like
  * and n1*n2 array, and copy the of n1 x n2 M into it.
  */
@@ -1103,6 +1119,7 @@ double quick_select(double arr[], int n, int k)
   int middle, ll, hh;
   
   low = 0 ; high = n-1 ; 
+  assert(k >= low && k <= high);
   for (;;) {
     if (high <= low) /* One element only */
       return arr[k] ;

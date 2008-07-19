@@ -99,7 +99,7 @@ function(object, burnin=0, ...)
     }
 
     ## only do if RJ
-    rl$b0 <- apply(object$beta[burnin:object$T,], 2,
+    rl$bn0 <- apply(object$beta[burnin:object$T,], 2,
                    function(x){ sum(x != 0) })/(object$T-burnin)
     
     ## print it or return it
@@ -149,10 +149,10 @@ function(object, burnin=0, ...)
     cat("\n")
   }
 
-  ## print b0
-  if(!is.null(x$b0)) {
+  ## print bn0
+  if(!is.null(x$bn0)) {
     cat("probability of beta != 0:\n")
-    print(x$b0)
+    print(x$bn0)
     cat("\n")
   }
 }

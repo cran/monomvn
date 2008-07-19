@@ -112,8 +112,8 @@ class Blasso
   void GetParams(double *beta, int *m, double *s2, double *tau2i, 
 		 double *lambda2) const;
   void InitIndicators(const unsigned int M, const unsigned int Mmax, 
-		      double *beta, double *tau2i);
-  void InitParams(const REG_MODEL reg_model);
+		      double *beta);
+  void InitParams(const REG_MODEL reg_model, double *beta, double s2, double lambda2);
   void InitParams(double * beta, const double lambda2, const double s2, 
 		  double *tau2i);
   void InitRegress(void);
@@ -138,11 +138,14 @@ class Blasso
 	 const double r, const double delta, 
 	 const double a, const double b, const bool rao_s2, 
 	 const bool normalize, const unsigned int verb);
-  Blasso(const unsigned int m, const unsigned int n, double **X, 
-	 double *Y, const bool RJ, unsigned int Mmax, const double r, 
-	 const double delta, const REG_MODEL reg_model, bool rao_s2, 
-	 const unsigned int verb);
+  Blasso(const unsigned int m, const unsigned int n, double **X, double *Y, 
+	 const bool RJ, unsigned int Mmax, double *beta_start, const double s2, 
+	 const double lambda2_start, const double r, const double delta, 
+	 const REG_MODEL reg_model, bool rao_s2, const unsigned int verb);
   ~Blasso();
+
+  /* initialization */
+  void Init(void);
 
   /* access functions */
   REG_MODEL RegModel(void);
@@ -169,16 +172,21 @@ class Blasso
   void PrintInputs(FILE *outfile) const;
   void PrintParams(FILE *outfile) const;
   int Method(void);
+  int Verb(void);
 };
 
+
 /* random number generation */
-void mvnrnd(double *x, double *mu, double **cov, double *rn, const unsigned int n);
+void mvnrnd(double *x, double *mu, double **cov, double *rn, 
+	    const unsigned int n);
 double rinvgauss(const double mu, const double lambda);
 
 /* for the inverse gamma distribution */
-double Igamma_inv(const double a, const double y, const int lower, const int ulog);
+double Igamma_inv(const double a, const double y, const int lower, 
+		  const int ulog);
 double Cgamma(const double a, const int log);
-double Rgamma_inv(const double a, const double y, const int lower, const int log);
+double Rgamma_inv(const double a, const double y, const int lower, 
+		  const int log);
 
 /* log pdf */
 double mvnpdf_log_dup(double *x, double *mu, double **cov, 
@@ -191,10 +199,10 @@ double log_determinant_chol(double **M, const unsigned int n);
 double mh_accep_ratio(unsigned int n, double *resid, double *x, double bnew, 
 		      double t2i, double mub, double vb, double s2);
 bool compute_BayesReg(unsigned int m, double **XtX, double *XtY, double *tau2i,
-		 double **A, double **A_util, double **Ai, double *bmu, double *ABmu,
-		 double *BAB);
-void draw_beta(const unsigned int m, BayesReg* breg, const double s2, double *rn,
-	       const bool lprob);
+		      double **A, double **A_util, double **Ai, double *bmu, 
+		      double *ABmu, double *BAB);
+void draw_beta(const unsigned int m, BayesReg* breg, const double s2, 
+	       double *rn, const bool lprob);
 void refresh_Vb(BayesReg *breg, const double s2);
 double beta_lprob(BayesReg *breg);
 

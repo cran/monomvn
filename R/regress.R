@@ -109,5 +109,6 @@ function(X, y, method=c("lsr", "plsr", "pcr", "lasso", "lar",
     }
 
     ## return method, mean vector, and mean-squared of residuals
-    return(list(call=cl, method=ret$method, ncomp=ret$ncomp, b=ret$b, S=S))
+    return(list(call=cl, method=ret$method, ncomp=ret$ncomp,
+                lambda=ret$lambda, b=ret$b, S=S))
   }

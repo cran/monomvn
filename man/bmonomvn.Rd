@@ -14,19 +14,19 @@
 }
 
 \usage{
-bmonomvn(y, pre = TRUE, p = 0.9, B = 100, T = 200, thin = 5,
+bmonomvn(y, pre = TRUE, p = 0.9, B = 100, T = 200, thin = 10,
          method = c("default", "rjlasso", "rjlsr", "lasso"),
-         capm = method!="lasso", r = 2, delta = 0.1, rao.s2 = TRUE,
-         verb = 1, trace = FALSE)
+         capm = method!="lasso", start = NULL, r = 2, delta = 0.1,
+         rao.s2 = TRUE, verb = 1, trace = FALSE)
 }
 
 \arguments{
-    \item{y}{ data \code{matrix}  were each row is interpreted as a
-    random sample from a MVN distribution with missing
-    values indicated by \code{NA}}
-  \item{pre}{ logical indicating whether pre-processing of the
-    \code{y} is to be performed.  This sorts the columns so that the
-    number of \code{NA}s is non-decreasing with the column index }
+ \item{y}{ data \code{matrix}  were each row is interpreted as a
+   random sample from a MVN distribution with missing
+   values indicated by \code{NA}}
+ \item{pre}{ logical indicating whether pre-processing of the
+   \code{y} is to be performed.  This sorts the columns so that the
+   number of \code{NA}s is non-decreasing with the column index }
  \item{p}{ when performing regressions, \code{p} is the proportion of the
    number of columns to rows in the design matrix before an
    alternative regression (lasso) is performed as if
@@ -43,7 +43,7 @@ bmonomvn(y, pre = TRUE, p = 0.9, B = 100, T = 200, thin = 5,
     place after burn-in, during which samples are saved }
   \item{thin}{ level of thinning in the MCMC, i.e., the number of MCMC
     rounds must be collected before a sample is saved }
-  \item{method}{ indicates the specific lasso regression specification
+  \item{method}{ indicates the lasso regression specification
     to be used.  The \code{"default"} uses the Trevor & Park formulation
     until \eqn{p \geq n}{p >= n} at which point a Reversible Jump (RJ)
     is turned on in order to keep the number of non-zero regression
@@ -57,6 +57,14 @@ bmonomvn(y, pre = TRUE, p = 0.9, B = 100, T = 200, thin = 5,
     \eqn{\beta}{beta} should not exceed \eqn{n}{n}, the number of
     response variables in a particular regression.  This argument
     is ignored when using \code{method = "lasso"} }
+  \item{start}{ a list depicting starting values for the parameters
+    that are use to initaliza the Markov chain.  Usually this will be
+    a \code{"monomvn"}-class object depsicting maximum likelihood
+    estimates output from the \code{\link{monomvn}} function, but
+    the relevant fields are the mean vector \code{$mu}, covariance
+    matrix \code{$S}, monotone ordering \code{$o} (for sanity checking
+    with intput \code{y}), component vector \code{$ncomp} and
+    penalty parameter vector \code{$lambda}.  See note below }
   \item{r}{ alpha (shape) parameter to the gamma distribution prior for
   the lasso parameter lambda }
   \item{delta}{ beta (rate) parameter to the gamma distribution prior
@@ -112,6 +120,9 @@ bmonomvn(y, pre = TRUE, p = 0.9, B = 100, T = 200, thin = 5,
     corresponding to the columns of \code{y} }
   \item{mu.var }{estimated variance of mean vector with columns
     corresponding to the columns of \code{y} }
+  \item{S.var }{estimated variance of the individual components of the
+    covariance matrix with columns corresponding to the columns
+    of \code{y}}
   \item{na }{ when \code{pre = TRUE} this is a vector containing number of
     \code{NA} entries in each column of \code{y}}
   \item{o }{ when \code{pre = TRUE} this is a vector containing the
@@ -119,12 +130,19 @@ bmonomvn(y, pre = TRUE, p = 0.9, B = 100, T = 200, thin = 5,
     obtained by \code{o <- \link{order}(na)}}
   \item{method }{method of regression used on each column, or
     \code{"bcomplete"} indicating that no regression was used}
-  \item{ncomp }{ Records the mean \eqn{\lambda^2}{lambda^2} value
+  \item{lambda2 }{ records the mean \eqn{\lambda^2}{lambda^2} value
     found in the trace of the Bayesian Lasso regressions.  This value
     will be zero if the corresponding column corresponds to a complete
-    case or a ordinary least squares regression.  This field is named
-    \code{$ncomp} (rather than \code{$lambda2}) for compatibility with
-    the \code{monomvn} output}
+    case or a ordinary least squares regression (these would be
+    \code{NA} entries maximum likelihood estimates are sought
+    via \code{\link{monomvn}} }
+  \item{ncomp }{ records the mean number of components
+    (columns of the design matrix) used in the regression model for
+    each column of \code{y}. If input \code{RJ = FALSE} then this simply
+    corresponds to the monotone ordering (these would correspond to
+    the \code{NA} entries when maximum likelihood estimates are sought
+    via \code{\link{monomvn}}.  When \code{RJ = TRUE}
+    the monotone ordering is an upper bound (on each entry)}
   \item{trace}{ if input \code{trace = TRUE} then this field contains
     traces of the samples of \code{mu} in the field \code{$mu} and
     of \code{S} in the field \code{$S}, and of all regression parameters
@@ -143,7 +161,7 @@ bmonomvn(y, pre = TRUE, p = 0.9, B = 100, T = 200, thin = 5,
 \references{
   Robert B. Gramacy and Joo Hee Lee (2007).
   \emph{On estimating covariances between many assets with histories 
-  of highly variable length}. Preprint available on arXiv:0710.5837:
+  of highly variable length}. Preprint available on arXiv:0710.5837:\cr
   \url{http://arxiv.org/abs/0710.5837}
 
   Roderick J.A. Little and Donald B. Rubin (2002).
@@ -151,7 +169,7 @@ bmonomvn(y, pre = TRUE, p = 0.9, B = 100, T = 200, thin = 5,
   Wilely.
 
   Park, T., Casella, G. (2008).
-  \emph{The Bayesian Lasso}, (unpublished)
+  \emph{The Bayesian Lasso}, (unpublished)\cr
   \url{http://www.stat.ufl.edu/~casella/Papers/bayeslasso.pdf}
 
 \url{http://www.statslab.cam.ac.uk/~bobby/monomvn.html}
@@ -167,6 +185,13 @@ bmonomvn(y, pre = TRUE, p = 0.9, B = 100, T = 200, thin = 5,
   to employ both lasso and RJ method.  Therefore, should this
   case be detected and one of the \code{"rjlsr"} or \code{"lasso"}
   methods is specified, a warning will be printed
+
+  It is important than any starting values provided in the
+  \code{start} input list be compatible with the regression model
+  specified by inputs \code{RJ} and \code{method}.  Any
+  incompatibilites will result with a warning that
+  (alternative) default action was taken and may result in
+  an undesired (possibly inferior) model being fit
 }
 
 \seealso{ \code{\link{blasso}}, \code{\link{monomvn}},
@@ -196,14 +221,19 @@ xmiss <- rmono(xmuS$x)
 out.b <- bmonomvn(xmiss)
 out.b
 kl.norm(out.b$mu, out.b$S, xmuS$mu, xmuS$S, symm=TRUE)
-out.mle <- monomvn(xmiss)
+out.mle <- monomvn(xmiss, method="lasso")
 kl.norm(out.mle$mu, out.mle$S, xmuS$mu, xmuS$S, symm=TRUE)
 
 ## using least squares sparingly
 out.b.s <- bmonomvn(xmiss, p=0.25)
 kl.norm(out.b.s$mu, out.b.s$S, xmuS$mu, xmuS$S, symm=TRUE)
-out.mle.s <- monomvn(xmiss, p=0.25)
+out.mle.s <- monomvn(xmiss, p=0.25, method="lasso")
 kl.norm(out.mle.s$mu, out.mle.s$S, xmuS$mu, xmuS$S, symm=TRUE)
+
+## using the maximum likelihood solution to initialize
+## the Markov chain and avoid burn-in.  
+out.b2.s <- bmonomvn(xmiss, p=0.25, B=0, start=out.mle.s, method="rjlasso")
+kl.norm(out.b2.s$mu, out.b2.s$S, xmuS$mu, xmuS$S, symm=TRUE)
 }
 
 % Add one or more standard keywords, see file 'KEYWORDS' in the
