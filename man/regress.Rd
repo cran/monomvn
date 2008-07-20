@@ -4,7 +4,7 @@
 \title{ Switch function for least squares and parsimonious monomvn regressions }
 \description{
   This function fits the specified ordinary least squares or
-  parsimonious regression (plsr. pcr, ridge, and lars methods)
+  parsimonious regression (plsr, pcr, ridge, and lars methods)
   depending on the arguments provided, and returns estimates of
   coefficients and (co-)variances in a \code{monomvn} friendly
   format
@@ -18,8 +18,8 @@ regress(X, y, method = c("lsr", "plsr", "pcr", "lasso", "lar",
 %- maybe also 'usage' for other objects documented here.
 \arguments{
   \item{X}{\code{data.frame}, \code{matrix}, or vector of inputs \code{X} }
-  \item{y}{ matrix of output responses \code{y} of row-length equal to the
-    leading dimension (rows) of \code{X}, i.e., \code{nrow(Y) ==
+  \item{y}{ matrix of responses \code{y} of row-length equal to the
+    leading dimension (rows) of \code{X}, i.e., \code{nrow(y) ==
       nrow(X)}; if \code{y} is a vector, then \code{nrow} may be
     interpreted as \code{length} }
   \item{method}{ describes the type of \emph{parsimonious}
@@ -31,11 +31,12 @@ regress(X, y, method = c("lsr", "plsr", "pcr", "lasso", "lar",
     \code{"type"} argument to \link[lars]{lars})
     we have \code{"lasso"} for L1-constrained regression, \code{"lar"}
     for least angle regression, \code{"forward.stagewise"} and
-    \code{"stepwise"} for fast implementation of classical forward
+    \code{"stepwise"} for fast implementations of classical forward
     selection of covariates.  From the \pkg{MASS} package we have
     \code{"ridge"} as implemented by the \code{\link[MASS]{lm.ridge}}
     function}
-  \item{p}{ when performing regressions, \code{p} is the proportion of the
+  \item{p}{ when performing regressions, \code{0 <= p <= 1}
+    is the proportion of the
     number of columns to rows in the design matrix before an
     alternative regression \code{method} (except \code{"lsr"})
     is performed as if  least-squares regression \dQuote{fails}.
@@ -43,15 +44,15 @@ regress(X, y, method = c("lsr", "plsr", "pcr", "lasso", "lar",
     known to fail when the number of columns equals the number of rows.
     The default setting, \code{p = 0}, forces the specified
     \code{method} to be used for \emph{every} regression unless
-    \code{"lsr"} is specified but is unstable.
+    \code{method = "lsr"} is specified but is unstable.
     Intermediate settings of \code{p} allow the user
     to specify that least squares regressions are preferred only
     when there are sufficiently more rows in the design matrix
     (\code{X}) than columns}
-  \item{ncomp.max}{ maximal number of (principal) components to include
+  \item{ncomp.max}{ maximal number of (principal) components to consider
     in a \code{method}---only meaningful for the \code{"plsr"} or
     \code{"pcr"} methods.  Large settings can cause the execution to be
-    slow as it drastically increases the cross-validation (CV) time}
+    slow as they drastically increases the cross-validation (CV) time}
   \item{validation}{ method for cross validation when applying 
     a \emph{parsimonious} regression method.  The default setting
     of \code{"CV"} (randomized 10-fold cross-validation) is the faster method, 
@@ -66,9 +67,9 @@ regress(X, y, method = c("lsr", "plsr", "pcr", "lasso", "lar",
   when least squares fails.  This argument is ignored for the
   \code{"ridge"} method, see details below}
   \item{verb}{ whether or not to print progress indicators.  The default
-    (\code{verb = 0}) keeps quiet,  This
-    argument is provided for \code{\link{monomvn}} and is not intended
-    to be set by the user via this interface }
+    (\code{verb = 0}) keeps quiet.  This argument is provided for
+    \code{\link{monomvn}} and is not intended to be set by the user
+    via this interface }
   \item{quiet}{ causes \code{\link{warning}}s about regressions to be silenced
     when \code{TRUE}}
 }
@@ -78,9 +79,9 @@ regress(X, y, method = c("lsr", "plsr", "pcr", "lasso", "lar",
   of non-zero coefficients (or principal components) in the model.
   Towards this end, the \pkg{pls} and \pkg{lars} packages support
   10-fold cross validation (CV) or leave-one-out (LOO) CV estimates of
-  root mean squared error (ERROR).  See \pkg{pls} and \pkg{lars} for
-  more details.  \code{regress} uses CV in all cases except when
-  \code{nrow(X) <= 10}, in which case CV fails and
+  root mean squared error.  See \pkg{pls} and \pkg{lars} for
+  more details.  The \code{regress} function uses CV in all cases
+  except when \code{nrow(X) <= 10}, in which case CV fails and
   LOO is used.  Whenever \code{nrow(X) <= 3} \code{\link[pls]{pcr}}
   fails,  so \code{\link[pls]{plsr}} is used instead.
   If \code{quiet = FALSE} then a \code{\link{warning}}
@@ -98,7 +99,7 @@ regress(X, y, method = c("lsr", "plsr", "pcr", "lasso", "lar",
   (\code{ncomp} for \pkg{pls}), or number of coefficients (for
   \pkg{lars}) which explains a large amount of the variability (RMSE).
   The \pkg{lars} methods use a \dQuote{one-standard error rule} outlined
-  in Section 7.10, page 216 of HTF, in the reference below.  The
+  in Section 7.10, page 216 of HTF below.  The
   \pkg{pls} package does not currently support the calculation of
   standard errors for CV estimates of RMSE, so a simple linear penalty
   for increasing \code{ncomp} is used instead.  The ridge constant
@@ -147,14 +148,14 @@ regress(X, y, method = c("lsr", "plsr", "pcr", "lasso", "lar",
 
 \note{
   The CV in \pkg{plsr} and \pkg{lars} are random in nature, and so
-  can be dependent on the random seed.  Use \code{validation=LOO} for
+  can be dependent on the random seed.  Use \code{validation="LOO"} for
   deterministic (but slower) result
 
   Be warned that the \pkg{lars} implementation of
   \code{"forward.stagewise"} can sometimes get stuck in
   (what seems like) an infinite loop.
   This is not a bug in the \code{regress} function;
-  the bug has been reported to the authors.
+  the bug has been reported to the authors of \pkg{lars}
 }
 \seealso{ \code{\link{monomvn}}, \code{\link{blasso}},
   \code{\link[lars]{lars}} in the \pkg{lars} library,

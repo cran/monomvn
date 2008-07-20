@@ -73,6 +73,8 @@ void center_rows(double **M, double *center, unsigned int n1, unsigned int n2);
 void norm_columns(double **M, double *norm, unsigned int n1, unsigned int n2);
 void sum_of_columns_f(double *s, double **M, unsigned int n1, unsigned int n2,
 		      double(*f)(double));
+void sum_of_each_column_f(double *s, double **M, unsigned int *n1, 
+			  unsigned int n2, double(*f)(double));
 void wmean_of_columns(double *mean, double **M, unsigned int n1, unsigned int n2, 
 		      double *weight);
 void wmean_of_columns_f(double *mean, double **M, unsigned int n1, unsigned int n2, 

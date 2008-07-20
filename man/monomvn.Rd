@@ -35,14 +35,14 @@ monomvn(y, pre = TRUE, method = c("plsr", "pcr", "lasso", "lar",
     \code{"type"} argument to \link[lars]{lars})
     we have \code{"lasso"} for L1-constrained regression, \code{"lar"}
     for least angle regression, \code{"forward.stagewise"} and
-    \code{"stepwise"} for fast implementation of classical forward
+    \code{"stepwise"} for fast implementations of classical forward
     selection of covariates.  From the \pkg{MASS} package we have
     \code{"ridge"} as implemented by the \code{\link[MASS]{lm.ridge}}
     function}
   \item{p}{ when performing regressions, \code{p} is the proportion of the
     number of columns to rows in the design matrix before an
     alternative regression \code{method} (those above) is performed as if
-    least-squares regression \dQuote{failed}.  Least-squares regression is
+    least-squares regression has \dQuote{failed}.  Least-squares regression is
     known to fail when the number of columns equals the number of rows,
     hence a default of \code{p = 0.9} close to \code{1}.
     Alternatively, setting \code{p = 0}
@@ -53,16 +53,17 @@ monomvn(y, pre = TRUE, method = c("plsr", "pcr", "lasso", "lar",
     in a \code{method}---only meaningful for the \code{"plsr"} or
     \code{"pcr"} methods.  Large settings can cause the execution to be
     slow as it drastically increases the cross-validation (CV) time}
-  \item{batch}{ indicates whether the colulmns with equal missingness
+  \item{batch}{ indicates whether the columns with equal missingness
     should be processed together using a multi-response regression.
     This is more efficient if many OLS regressions are used, but can
     lead to slightly poorer, even unstable, fits when parsimonious
     regressions are used}
   \item{validation}{ method for cross validation when applying 
     a \emph{parsimonious} regression method.  The default setting
-    of \code{"CV"} (randomized 10-fold cross-validation) is the faster method, 
-    but does not yield a deterministic result and does not apply for regressions
-    on less than ten responses.  \code{"LOO"} (leave-one-out cross-validation)
+    of \code{"CV"} (randomized 10-fold cross-validation) is the faster
+    method, but does not yield a deterministic result and does not apply
+    for regressions on less than ten responses.
+    \code{"LOO"} (leave-one-out cross-validation)
     is deterministic, always applicable, and applied automatically whenever 
     \code{"CV"} cannot be used.  When standard least squares is
     appropriate, the methods implemented the
@@ -72,8 +73,8 @@ monomvn(y, pre = TRUE, method = c("plsr", "pcr", "lasso", "lar",
   \code{"ridge"} method, see details below}
   \item{obs}{ logical indicating whether or not to (additionally)
     compute a mean vector and covariance matrix based only on the observed
-    data, without regressions.  I.e., means are calculated via averages of each
-    non-\code{NA} entry in each column of \code{y}, and entries
+    data, without regressions.  I.e., means are calculated as averages
+    of each non-\code{NA} entry in each column of \code{y}, and entries
     \code{(a,b)} of the
     covariance matrix are calculated by applying \code{\link{cov}(ya,yb)}
     to the jointly non-\code{NA} entries of columns \code{a} and \code{b}
@@ -97,11 +98,12 @@ monomvn(y, pre = TRUE, method = c("plsr", "pcr", "lasso", "lar",
   the first set of complete columns are obtained through the standard
   \code{\link{mean}} and \code{\link{cov}} routines.
 
-  Next each successive group of column with the same missingness pattern
-  is processed in sequence.  Suppose a total of \code{j} columns have
+  Next each successive group of columns with the same missingness pattern
+  is processed in sequence (assuming \code{batch = TRUE}).
+  Suppose a total of \code{j} columns have
   been processed this way already.  Let \code{y2} represent the non-missing
   contingent of the next group of \code{k} columns of \code{y}
-  with identical missingness pattern, and let \code{y1} be the
+  with and identical missingness pattern, and let \code{y1} be the
   previously processed \code{j-1} columns of \code{y}
   containing only the rows
   corresponding to each non-\code{NA} entry in \code{y2}.  I.e.,
@@ -114,14 +116,14 @@ monomvn(y, pre = TRUE, method = c("plsr", "pcr", "lasso", "lar",
   in \code{y1} and on the \code{p} parameter.  Whenever \code{ncol(y1)
     < p*nrow(y1)} least-squares regression is used, otherwise
   \code{method = c("pcr", "plsr")}.  If ever a least-squares regression
-  fails due to co-linearity the one of the other \code{method}s is tried.
+  fails due to co-linearity then one of the other \code{method}s is tried.
   
   All \code{method}s require a scheme for estimating the amount of
-  variability explained by increasing numbers of coefficients (or principal
-  components) in the model.
+  variability explained by increasing the numbers of coefficients
+  (or principal components) in the model.
   Towards this end, the \pkg{pls} and \pkg{lars} packages support
   10-fold cross validation (CV) or leave-one-out (LOO) CV estimates of
-  root mean squared error (ERROR).  See \pkg{pls} and \pkg{lars} for
+  root mean squared error.  See \pkg{pls} and \pkg{lars} for
   more details.  \code{monomvn} uses
   CV in all cases except when \code{nrow(y1) <= 10}, in which case CV fails and
   LOO is used.  Whenever \code{nrow(y1) <= 3} \code{\link[pls]{pcr}}
@@ -139,23 +141,23 @@ monomvn(y, pre = TRUE, method = c("plsr", "pcr", "lasso", "lar",
   
   Simple heuristics are used to select a small number of components
   (\code{ncomp} for \pkg{pls}), or number of coefficients (for
-  \pkg{lars}) which explains a large amount of the variability (RMSE).
+  \pkg{lars}), which explains a large amount of the variability (RMSE).
   The \pkg{lars} methods use a \dQuote{one-standard error rule} outlined
-  in Section 7.10, page 216 of HTF, in the reference below.  The
+  in Section 7.10, page 216 of HTF below.  The
   \pkg{pls} package does not currently support the calculation of
   standard errors for CV estimates of RMSE, so a simple linear penalty
   for increasing \code{ncomp} is used instead.  The ridge constant
-  (lambda) for \code{\link[MASS]{lm.ridge}} is set using the \code{\link{optimize}}
-  function on the \code{GCV} output.
+  (lambda) for \code{\link[MASS]{lm.ridge}} is set using the
+  \code{\link{optimize}} function on the \code{GCV} output.
 
-  Based on the MLE \code{ncol(y1)+1} regression coefficients (including
+  Based on the ML \code{ncol(y1)+1} regression coefficients (including
   intercept) obtained for each of the
   columns of \code{y2}, and on the corresponding \code{matrix} of
   residual sum of squares, and on the previous \code{j-1} means
   and rows/cols of the covariance matrix, the \code{j:(j+k)} entries and
   rows/cols can be filled in as described by Little and Rubin, section 7.4.3.
 
-  Once every column has been processed the entries of the mean vector, and
+  Once every column has been processed, the entries of the mean vector, and
   rows/cols of the covariance matrix are re-arranged into their original
   order.
 }
@@ -232,7 +234,7 @@ monomvn(y, pre = TRUE, method = c("plsr", "pcr", "lasso", "lar",
   \code{"forward.stagewise"} can sometimes get stuck in
   (what seems like) an infinite loop.
   This is not a bug in the \code{monomvn} package;
-  the bug has been reported to the authors.
+  the bug has been reported to the authors of \pkg{lars}
 }
 
 \seealso{ \code{\link{bmonomvn}}, \code{\link[norm]{em.norm}}
@@ -253,40 +255,48 @@ out$S
 ## A bigger example, comparing the various methods
 ##
 
-## generate N=1000 samples from a random MVN
-xmuS <- randmvn(1000, 100)
+## generate N=100 samples from a 10-d random MVN
+xmuS <- randmvn(100, 20)
 
 ## randomly impose monotone missingness
 xmiss <- rmono(xmuS$x)
 
 ## plsr
-out.plsr <- monomvn(xmiss)
-out.plsr
-kl.norm(out.plsr$mu, out.plsr$S, xmuS$mu, xmuS$S)
+oplsr <- monomvn(xmiss, obs=TRUE)
+oplsr
+rmse.muS(oplsr$mu, oplsr$S, xmuS$mu, xmuS$S)
+
+## calculate the complete and observed RMSEs
+n <- nrow(xmiss) - max(oplsr$na)
+x.c <- xmiss[1:n,]
+mu.c <- apply(x.c, 2, mean)
+S.c <- cov(x.c)*(n-1)/n
+rmse.muS(mu.c, S.c, xmuS$mu, xmuS$S)
+rmse.muS(oplsr$mu.obs, oplsr$S.obs, xmuS$mu, xmuS$S)
 
 ## plcr
-out.pcr <- monomvn(xmiss, method="pcr")
-kl.norm(out.pcr$mu, out.pcr$S, xmuS$mu, xmuS$S)
+opcr <- monomvn(xmiss, method="pcr")
+rmse.muS(opcr$mu, opcr$S, xmuS$mu, xmuS$S)
 
 ## ridge regression
-out.ridge <- monomvn(xmiss, method="ridge")
-kl.norm(out.ridge$mu, out.ridge$S, xmuS$mu, xmuS$S)
+oridge <- monomvn(xmiss, method="ridge")
+rmse.muS(oridge$mu, oridge$S, xmuS$mu, xmuS$S)
 
 ## lasso
-out.lasso <- monomvn(xmiss, method="lasso")
-kl.norm(out.lasso$mu, out.lasso$S, xmuS$mu, xmuS$S)
+olasso <- monomvn(xmiss, method="lasso")
+rmse.muS(olasso$mu, olasso$S, xmuS$mu, xmuS$S)
 
 ## lar
-out.lar <- monomvn(xmiss, method="lar")
-kl.norm(out.lar$mu, out.lar$S, xmuS$mu, xmuS$S)
+olar <- monomvn(xmiss, method="lar")
+rmse.muS(olar$mu, olar$S, xmuS$mu, xmuS$S)
 
 ## forward.stagewise
-out.fs <- monomvn(xmiss, method="forward.stagewise")
-kl.norm(out.fs$mu, out.fs$S, xmuS$mu, xmuS$S)
+ofs <- monomvn(xmiss, method="forward.stagewise")
+rmse.muS(ofs$mu, ofs$S, xmuS$mu, xmuS$S)
 
 ## stepwise
-out.step <- monomvn(xmiss, method="stepwise")
-kl.norm(out.step$mu, out.step$S, xmuS$mu, xmuS$S)
+ostep <- monomvn(xmiss, method="stepwise")
+rmse.muS(ostep$mu, ostep$S, xmuS$mu, xmuS$S)
 }
 
 \keyword{ multivariate }

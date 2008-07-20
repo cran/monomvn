@@ -88,18 +88,32 @@
       co <- coef(reglst, s=s, mode="fraction")
     }
 
-    ## extract regression coefficients and parameters
-    y1co <- drop(y1 %*% co)
-    icept <- reglst$mu - mean(y1co)
-    bvec[,i] <- c(icept, co)
+    ## get the intercept and residulas and check that they
+    ## have led to a valid regression
+    ##for(j in 1:2) {
+      ## extract regression coefficients and parameters
+      y1co <- drop(y1 %*% co)
+      icept <- reglst$mu - mean(y1co)
+      bvec[,i] <- c(icept, co)
+    
+      ## use predict to get the residuals
+      ## res[,i] <- y2[,i] - predict(reglst, s=s, newx=y1, mode="fraction")$fit
+      res[,i] <- y2[,i] - (icept + y1co)
+
+      ## check that the residuals aren't too small
+      ##if(mean(res[,i]^2) < 1e-7) ##sqrt(.Machine$double.eps))
+        ##{ co <- coef(reglst, s=0, mode="fraction"); next; }
+      ##else break;
+    ##}
+
+    ## calculate the number of nonzero coefficients, and extract lambda
     nzb[i] <- sum(co != 0)
     if(!is.null(lambda)) lambda[i] <- get.lambda(reglst, s)
     if(verb > 0) cat(paste(" ", nzb[i], sep=""))
-    
-    ## use predict to get the residuals
-    ## res[,i] <- y2[,i] - predict(reglst, s=s, newx=y1, mode="fraction")$fit
-    res[,i] <- y2[,i] - (icept + y1co)
+
   }
+
+  ## possibly cap off the print the number of components used
   if(verb > 0) cat(paste(" of ", min(numobs, numpred), sep=""))
 
   return(list(method=actual.method, ncomp=nzb, b=bvec, res=res, lambda=lambda))

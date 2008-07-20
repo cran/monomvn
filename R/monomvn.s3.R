@@ -179,8 +179,8 @@ function(x, ...)
     ## in the case of Bayesian regressions
     if(!is.null(x$B)) {
       cat("Bayesian regressions were used with B=", x$B, "\n", sep="")
-      cat("burn-in rounds and T=", x$T, " total sampling rounds\n", sep="")
-      cat("with thin=", x$thin, " rounds between each sample.\n", sep="")
+      cat("burn-in rounds and T=", x$T, " total sampling rounds;\n", sep="")
+      cat("see $thin column-wise dynamic thinning level;\n", sep="")
       if(x$rao.s2) cat("Rao-Blackwellized s2 draws were used\n")
       else cat("Standard Park & Casella s2 full-conditional draws were used\n")
       cat("\n")

@@ -1,3 +1,54 @@
+1.4 (20 July 2008)
+---
+
+removed need to store XtX in blasso explicitly, relying 
+instead on A and Xtx_diag
+
+added economy option to bmonomvn to save on storage 
+when running several (thousand) blassos, as would 
+happen for large ncol(y)
+
+precomputing full Xnorm and X (normalized) in the 
+Bonomvn module so that it doesn't need to be duplicated 
+(in smaller chunks) within all Blasso modules
+
+corrected the bn0 summary.blasso calculation to use 
+the right sampling (-burnin) range and denominator
+
+made regression traces in bmonomvn be stripped down 
+"blasso" class objects so that the blasso methods like 
+print and summary can be used
+
+made thinning level dynamic in bmonomvn, depending on
+the regression model (i.e., lasso) and RJ
+
+smaller examples throught (b)monomvn for faster R CHECK, 
+and smaller final blasso example comparing to ML lasso
+
+added parsimonious method for generating random mu and
+S within the randmvn function
+
+Ridge regression implemented as a special case in the
+blasso function (added bridge function as more direct
+interface)
+
+lambda2 now walks under the prior when m=0 under lasso, 
+but not under ridge; fixed s2 to use Jeffrey's prior 
+ecaluation in log_posterior
+
+added code to check for monotone pattern in bmonomvn
+that will provide the indicator matrix needed for
+monotone data augmentation in a later version
+
+added Ellik.norm function to calculate the expected
+log likelihood of an estimated normal distribution 
+relative to the true but don't actually use it
+
+replaced code in the documentation files to use a new
+rmse.muS function as a metric for comparison instead
+of kl.norm
+	
+
 1.3-1 (19 June 2008)
 -----
 

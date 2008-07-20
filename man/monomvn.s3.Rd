@@ -22,7 +22,7 @@
     \code{\link{print.summary.monomvn}} and
     \code{\link{plot.summary.monomvn}} }
   \item{Si}{ boolean indicating whether \code{object$S} should be
-    inverted within top look for zeros within
+    inverted and inspected for zeros within
 \code{\link{summary.monomvn}}, indicating pairwise independence;
     default is \code{FALSE} }
   \item{gt0}{ boolean indicating whether the histograms in
@@ -39,7 +39,7 @@
 
   \code{\link{print.monomvn}} prints the \code{call} followed by a
   summary of the regression  method used at each iteration of the
-  algorithm, also indicating how  many completely observed features
+  algorithm.  It also indicates how  many completely observed features
   (columns) there were in the data.
   For non-least-squares regressions (i.e., \pkg{plsr}, \pkg{lars}
   and \code{\link[MASS]{lm.ridge}} methods)
@@ -49,7 +49,7 @@
 
   \code{\link{summary.monomvn}} summarizes information about the
   number of zeros in the estimated covariance matrix \code{object$S}
-  and its inverse.
+  and its inverse
 
   \code{\link{print.summary.monomvn}} calls \code{\link{print.monomvn}}
   on the \code{object} and then prints the result of

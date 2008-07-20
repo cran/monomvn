@@ -534,6 +534,31 @@ void sum_of_columns_f(double *s, double **M, unsigned int n1, unsigned int n2,
 
 
 /*
+ * sum_of_each_column_f:
+ *
+ * fill sum[n1] with the sum of the columns of M (n1[i] x n2);
+ * each element of which is sent through function f() first;
+ * n1 must have n2 entries
+ */
+
+void sum_of_each_column_f(double *s, double **M, unsigned int *n1, 
+			  unsigned int n2, double(*f)(double))
+{
+  unsigned int i,j;
+
+  /* sanity checks */
+  if(n2 <= 0) {return;}
+  assert(s && M);
+  
+  /* calculate mean of columns */
+  for(i=0; i<n2; i++) {
+    s[i] = 0;
+    for(j=0; j<n1[i]; j++) s[i] += f(M[j][i]);
+  }
+}
+
+
+/*
  * wmean_of_columns_f:
  *
  * fill mean[n1] with the weighted mean of the columns of M (n1 x n2);

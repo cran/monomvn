@@ -56,6 +56,20 @@ Bmonomvn::Bmonomvn(const unsigned int M, const unsigned int N, double **Y,
   this->verb = verb;
   this->p = p;
 
+  /* calculate the mean of each column of X*/
+  Xmean = new_zero_vector(M);
+  wmean_of_columns(Xmean, this->Y, N, M, NULL);
+  
+  /* center X */
+  X = new_dup_matrix(Y, N, M);
+  center_columns(X, Xmean, N, M);
+  
+  /* normalize X */
+  Xnorm = new_zero_vector(M);
+  sum_of_each_column_f(Xnorm, X, (unsigned int *) n, M, sq);
+  for(unsigned int i=0; i<M; i++) Xnorm[i] = sqrt(Xnorm[i]);
+  norm_columns(X, Xnorm, N, M);
+
   /* allocate the mean vector and covariance matrix */
   mu = new_zero_vector(M);
   S = new_zero_matrix(M, M);
@@ -98,6 +112,12 @@ Bmonomvn::Bmonomvn(const unsigned int M, const unsigned int N, double **Y,
 
 Bmonomvn::~Bmonomvn(void)
 {
+  /* copied and normalized design matrices */
+  if(X) delete_matrix(X);
+  if(Xnorm) free(Xnorm);
+  if(Xmean) free(Xmean);
+
+  /* parameters */
   if(mu) free(mu);
   if(S) delete_matrix(S);
 
@@ -137,10 +157,11 @@ Bmonomvn::~Bmonomvn(void)
  * passes contrl back to R for cleanup
  */
 
-void Bmonomvn::InitBlassos(const unsigned int method, const bool capm, 
-			   double *mu_start, double **S_start, int *ncomp_start,
-			   double *lambda_start, const double r, 
-			   const double delta, const bool rao_s2, const bool trace)
+void Bmonomvn::InitBlassos(const unsigned int method, const unsigned int RJm,
+			   const bool capm, double *mu_start, double **S_start, 
+			   int *ncomp_start, double *lambda_start, const double r, 
+			   const double delta, const bool rao_s2, const bool economy, 
+			   const bool trace)
 {
   /* initialize each of M regressions */
   for(unsigned int i=0; i<M; i++) {
@@ -148,20 +169,23 @@ void Bmonomvn::InitBlassos(const unsigned int method, const bool capm,
     /* get the j-th column */
     for(unsigned int j=0; j<(unsigned)n[i]; j++) y[j] = Y[j][i];
 
-    /* choose baseline regression model to be modified by method */
-    REG_MODEL rm = LASSO;
-    bool RJ = true;
-    if(p*((double)n[i]) > i) { RJ = FALSE; rm = OLS; }
+    /* choose baseline regression model to be modified by method & RJ */
+    REG_MODEL rm = OLS;
+    bool RJ = false;
 
-    /* rjlsr: uses only lsr with RJ except when big-p-small-n */
-    if(method == 1) {
-      if(n[i] > (int) i) rm = OLS;
-      else rm = LASSO;
+    /* re-set RJ and method vi the p parameter */
+    if(p*((double)n[i]) <= i) {
+      switch (method) {
+      case 0: rm = LASSO; break;
+      case 1: rm = RIDGE; break;
+      case 2: rm = OLS; break;
+      default: error("regression method %d not supported", method);
+      }
+      
+      /* now deal with RJ */
+      if(RJm == 1) RJ = true;
+      else if(RJm == 0 && n[i] <= (int) i) RJ = true;
     }
-
-    /* rjlasso and default: involves RJ at some stage */
-    if(method == 2 || (method == 3 && n[i] > (int) i)) 
-      RJ = false;
 
     /* choose the maximum number of columns */
     unsigned int mmax = i;
@@ -172,19 +196,23 @@ void Bmonomvn::InitBlassos(const unsigned int method, const bool capm,
     double lambda2;
     if(mu_start) {
       assert(S_start && ncomp_start && lambda_start);
-      get_regress(i, mu_start, S_start[i], S_start, ncomp_start[i], &mu_s, beta, &s2);
+      get_regress(i, mu_start, S_start[i], S_start, ncomp_start[i], 
+		  &mu_s, beta, &s2);
       beta_start = beta;
+      /* THIS WOULD BE INCORRECT FOR RIDGE REGRESSION */
       lambda2 = sq(lambda_start[i]) / (4.0 * s2);
       assert(lambda2 >= 0);
     } else { 
       beta_start = NULL;
-      lambda2 = (double) (rm == LASSO);
+      lambda2 = (double) (rm != OLS);
     }
 
     /* set up the j-th regression, with initial params */
-    blasso[i] = new Blasso(i, n[i], Y, y, RJ, mmax, beta_start, s2,
-			   lambda2, r, delta, rm, rao_s2, verb-1);
-    blasso[i]->Init();
+    double Xnorm_scale = ((double) n[i])/N;
+    blasso[i] = new Blasso(i, n[i], Y, Xnorm, Xnorm_scale, Xmean, M, 
+			   y, RJ, mmax, beta_start, s2, lambda2, r, 
+			   delta, rm, rao_s2, verb-1);
+    if(!economy) blasso[i]->Init();
   }
 
   /* initialize traces if we're gathering them */
@@ -219,15 +247,18 @@ void Bmonomvn::InitTrace(unsigned int i)
   assert(trace_lasso[i]);
 
   /* add the R-type header */
-  fprintf(trace_lasso[i], "s2 mu m ");
+  fprintf(trace_lasso[i], "s2 mu ");
+  if(blasso[i]->UsesRJ()) fprintf(trace_lasso[i], "m ");
   for(unsigned int j=0; j<i; j++)
     fprintf(trace_lasso[i], "beta.%d ", j);
   
   /* maybe add lasso params to the header */
-  if(blasso[i]->RegModel() == LASSO) {
+  REG_MODEL rm = blasso[i]->RegModel();
+  if(rm != OLS) {
     fprintf(trace_lasso[i], "lambda2 ");
-    for(unsigned int j=0; j<i; j++)
-      fprintf(trace_lasso[i], "tau2i.%d ", j);
+    if(rm == LASSO)
+      for(unsigned int j=0; j<i; j++)
+	fprintf(trace_lasso[i], "tau2i.%d ", j);
   }
 
   /* finish off the header */
@@ -246,17 +277,20 @@ void Bmonomvn::PrintTrace(unsigned int i)
   assert(trace_lasso && trace_lasso[i]);
   
   /* add the mean and variance to the line */
-  fprintf(trace_lasso[i], "%.20f %.20f %d ", s2, mu_s, m);
+  fprintf(trace_lasso[i], "%.20f %.20f ", s2, mu_s);
+  if(blasso[i]->UsesRJ()) fprintf(trace_lasso[i], "%d ", m);
 
   /* add the regression coeffs to the file */
   for(unsigned int j=0; j<i; j++)
     fprintf(trace_lasso[i], "%.20f ", beta[j]);
 
   /* maybe add lasso params to the file */
-  if(blasso[i]->RegModel() == LASSO) {
+  REG_MODEL rm = blasso[i]->RegModel();
+  if(rm != OLS) {
     fprintf(trace_lasso[i], "%.20f ", lambda2);
-    for(unsigned int j=0; j<i; j++)
-      fprintf(trace_lasso[i], "%.20f ", tau2i[j]);
+    if(rm == LASSO)
+      for(unsigned int j=0; j<i; j++)
+	fprintf(trace_lasso[i], "%.20f ", tau2i[j]);
   }
 
   /* finish printing the line */
@@ -290,7 +324,7 @@ void Bmonomvn::PrintRegressions(FILE *outfile)
  */
 
 void Bmonomvn::Rounds(const unsigned int T, const unsigned int thin, 
-		      const bool burnin)
+		      const bool economy, const bool burnin)
 {
   /* sanity check */
   if(!burnin) assert(mu_sum && mu2_sum && S_sum && S2_sum);
@@ -305,8 +339,8 @@ void Bmonomvn::Rounds(const unsigned int T, const unsigned int thin,
       myprintf(stdout, "t=%d\n", t+1);
 
     /* take one draw after thinning */
-    Draw(thin, burnin);
-    
+    Draw(thin, economy, burnin);
+
     /* record samples unless burning in */
     if(! burnin) {
 
@@ -339,16 +373,22 @@ void Bmonomvn::Rounds(const unsigned int T, const unsigned int thin,
  * and the other calculations are skipped.
  */
 
-void Bmonomvn::Draw(const unsigned int thin, const bool burnin)
+void Bmonomvn::Draw(const unsigned int thin, const bool economy, const bool burnin)
 {
   /* sanity checks */
   if(!burnin) assert(lambda2_sum && m_sum);
 
   /* for each column of Y */
   for(unsigned int i=0; i<M; i++) {
+
+    /* need to initialse each blasso before it is used if economizing */
+    if(economy) blasso[i]->Init();
     
     /* obtain a draw from the i-th Bayesian lasso parameters */
     blasso[i]->Draw(thin, &lambda2, &mu_s, beta, &m, &s2, tau2i, &lpost);
+
+    /* now un-init if economizing */
+    if(economy) blasso[i]->Economize();
 
     /* nothing more to do when burning in */
     if(burnin) continue;
@@ -394,6 +434,21 @@ void Bmonomvn::Methods(int *methods)
   assert(methods);
   for(unsigned int i=0; i<M; i++)
     methods[i] = blasso[i]->Method();
+}
+
+
+/*
+ * Thin:
+ *
+ * get the regression method associated with each regression
+ * model encoded as an integer 
+ */
+
+void Bmonomvn::Thin(const unsigned int thin, int *thin_out)
+{
+  assert(thin_out);
+  for(unsigned int i=0; i<M; i++)
+    thin_out[i] = blasso[i]->Thin(thin);
 }
 
 
@@ -514,12 +569,12 @@ double **S_mean = NULL;
 double **S_var = NULL;
 
 void bmonomvn_R(int *B, int *T, int *thin, int *M, int *N, double *Y_in, 
-		int *n,	double *p, int *method, int *capm, double *mu_start, 
-		double *S_start_in, int *ncomp_start, double *lambda_start,
-		double *r, double *delta, int *rao_s2, int *verb, int *trace, 
-		double *mu_mean, double *mu_var, double *S_mean_out, 
-		double *S_var_out, int *methods, double *lambda2_mean, 
-		double *m_mean)
+		int *n,	double *p, int *method, int *RJ, int *capm, 
+		double *mu_start, double *S_start_in, int *ncomp_start, 
+		double *lambda_start, double *rd, int *rao_s2, int *economy, 
+		int *verb, int *trace, double *mu_mean, double *mu_var, 
+		double *S_mean_out, double *S_var_out, int *methods, 
+		int *thin_out, double *lambda2_mean, double *m_mean)
 {
   /* copy the vector input Y into matrix form */
   Y = new_matrix_bones(Y_in, *N, *M);
@@ -538,20 +593,20 @@ void bmonomvn_R(int *B, int *T, int *thin, int *M, int *N, double *Y_in,
   bmonomvn = new Bmonomvn(*M, *N, Y, n, *p, *verb, (bool) (*trace));
 
   /* PERHAPS CONSIDER MOVING THIS CALL TO OUTSIDE THIS CONSTRUCTOR */
-  bmonomvn->InitBlassos(*method, (bool) (*capm), mu_start, S_start, ncomp_start, 
-			lambda_start, *r, *delta, (bool) (*rao_s2), 
-			(bool) (*trace));
+  bmonomvn->InitBlassos(*method, *RJ, (bool) (*capm), mu_start, S_start, 
+			ncomp_start, lambda_start, rd[0], rd[1], 
+			(bool) (*rao_s2), (bool) *economy, (bool) (*trace));
 
   /* do burn-in rounds */
   if(*verb) myprintf(stdout, "%d burnin rounds\n", *B);
-  bmonomvn->Rounds(*B, *thin, true);
+  bmonomvn->Rounds(*B, *thin, (bool) *economy, true);
   
   /* set up the mu and S sums for calculating means and variances */
   bmonomvn->SetSums(mu_mean, mu_var, S_mean, S_var, lambda2_mean, m_mean);
 
   /* and now sampling rounds */
   if(*verb) myprintf(stdout, "%d sampling rounds\n", *T);
-  bmonomvn->Rounds(*T, *thin, false);
+  bmonomvn->Rounds(*T, *thin, (bool) *economy, false);
 
   /* copy back the mean and variance of mu */
   scalev(mu_mean, *M, 1.0/(*T));
@@ -571,8 +626,9 @@ void bmonomvn_R(int *B, int *T, int *thin, int *M, int *N, double *Y_in,
   /* bopy back the mean ms */
   scalev(m_mean, *M, 1.0/(*T));
 
-  /* get the actual methods used for each regression */
+  /* get the actual methods and thinning level used for each regression */
   bmonomvn->Methods(methods);
+  bmonomvn->Thin(*thin, thin_out);
 
   /* clean up */
   delete bmonomvn;

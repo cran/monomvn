@@ -33,6 +33,12 @@
 `kl.norm` <-
 function(mu1, S1, mu2, S2, quiet=FALSE, symm=FALSE)
 {
+  ## check that library(accuracy) can be loaded
+  if(require(accuracy, quietly=TRUE) == FALSE) {
+    if(!quiet) warning("library(accuracy) is recommended for kl.norm")
+    sechol <- chol
+  }
+  
   N <- length(mu1)
 
   ## check that the mean vectors have the same length
@@ -45,25 +51,31 @@ function(mu1, S1, mu2, S2, quiet=FALSE, symm=FALSE)
     stop("must have nrow(S2) == ncol(S2) == length(mu2)")
 
   ## force positive definiteness of the covs
-  S1 <- posdef.approx(S1, "S1", quiet)
-  S2 <- posdef.approx(S2, "S2", quiet)
+  ## S1 <- posdef.approx(S1, "S1", quiet)
+  ## S2 <- posdef.approx(S2, "S2", quiet)
+  S1c <- sechol(S1)
+  S2c <- sechol(S2)
 
   ##
   ## distance calculation in parts
   ##
 
   ## calculate the determinants in log space
-  ld2 <- determinant(S2, logarithm=TRUE)
-  if(ld2$sign == -1) { warning("S2 is not posdef"); return(Inf) }
-  ld1 <- determinant(S1, logarithm=TRUE)
-  if(ld1$sign == -1) { warning("S1 is not posdef"); return(Inf) }
-  ldet <- ld2$modulus[1] - ld1$modulus[1]
-
+  ## ld2 <- determinant(S2, logarithm=TRUE)
+  ## if(ld2$sign == -1) { warning("S2 is not posdef"); return(Inf) }
+  ld2 <- 2*sum(log(diag(S2c)))
+  ##ld1 <- determinant(S1, logarithm=TRUE)
+  ## if(ld1$sign == -1) { warning("S1 is not posdef"); return(Inf) }
+  ld1 <- 2*sum(log(diag(S1c)))
+  ##ldet <- ld2$modulus[1] - ld1$modulus[1]
+  ldet <- ld2 - ld1
+  
   ## rest of the calculation
-  S2i <- solve(S2)
-  tr <- sum(diag(S2i %*% S1))
+  ## S2i <- solve(S2)
+  S1i <- chol2inv(S1c)
+  tr <- sum(diag(S1i %*% S2))
   m2mm1 <- mu2 - mu1
-  qf <- as.numeric(t(m2mm1) %*% S2i %*% m2mm1)
+  qf <- as.numeric(t(m2mm1) %*% (S1i %*% m2mm1))
 
   ## return the correct combination of the parts
   r <- 0.5*(ldet + tr + qf - N)
@@ -71,3 +83,57 @@ function(mu1, S1, mu2, S2, quiet=FALSE, symm=FALSE)
   else return(r)
 }
 
+
+## Ellik:
+##
+## the expected log likelihood under an MVN with parameters
+## mu1 and S1 when supposing that the data follows an reference
+## MVN distribution with paramerters mu2 and S2
+
+Ellik.norm <- function(mu1, S1, mu2, S2, quiet=FALSE)
+  {
+    ## check that library(accuracy) can be loaded
+    if(require(accuracy, quietly=TRUE) == FALSE) {
+      if(!quiet) warning("library(accuracy) is recommended for Ellik")
+      sechol <- chol
+    }
+    
+    N <- length(mu1)
+    
+    ## check that the mean vectors have the same length
+    if(length(mu2) != N) stop("must have length(mu1) == length(mu2)")
+    
+    ## check the covar matrices have same dims as the mean
+    if(ncol(S1) != N || nrow(S1) != N)
+      stop("must have nrow(S1) == ncol(S1) == length(mu1)")
+    if(ncol(S2) != N || nrow(S2) != N)
+      stop("must have nrow(S2) == ncol(S2) == length(mu2)")
+
+    ## first calculate the differential entropy
+    S2c <- sechol(S2)
+    ld2 <-  2*sum(log(diag(S2c)))
+    de <- 0.5*(N*log((2*pi*exp(1))) + ld2)
+
+    ## the calculate the KL-divergence
+    S1c <- sechol(S1)
+    ld1 <- 2*sum(log(diag(S1c)))
+    S1i <- chol2inv(S1c)
+    tr <- sum(diag(S1i %*% S2))
+    m2mm1 <- mu2 - mu1
+    qf <- as.numeric(t(m2mm1) %*% (S1i %*% m2mm1))
+    ldet <- ld1 - ld2
+    kl <- 0.5*(ldet + tr + qf - N)
+
+    ## return the sum negated
+    return(-(de+kl))
+  }
+
+
+rmse.muS <- function(mu1, S1, mu2, S2)
+  {
+    resid.mu <- (mu1 - mu2)^2
+    S1 <- as.vector(S1[upper.tri(S1, TRUE)])
+    S2 <- as.vector(S2[upper.tri(S2, TRUE)])
+    resid.S <- (S1 - S2)^2
+    return(mean(c(resid.mu, resid.S)))
+  }

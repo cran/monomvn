@@ -33,20 +33,52 @@ function(S, name="S", quiet=FALSE)
   ## sanity check
   if(!is.matrix(S) || nrow(S) != ncol(S))
     stop(paste(name, "needs to be a symmetric matrix"))
-  
-  if(class(try(chol(S), silent=TRUE)) == "try-error") {
 
+  posdef <- function(S)
+    {
+      if(class(try(chol(S), silent=TRUE)) == "try-error" ||
+         class(try(solve(S), silent=TRUE)) == "try-error") return(FALSE)
+      else return(TRUE)
+    }
+  
+  if(!posdef(S)) {
+    
     ## check that library(accuracy) can be loaded
     if(require(accuracy, quietly=TRUE) == FALSE) {
-      warning(paste(name, "is not pos-def, install library(accuracy) for nearest approx"))
-      return(S)
-    } else if(!quiet) warning(paste(name, "is not pos-def, using nearest approx"))
+      warning(paste(name, "not pos-def, install library(accuracy) for approx"))
+      ## return(S)
+    }
+
+    ## print something to explain what is going on
+    if(!quiet) warning(paste(name, "is not pos-def, using nearest approx"))
 
     ## make the approximation
-    S.sechol <- sechol(S)
-    S <- t(S.sechol) %*% S.sechol
-  }
+    S.sechol <- try(sechol(S), silent=TRUE)
+    if(class(S.sechol) != "try-error")
+      S.approx <- t(S.sechol) %*% S.sechol
 
-  return(S)
+    ## see if the approximation worked.  If not, then just add a little
+    ## to the diagonal of the original matrix and move on
+    if(!posdef(S.approx)) {
+      S.approx <- S
+      eps <- 1
+      cum <- 0
+      while(1) {
+        ## diag(S.approx) <- diag(S.approx) + .Machine$double.eps
+        diag(S.approx) <- diag(S.approx) + eps
+        cum <- cum + eps
+        ## print(c(eps, cum))
+        if(posdef(S.approx)) {
+          if(eps > 2*.Machine$double.eps) {
+            diag(S.approx) <- diag(S.approx) - eps
+            cum <- cum - eps
+            eps <- eps/2
+          } else break;
+        }
+      }
+     }
+    return(S.approx)
+    
+  } else return(S)
 }
 

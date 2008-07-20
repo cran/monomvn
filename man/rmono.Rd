@@ -14,19 +14,17 @@ rmono(x, m = 7, ab = NULL)
   \item{x}{ data \code{matrix} }
   \item{m}{ minimum number of non-\code{NA} entries in each column }
   \item{ab}{ a two-vector of \eqn{\alpha}{alpha} (\code{ab[1]}) and
-    \eqn{\beta}{beta}
-    (\code{\ab[2]}) parameters to a beta distribution describing the
-      proportion of \code{NA} entries in each column.  The default
-      setting\code{ab = NULL} yields a uniform distribution }
+    \eqn{\beta}{beta} (\code{ab[2]}) parameters to a beta distribution
+    describing the proportion of \code{NA} entries in each column.
+    The default setting \code{ab = NULL} yields a uniform distribution }
 }
 \details{
-The returned \code{x} always has
-one (randomly selected)complete column, 
-and no column has fewer than \code{m >= 4}
-non-missing entries.  Otherwise, the proportion of missing entries
-in each column can be uniform, or it can have a beta
-distribution with parameters \eqn{\alpha}{alpha} (\code{ab[1]}) and
-\eqn{\beta}{beta} (\code{ab[2]})
+  The returned \code{x} always has one (randomly selected)
+  complete column, and no column has fewer than \code{m}
+  non-missing entries.  Otherwise, the proportion of missing entries
+  in each column can be uniform, or it can have a beta
+  distribution with parameters \eqn{\alpha}{alpha} (\code{ab[1]}) and
+  \eqn{\beta}{beta} (\code{ab[2]})
 }
 \value{
   returns a matrix with the same dimensions as the input \code{x}

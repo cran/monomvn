@@ -3,14 +3,16 @@
 \docType{package}
 \title{Estimation for Multivariate Normal Data with Monotone Missingness}
 \description{
-Estimation of multivariate normal data of arbitrary dimension
-where the pattern of missing data is monotone. Through the use of
-partial least squares and principal component regressions, 
-where standard regressions fail,
-the package can handle an (almost) arbitrary amount of missing
-data.  The current version supports maximum likelihood inference.
-Future versions will provide a means of sampling from a Bayesian
-posterior.
+  Estimation of multivariate normal data of arbitrary dimension
+  where the pattern of missing data is monotone. Through the use of
+  parsimonious/shrinkage regressions (plsr, pcr, lasso, ridge, etc.),
+  where standard regressions fail, the package can handle an 
+  (almost) arbitrary amount of missing data.  The current version 
+  supports maximum likelihood inference and beta implementation
+  of a Bayesian version employing a Bayesian lasso.  A fully 
+  functional standalone (beta) interface to the Bayesian lasso 
+  (from Park & Casella) and ridge regression with model selection 
+  via Reversible Jump is also provided
 }
 \details{
 For a fuller overview including a complete list of functions, demos and

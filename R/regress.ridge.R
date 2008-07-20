@@ -22,6 +22,39 @@
 #*******************************************************************************
 
 
+## opt.ridge:
+##
+## function which determines what to optimize in order to
+## chose lambda -- LOO or GCV can be used.  Generally LOO
+## is used for p >= n regressions
+
+opt.ridge <- function(lambda, y2, y1, LOO=FALSE)
+  {
+    ## sanity check
+    if(lambda <= 0) return(Inf)
+
+    ## using Leave-One-Out Cross Validation
+    if(LOO) {
+      res <- rep(NA, length(y2))
+      for (omit in 1:length(y2)) {
+        x <- y1[-omit, ,drop=FALSE]; y <- y2[-omit]
+        beta <- coef(lm.ridge(y~x, lambda=lambda))
+        fit <- y1[omit, ,drop = FALSE] %*% (beta[-1]) + beta[1]
+        res[omit] <- (y2[omit] - fit)^2
+      }
+      r <- mean(res)
+      r <- r + 2*sd(res)
+    }
+
+    ## using GCV
+    else r <- lm.ridge(y2 ~ y1, lambda=lambda)$GCV
+
+    ## print(c(ncol(y1), length(y2), lambda, r))
+    return(r)
+  }
+
+
+
 ## regress.ridge:
 ##
 ## fit y2 ~ y1  using ridge regression
@@ -30,13 +63,6 @@
 ## "big-p small-n" -- it essentially gives zero-residulas
 ## regardless of the method used to choose the ridge
 ## constant (lambda)
-
-
-opt.ridge <- function(lambda, y2, y1)
-  {
-    if(lambda <= 0) return(Inf)
-        return(lm.ridge(y2 ~ y1, lambda=lambda)$GCV)
-  }
 
 'regress.ridge' <-
   function(y1, y2, verb=0)
@@ -65,25 +91,38 @@ opt.ridge <- function(lambda, y2, y1)
   
   if(numreg == 1) y2 <- matrix(y2, ncol=numreg)
   for(i in 1:numreg) {
-    
+
     ## actually get the ridge reggression constant (lambda)
-    while(1) {
+    while(1) { ## loop out bounds of the optimization window
       lam <- optimize(opt.ridge, lower=lower, upper=upper,
-                         y2=y2[,i], y1=y1)$minimum
+                      y2=y2[,i], y1=y1)$minimum
       if(round(lam) != upper) break;
       lower <- lam; upper <- 2*upper
     }
 
     ## use that lambda, and re-fit the model to get the coefficients
     reglst <- lm.ridge(y2[,i] ~ y1, lambda=lam)
-    bvec[,i] <- coef(reglst)
-    lambda[i] <- reglst$lambda
-    if(verb > 0) cat(paste(" ", signif(lambda[i],5), sep=""))
-    
-    ## use predict to get the residuals
-    ## res[,i] <- y2[,i] - predict(reglst, s=s, newx=y1, mode="fraction")$fit
-    res[,i] <- y2[,i] - (bvec[1,i] + y1 %*% bvec[-1,i])
+
+    ## get the coefficients and residulas and check that they
+    ## have led to a valid regression
+    ## for(j in 1:2) {
+
+      ## get the regression coefficients and lambda estimate
+      bvec[,i] <- coef(reglst)
+      
+      ## check that the residuals aren't too small
+      res[,i] <- y2[,i] - (bvec[1,i] + y1 %*% bvec[-1,i])
+      ##if(any(res[,i]^2 < .Machine$double.eps))
+        ##{ reglst <- lm.ridge(y2[,i] ~ y1, lambda=Inf); next; }
+      
+      ## get lambda
+      lambda[i] <- reglst$lambda
+      if(verb > 0) cat(paste(" ", signif(lambda[i],5), sep=""))
+      ##break;
+    ##}
   }
+
+  ## print lambda range
   if(verb > 0) cat(paste(" in range [", signif(lmin,5),
                          ",", upper, "]", sep=""))
 
