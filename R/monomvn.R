@@ -112,9 +112,7 @@ function(y, pre=TRUE,
     if(pre) {
       nao <- order(nas)
       y <- y[,nao]
-    } else {
-      nao <- 1:ncol(y)
-    }
+    } else nao <- 1:m
 
     ## get indices where the missingness pattern changes,
     ## in particular where the missingness increases
@@ -122,6 +120,10 @@ function(y, pre=TRUE,
       naso <- nas[nao]
       miss <- (1:m)[duplicated(naso) == FALSE]
       miss <- c(miss, m+1)
+      if(length(miss[1]:(miss[2]-1)) >= n) {
+        warning("complete block does not have more rows than cols, using batch=FALSE")
+        batch <- FALSE; miss <- 1:(m+1)
+      }
     } else miss <- 1:(m+1)
 
     ## for holding the means and covars
@@ -291,7 +293,7 @@ function(y, pre=TRUE,
 
     ## done, make initial class-list for return
     r <- list(call=cl, methods=methods, ncomp=ncomp, lambda=lambda,
-              mu=mu, S=S, p=p)
+              mu=mu, S=S, p=p, batch=batch)
 
     ## possibly add column permutation info from pre-processing
     if(pre) {

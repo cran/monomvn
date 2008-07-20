@@ -46,6 +46,11 @@ class Bmonomvn
   double **Y;                /* the data matrix */
   double p;                  /* the parsimony proportion */
 
+  /* large normed design matrix used in regressions */
+  double *Xnorm;            /* normalization constants for the cols of X */
+  double *Xmean;            /* mean of Xorig for centering */
+  double **X;               /* the (normd and centered) design matrix */
+
   /* model parameters */
   double *mu;                /* estimated mean vector (in round t) */
   double **S;                /* estimated covariance matrix (in round t) */
@@ -86,6 +91,8 @@ class Bmonomvn
 
  protected:
 
+  void Draw(const unsigned int thin, const bool economize, const bool burnin);
+
  public:
 
   /* constructors and destructors */
@@ -94,21 +101,22 @@ class Bmonomvn
   ~Bmonomvn();
 
   /* Initialization */
-  void InitBlassos(const unsigned int method, const bool capm, 
-		   double *mu_start, double ** S_start, int *ncomp_start,
-		   double *lambda_start, const double r, const double delta, 
-		   const bool rao_s2, const bool trace);
+  void InitBlassos(const unsigned int method, const unsigned int RJm, 
+		   const bool capm, double *mu_start, double ** S_start, 
+		   int *ncomp_start, double *lambda_start, const double r, 
+		   const double delta, const bool rao_s2, const bool economy, 
+		   const bool trace);
 
   /* sampling from the posterior distribution */
-  void Draw(const unsigned int thin, const bool burnin);
   void Rounds(const unsigned int T, const unsigned int thin, 
-	      const bool burnin);
+	      const bool economy, const bool burnin);
 
   /* printing and tracing */
   void PrintRegressions(FILE *outfile);
   void InitTrace(unsigned int m);
   void PrintTrace(unsigned int m);
   void Methods(int *methods);
+  void Thin(const unsigned int thin, int *thin_out);
   int Verb(void);
 
   /* setting pointers to allocated memory */

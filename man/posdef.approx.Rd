@@ -4,10 +4,12 @@
 \title{ Find the Nearest Positive Definite Matrix }
 \description{
   Check if the matrix is positive definite via attempted
-  Cholesky decomposition, and if not use the
-  \code{\link[accuracy]{sechol}} function to get the nearest
+  Cholesky decomposition and inversion.  If not, then the
+  \code{\link[accuracy]{sechol}} function is used to obtain the nearest
   approximate Cholesky decomposition from which to recover an
   approximate covariance matrix which is positive definite.
+  If that doesn't do the trick, then \code{.Machine$double.eps} is
+  added to the diagonal until a positive definite matrix can be returned
 }
 \usage{
 posdef.approx(S, name = "S", quiet=FALSE)
@@ -21,7 +23,7 @@ posdef.approx(S, name = "S", quiet=FALSE)
     non-positive definite matrix is found }
 }
 \value{
-  If successful, returns a \code{matrix} which is positive definite:
+  Returns a \code{matrix} which is positive definite:
   either the original matrix, or a nearby positive definite approximation.
 }
 \references{
@@ -33,11 +35,8 @@ posdef.approx(S, name = "S", quiet=FALSE)
 \url{http://www.statslab.cam.ac.uk/~bobby/monomvn.html}
 }
 \author{ Robert B. Gramacy \email{bobby@statslab.cam.ac.uk} }
-\note{
-  Requires the \pkg{accuracy} package.  If \code{S} is far from positive
-  definite, then the method may fail.
-}
-\seealso{ \code{\link[accuracy]{sechol}} }
+
+\seealso{ \code{\link[accuracy]{sechol}} in the \pkg{accuracy} package }
 \examples{
 ## most likely generates a matrix which is close to positive definite
 ## but not quite

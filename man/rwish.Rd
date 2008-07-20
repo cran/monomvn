@@ -16,7 +16,7 @@
 }
 
 \value{
-  returns generates one random draw from the distribution which is a
+  Returns generates one random draw from the distribution which is a
   \code{matrix} with the same dimensions as \code{S}
 }
 

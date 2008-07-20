@@ -29,8 +29,8 @@
   \item{burnin}{ number of burn-in rounds to discard before
     reporting summaries and making plots.  Must be non-negative
     and less than \code{x$T}}
-  \item{which}{ indicates the parameter whose summary should be plotted;
-     does not apply to the summary }
+  \item{which}{ indicates the parameter whose characteristics should be plotted;
+     does not apply to the \code{\link{summary}} }
   \item{...}{ passed to \code{\link{print.blasso}}, or
       \code{\link{plot.default}}}
   }
@@ -45,12 +45,12 @@
   on the list entries of the \code{"blasso"}-class object thus
   visually summarizing the samples from the posterior distribution of
   each parameter in the model depending on the \code{which}
-  argument supplied
+  argument supplied.
   
   \code{\link{summary.blasso}} uses the \code{\link{summary}} command
   on the list entries of the \code{"blasso"}-class object thus
   summarizing the samples from the posterior distribution of each
-  parameter in the model
+  parameter in the model.
 
   \code{\link{print.summary.monomvn}} calls \code{\link{print.blasso}}
   on the \code{object} and then prints the result of
@@ -62,19 +62,19 @@
   The other functions do not return values.
 
   \item{B}{ a copy of the input argument \code{thin} }
-  \item{T}{ Total number of MCMC samples to be collected from \code{x$T}
+  \item{T}{ total number of MCMC samples to be collected from \code{x$T}
   }
   \item{thin}{ number of MCMC samples to skip before a sample is
     collected (via thinning) from \code{x$T} }
   \item{coef}{ a joint \code{summary} of \code{x$mu} and
     the columns of \code{x$beta}}
   \item{s2}{ a \code{summary} of \code{x$s2}}
-  \item{lambda2}{ a \code{summary} of \code{x$lambda2} when lasso is
-    active }
+  \item{lambda2}{ a \code{summary} of \code{x$lambda2} when lasso
+    or ridge regression is active }
   \item{tau2}{ a \code{summary} of the columns of \code{x$tau2i} when
     lasso is active }
   \item{bn0}{ the estimated posterior probability that the individual
-	componets of the regression coefficiets \code{beta} is 
+	components of the regression coefficients \code{beta} is 
  	nonzero  }
 }
 

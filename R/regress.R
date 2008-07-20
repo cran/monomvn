@@ -98,15 +98,25 @@ function(X, y, method=c("lsr", "plsr", "pcr", "lasso", "lar",
     ## make sure the regression was non-signuar.  If so,
     ## use force a pls (or maybe lars or ridge) regression & print a warning
     if(sum(S) == 0) {
-      if(ret$method != "lsr") stop(paste("singular", method, "regression"))
-      if(!quiet)
+    ##mres <- apply(S, 2, function(x){ mean(abs(x)) })
+    ##if(any(mres < 1e-7)) {
+
+      ## nothing to do if lar was not used
+      if(p == 0 || ret$method != "lsr")
+        stop(paste("singular", method, "regression"))
+      
+      if(!quiet) ## warn if lsr
         warning(paste("singular least-squares ", nrow(X), "x", numpred,
-                    " regression, forcing pslr", sep=""))
+                    " regression, forcing ", method, " ", sep=""))
       if(verb > 0) cat("[FAILED], ")
 
-      ## using plsr
+      ## force a parsimonious regression
       return(regress(X, y, method, p=0, verb=verb))
     }
+
+    ## sanity check -- could hallen if all X's are the same
+    if(any(!is.finite(ret$b)) || any(!is.finite(S)))
+      stop("encountered NA in regression")
 
     ## return method, mean vector, and mean-squared of residuals
     return(list(call=cl, method=ret$method, ncomp=ret$ncomp,

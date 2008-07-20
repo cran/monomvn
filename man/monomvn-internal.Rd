@@ -17,6 +17,8 @@
 \alias{blasso.cleanup}
 \alias{bmonomvn.cleanup}
 \alias{check.start}
+\alias{table2blasso}
+\alias{getR}
 
 \title{Internal Monomvn Functions}
 \description{

@@ -30,10 +30,10 @@
 ## give a monotone appearance, but the pattern must be monotone.
 
 'bmonomvn' <-
-function(y, pre=TRUE, p=0.9, B=100, T=200, thin=10,
-         method=c("default", "rjlasso", "rjlsr", "lasso"),
-         capm=method!="lasso", start=NULL, r=2, delta=0.1,
-         rao.s2=TRUE, verb=1, trace=FALSE)
+function(y, pre=TRUE, p=0.9, B=100, T=200, thin=1, economy=FALSE,
+         method=c("lasso", "ridge", "lsr"), RJ=c("bpsn", "p", "none"),
+         capm=method!="lasso", start=NULL, rd=NULL, rao.s2=TRUE,
+         verb=1, trace=FALSE)
   {
     ## (quitely) double-check that blasso is clean before-hand
     bmonomvn.cleanup(1)
@@ -67,14 +67,29 @@ function(y, pre=TRUE, p=0.9, B=100, T=200, thin=10,
     if(length(thin) != 1 || thin < 1)
       stop("thin must be a scalar integer >= 1")
 
-    ## check method
-    method <- match.arg(method)
+    ## check rao.s2
+    if(length(rao.s2) != 1 || !is.logical(rao.s2))
+      stop("rao.s2 must be a scalar logical")
 
-    ## change method into an integer
-    mi <- 0  ## for rjlasso 
-    if(method == "rjlsr") mi <- 1
-    else if(method == "lasso") mi <- 2
-    else if(method == "default") mi <- 3
+    ## check economy
+    if(length(economy) != 1 || !is.logical(economy))
+      stop("economy must be a scalar logical")
+
+    ## check method, and change to an integer
+    method <- match.arg(method)
+    mi <- 0  ## lasso
+    if(method == "ridge") mi <- 1
+    else if(method == "lsr") mi <- 2
+
+    ## check RJ, and change to an integer
+    RJ <- match.arg(RJ)
+    RJi <- 0  ## bpsn: "big-p small-n"
+    if(RJ == "p") RJi <- 1
+    else if(RJ == "none") RJi <- 2
+
+    ## disallow bad RJ combination
+    if(method == "lsr" && RJ == "none")
+      stop("bad method (", method, ") and RJ (", RJ, ") combination", sep="")
     
     ## check capm
     if(length(capm) != 1 || !is.logical(capm))
@@ -83,6 +98,15 @@ function(y, pre=TRUE, p=0.9, B=100, T=200, thin=10,
       warning("capm must be FALSE for method=\"lasso\"", immediate.=TRUE)
       capm <- FALSE
     }
+
+    ## check r and delta (rd), or default
+    if(is.null(rd)) {
+      if(method == "lasso") rd <- c(2,0.1)
+      else if(method == "ridge") rd <- c(5, 10)
+      else rd <- c(0,0)
+    }
+    if(length(rd) != 2 || (method=="lasso" && any(rd <= 0)))
+      stop("rd must be a positive 2-vector")
         
     ## save the call
     cl <- match.call()
@@ -100,18 +124,23 @@ function(y, pre=TRUE, p=0.9, B=100, T=200, thin=10,
     ## re-order the columns to follow the monotone pattern
     if(pre) {
       nao <- order(nas)
-      y <- y[,nao]
-    } else {
-      nao <- 1:ncol(y)
-    }
+    } else nao <- 1:ncol(y)
+
+    ## re-order the rows by NA too, since the more general monotone
+    ## pattern finding is not currently implemented
+    r <- apply(y, 1, function(x){ sum(is.na(x)) })
+    y <- y[order(r),nao]
+    
+    ## get the R matrix and n
+    R <- getR(y)
+    n <- N - apply(R, 2, function(x){ sum(x == 1) })
+    if(sum(R == 2) != 0) stop("missingness pattern in y is not monotone")
+
     
     ## check the start argument
     start <- check.start(start, nao, M)
-    
-    ## number of non-nas in each column
-    n <- N - nas[nao]
 
-    ## replace NAs with zeros
+    ## save old y and then replace NA with Inf
     Y <- y
     Y[is.na(Y)] <- 0
 
@@ -128,14 +157,15 @@ function(y, pre=TRUE, p=0.9, B=100, T=200, thin=10,
             n = as.integer(n),
             p = as.double(p),
             mi = as.integer(mi),
+            RJi = as.integer(RJi),
             capm = as.integer(capm),
             smu = as.double(start$mu),
             sS = as.double(start$S),
             sncomp = as.integer(start$ncomp),
             slambda = as.double(start$lambda),
-            r = as.double(r),
-            delta = as.double(delta),
-            rao.s2 = as.integer(rao.s2), 
+            rd = as.double(rd),
+            rao.s2 = as.integer(rao.s2),
+            economy = as.integer(economy),
             verb = as.integer(verb),
             trace = as.integer(trace),
             mu = double(M),
@@ -143,6 +173,7 @@ function(y, pre=TRUE, p=0.9, B=100, T=200, thin=10,
             S = double(M*M),
             S.var = double(M*M),
             methods = integer(M),
+            thin.act = integer(M),
             lambda2 = double(M),
             ncomp = double(M),
             PACKAGE = "monomvn")
@@ -161,7 +192,8 @@ function(y, pre=TRUE, p=0.9, B=100, T=200, thin=10,
     }
     
     ## extract the methods
-    mnames <- c("bcomplete", "brjlasso", "brjlsr", "blasso", "blsr")
+    mnames <- c("bcomplete", "brjlasso", "brjridge", "brjlsr",
+                "blasso", "bridge", "blsr")
     r$methods <- mnames[r$methods]
     
     ## put the original ordering back
@@ -174,6 +206,7 @@ function(y, pre=TRUE, p=0.9, B=100, T=200, thin=10,
       r$ncomp <- r$ncomp[oo]
       r$lambda2 <- r$lambda2[oo]
       r$methods <- r$methods[oo]
+      r$thin <- r$thin.act[oo]
     } else oo <- NULL
 
     ## deal with names
@@ -191,7 +224,8 @@ function(y, pre=TRUE, p=0.9, B=100, T=200, thin=10,
     }
 
     ## read the trace in the output files, and then delete them
-    if(trace) r$trace <- bmonomvn.read.traces(r$N, r$n, r$M, oo, nam, r$verb)
+    if(trace)
+      r$trace <- bmonomvn.read.traces(r$N, r$n, r$M, oo, nam, cl, thin, r$verb)
     else r$trace <- NULL
     
     ## final line
@@ -200,15 +234,36 @@ function(y, pre=TRUE, p=0.9, B=100, T=200, thin=10,
     ## null-out redundancies
     r$n <- r$N <- r$M <- r$mi <- r$verb <- NULL
     r$smu <- r$sS <- r$sncomp <- r$slambda <- NULL
+    r$thin.act <- NULL
 
     ## change back to logicals or original inputs
     r$rao.s2 <- as.logical(r$rao.s2)
     r$capm <- as.logical(r$capm)
+    r$economy <- as.logical(r$economy)
     
     ## assign class, call and methods, and return
     r$call <- cl
     class(r) <- "monomvn"
     return(r)
+  }
+
+
+## getR:
+##
+## calculate which need to be imputed (2) with
+## which are simply missing in the monotone pattern (1);
+## else (0)
+
+getR <- function(y)
+  {
+    R <- matrix(2*as.numeric(is.na(y)), ncol=ncol(y))
+    for(i in nrow(y):1) {
+      for(j in ncol(y):1) {
+        if(R[i,j]) R[i,j] <- 1
+        else break
+      }
+    }
+    return(R)
   }
 
 
@@ -268,7 +323,7 @@ check.start <- function(start, nao, M)
 ## C-side, process them as appropriate, and then delete the trace files
 
 "bmonomvn.read.traces" <-
-  function(N, n, M, oo, nam, verb, rmfiles=TRUE)
+  function(N, n, M, oo, nam, cl, thin, verb, rmfiles=TRUE)
 {
   trace <- list()
   if(verb >= 1) cat("\nGathering traces\n")
@@ -315,7 +370,8 @@ check.start <- function(start, nao, M)
   for(i in 1:length(n)) {
     fname <- paste("blasso_M", i-1, "_n", n[i], ".trace", sep="")
     lname <- paste("M", i-1, ".n", n[i], sep="")
-    trace$reg[[lname]] <- read.table(fname, header=TRUE)
+    table <- read.table(fname, header=TRUE)
+    trace$reg[[lname]] <- table2blasso(table, thin, cl)
     if(rmfiles) unlink(fname)
 
     ## progress meter
@@ -331,6 +387,41 @@ check.start <- function(start, nao, M)
 
   return(trace)
 }
+
+
+## table2blasso:
+##
+## change the table trace read in and convert it into a
+## skeleton blasso class object so that the blasso methods
+## like print, plot, and summary can be used
+
+table2blasso <- function(table, thin, cl)
+  {
+    ## first convert to a list
+    tl <- as.list(table)
+    
+    ## start with the easy scalars
+    l <- list(s2=tl[["s2"]], mu=tl[["mu"]], m=tl[["m"]],
+              lambda2=tl[["lambda2"]])
+
+    ## now the vectors
+    bi <- grep("beta.[0-9]+", names(table))
+    l$beta <- as.matrix(table[,bi])
+    ti <- grep("tau2i.[0-9]+", names(table))
+    l$tau2i <- as.matrix(table[,ti])
+    l$tau2i[l$tau2i == -1] <- NA
+
+    ## assign "inputs"
+    l$T <- nrow(l$beta)
+    l$thin <- "dynamic"
+    l$RJ <- !is.null(l$m)
+    
+    ## assign the call and the class
+    l$call <- cl
+    class(l) <- "blasso"
+    
+    return(l)
+  }
 
 
 ## bmonomvn.cleanup

@@ -23,7 +23,7 @@ data(cement.miss)
 }
 \details{
   \code{cement.miss} is taken from an example in Little & Rubin's book
-  on \emph{Statistical Analysis with Missing Data} (2002), pp. 154, for
+  on \emph{Statistical Analysis with Missing Data} (2002), pp.~154, for
   demonstrating estimation of multivariate means and variances when
   the missing data pattern is monotone.  These are indicated by
   \code{NA} in \code{cement.miss}.  See the examples section of
