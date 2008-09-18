@@ -115,7 +115,8 @@ Ellik.norm <- function(mu1, S1, mu2, S2, quiet=FALSE)
     de <- 0.5*(N*log((2*pi*exp(1))) + ld2)
 
     ## the calculate the KL-divergence
-    S1c <- sechol(S1)
+    S1c <- try(sechol(S1), silent=TRUE)
+    if(class(S1c) == "try-error") return(NA)
     ld1 <- 2*sum(log(diag(S1c)))
     S1i <- chol2inv(S1c)
     tr <- sum(diag(S1i %*% S2))
@@ -135,5 +136,7 @@ rmse.muS <- function(mu1, S1, mu2, S2)
     S1 <- as.vector(S1[upper.tri(S1, TRUE)])
     S2 <- as.vector(S2[upper.tri(S2, TRUE)])
     resid.S <- (S1 - S2)^2
-    return(mean(c(resid.mu, resid.S)))
+    ##print(c(1, max(resid.mu), max(resid.S)))
+    ##print(c(2, mean(resid.mu), mean(resid.S)))
+    return(sqrt(mean(c(resid.mu, resid.S))))
   }

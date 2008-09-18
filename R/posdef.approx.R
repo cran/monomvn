@@ -61,15 +61,15 @@ function(S, name="S", quiet=FALSE)
     ## to the diagonal of the original matrix and move on
     if(!posdef(S.approx)) {
       S.approx <- S
-      eps <- 1
+      eps <- max(diag(S))
       cum <- 0
       while(1) {
         ## diag(S.approx) <- diag(S.approx) + .Machine$double.eps
         diag(S.approx) <- diag(S.approx) + eps
         cum <- cum + eps
-        ## print(c(eps, cum))
+        ## cat("eps=", signif(eps, 5), ", cum=", signif(cum, 5), "\n", sep="")
         if(posdef(S.approx)) {
-          if(eps > 2*.Machine$double.eps) {
+          if(eps > sqrt(.Machine$double.eps)) { ## 2*.Machine$double.eps) 
             diag(S.approx) <- diag(S.approx) - eps
             cum <- cum - eps
             eps <- eps/2

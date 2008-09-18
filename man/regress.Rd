@@ -11,7 +11,7 @@
 }
 \usage{
 regress(X, y, method = c("lsr", "plsr", "pcr", "lasso", "lar",
-     "forward.stagewise", "stepwise", "ridge"), p = 0,
+     "forward.stagewise", "stepwise", "ridge", "factor"), p = 0,
      ncomp.max = Inf, validation = c("CV", "LOO", "Cp"),
      verb = 0, quiet = TRUE)
 }
@@ -34,7 +34,8 @@ regress(X, y, method = c("lsr", "plsr", "pcr", "lasso", "lar",
     \code{"stepwise"} for fast implementations of classical forward
     selection of covariates.  From the \pkg{MASS} package we have
     \code{"ridge"} as implemented by the \code{\link[MASS]{lm.ridge}}
-    function}
+    function.  The \code{"factor"} method treats the first \code{p}
+    columns of \code{y} as known factors}
   \item{p}{ when performing regressions, \code{0 <= p <= 1}
     is the proportion of the
     number of columns to rows in the design matrix before an
@@ -48,7 +49,9 @@ regress(X, y, method = c("lsr", "plsr", "pcr", "lasso", "lar",
     Intermediate settings of \code{p} allow the user
     to specify that least squares regressions are preferred only
     when there are sufficiently more rows in the design matrix
-    (\code{X}) than columns}
+    (\code{X}) than columns. When \code{method = "factor"} the \code{p}
+    argument represents an integer (positive) number of initial columns
+    of \code{y} to treat as known factors}
   \item{ncomp.max}{ maximal number of (principal) components to consider
     in a \code{method}---only meaningful for the \code{"plsr"} or
     \code{"pcr"} methods.  Large settings can cause the execution to be
@@ -125,7 +128,7 @@ regress(X, y, method = c("lsr", "plsr", "pcr", "lasso", "lar",
   \item{b }{matrix containing the estimated regression coefficients,
     with \code{ncol(b) = ncol(y)} and the intercept
     in the first row}
-  \item{S }{(biased) maximum likelihood estimate of residual
+  \item{S }{(biased corrected) maximum likelihood estimate of residual
     covariance matrix}
 }
 

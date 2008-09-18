@@ -1,3 +1,21 @@
+1.4-1 (18 Sept 2008)
+-----
+
+Ellik now returns NA if sechol(S1) doesn't work
+
+fixed bug in obs estimator
+
+added sqrt to rmse.muS
+
+now using unbiased cov calculations which has led to 
+improved performace (drastically in some cases)
+
+added the "factor" method option to do monomvn style
+(known) factor based estimates of mu and Sigma
+
+switched back to Ellik.norm for monomvn.Rd examples
+	
+	
 1.4 (20 July 2008)
 ---
 

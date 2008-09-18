@@ -39,7 +39,7 @@
 `monomvn` <-
 function(y, pre=TRUE,
          method=c("plsr", "pcr", "lasso", "lar", "forward.stagewise",
-           "stepwise", "ridge"), p=0.9, ncomp.max=Inf, batch=TRUE,
+           "stepwise", "ridge", "factor"), p=0.9, ncomp.max=Inf, batch=TRUE,
          validation=c("CV", "LOO", "Cp"), obs=FALSE, verb=0, quiet=TRUE)
   {
     ##
@@ -49,10 +49,17 @@ function(y, pre=TRUE,
     ## check method argument
     method <- match.arg(method)
     
-    ## check p argument
-    if(length(p) != 1 || p > 1 || p < 0) {
-      warning("should have scalar 0 <= p <= 1, using default p=1")
-      p <- 1
+    ## check p argument, whose usage varies depending on method="factor"
+    if(method != "factor") {
+      if(length(p) != 1 || p > 1 || p < 0) {
+        warning("should have scalar 0 <= p <= 1, using p=1")
+        p <- 1
+      }
+    } else { ## method == "factor"
+      if(length(p) != 1 || p < 1) {
+        warning("when method=\"factor\" pust have p >= 1, using  p=1")
+        p <- 1
+      }
     }
 
     ## check ncomp.max argument
@@ -158,8 +165,8 @@ function(y, pre=TRUE,
     
     ## Mean and variance for the first length(fcol) complete columns
     mu[fcol] <- matrix(apply(as.matrix(y[,fcol]),2,mean),length(fcol),1)
-    S[fcol,fcol] <- matrix((n-1)*cov(as.matrix(y[,fcol]))/n,
-                           length(fcol),length(fcol))
+    ## S[fcol,fcol] <- matrix((n-1)cov(as.matrix(y[,fcol]))/n,length(fcol),length(fcol))
+    S[fcol,fcol] <- matrix(cov(as.matrix(y[,fcol])),length(fcol),length(fcol))
 
     ## print mu and S to the screen
     if(verb >= 2) {
@@ -199,7 +206,11 @@ function(y, pre=TRUE,
           tousejm1 <- !is.na(y[,jm1])
           tousej <- !is.na(y[,j])
           diff <- as.numeric(tousej) - as.numeric(tousejm1)
-          if(max(diff) > 0) stop(paste("variable", nao[j], "violates monotonicity"))
+          if(max(diff) > 0) { ## remove rows that violate monotonicity
+            warning(paste("col", nao[j], "violates monotonicity"), immediate.=TRUE)
+            rem <- (1:nrow(y))[diff > 0]
+            y <- y[-rem,]; tousejm1 <- tousejm1[-rem]; tousej <- tousej[-rem]
+          }
         }
 
         ## a are column indices processed already, b are new indices
@@ -219,10 +230,12 @@ function(y, pre=TRUE,
           mu.obs[b] <- apply(as.matrix(y2), 2, mean)
         
           ## add next rows/cols to the observed covariance matrix
-          lty <- nrow(y1); if(is.null(lty)) lty <- 1
-          S.obs[a,b] <- (lty-1)*cov(y1,y2)/lty
+          lty <- nrow(y1); if(is.null(lty)) lty <- length(y1)
+          ## S.obs[a,b] <- (lty-1)*cov(y1,y2)/lty
+          S.obs[a,b] <- cov(y1,y2)
           S.obs[b,a] <- t(S.obs[a,b])
-          S.obs[b,b] <- (lty-1)*cov(as.matrix(y2))/lty
+          ## S.obs[b,b] <- (lty-1)*cov(as.matrix(y2))/lty
+          S.obs[b,b] <- cov(as.matrix(y2))
         }
 
         ## here is where it all happens:
