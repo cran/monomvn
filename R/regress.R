@@ -34,7 +34,7 @@
 
 `regress` <-
 function(X, y, method=c("lsr", "plsr", "pcr", "lasso", "lar",
-                 "forward.stagewise", "stepwise", "ridge"),
+                 "forward.stagewise", "stepwise", "ridge", "factor"),
          p=0.0, ncomp.max=Inf, validation=c("CV", "LOO", "Cp"),
          verb=0, quiet=TRUE)
   {
@@ -45,10 +45,20 @@ function(X, y, method=c("lsr", "plsr", "pcr", "lasso", "lar",
     method <- match.arg(method)
     if(method == "lsr") p <- 1
     
-    ## check p argument
-    if(length(p) != 1 || p > 1 || p < 0) {
-      warning("should have scalar 0 <= p <= 1, using default p=1")
-      p <- 1
+    ## check p argument, whose usage varies depending on method="factor"
+    if(method != "factor") {
+      if(length(p) != 1 || p > 1 || p < 0) {
+        warning("should have scalar 0 <= p <= 1, using p=1")
+        p <- 1
+      }
+    } else { ## method == "factor"
+      if(length(p) != 1 || p < 1) {
+        warning("when method=\"factor\" pust have p >= 1, using  p=1")
+        p <- 1
+      }
+
+      ## save p in num.facts and set p=0
+      num.facts <- min(p, ncol(X));  p <- 0
     }
 
     ## check ncomp.max argument
@@ -87,13 +97,15 @@ function(X, y, method=c("lsr", "plsr", "pcr", "lasso", "lar",
       if(method == "plsr" || method == "pcr")
         ret <- regress.pls(X, y, method, ncomp.max, validation, verb, quiet)
       else if(method == "ridge") ret <- regress.ridge(X, y, verb)
+      else if(method == "factor") ret <- regress.fact(X, y, num.facts, verb)
       else ret <- regress.lars(X, y, method, validation, verb)
 
       ## least squares regression
     } else ret <- regress.ls(X, y, verb)
 
     ## calculate the mean-square residuals
-    S <- (numobs-1)*cov(ret$res)/numobs
+    ## S <- (numobs-1)*cov(ret$res)/numobs
+    S <- cov(ret$res)
 
     ## make sure the regression was non-signuar.  If so,
     ## use force a pls (or maybe lars or ridge) regression & print a warning

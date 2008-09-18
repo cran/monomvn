@@ -13,6 +13,7 @@
 \alias{regress.lars}
 \alias{regress.pls}
 \alias{regress.ridge}
+\alias{regress.fact}
 \alias{opt.ridge}
 \alias{blasso.cleanup}
 \alias{bmonomvn.cleanup}

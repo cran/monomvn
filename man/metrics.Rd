@@ -34,7 +34,7 @@ kl.norm(mu1, S1, mu2, S2, quiet=FALSE, symm=FALSE)
   matrices (including the diagonal).
   
   The KL divergence is given by the formula:
-  \deqn{D_{\mbox{\tiny KL}(N_1 \| N_2)} = \frac{1}{2}
+  \deqn{D_{\mbox{\tiny KL}}(N_1 \| N_2) = \frac{1}{2}
   \left( \log \left( \frac{|\Sigma_1|}{|\Sigma_2|} \right)
     + \mbox{tr} \left( \Sigma_1^{-1} \Sigma_2 \right) +
     \left( \mu_1 - \mu_2\right)^\top \Sigma_1^{-1}

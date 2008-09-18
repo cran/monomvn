@@ -13,7 +13,7 @@ this function can handle an (almost) arbitrary amount of missing data.
 }
 \usage{
 monomvn(y, pre = TRUE, method = c("plsr", "pcr", "lasso", "lar",
-        "forward.stagewise", "stepwise", "ridge"), p = 0.9,
+        "forward.stagewise", "stepwise", "ridge", "factor"), p = 0.9,
         ncomp.max = Inf, batch = TRUE, validation = c("CV", "LOO", "Cp"),
         obs = FALSE, verb = 0, quiet = TRUE)
 }
@@ -38,7 +38,8 @@ monomvn(y, pre = TRUE, method = c("plsr", "pcr", "lasso", "lar",
     \code{"stepwise"} for fast implementations of classical forward
     selection of covariates.  From the \pkg{MASS} package we have
     \code{"ridge"} as implemented by the \code{\link[MASS]{lm.ridge}}
-    function}
+    function.  The \code{"factor"} method treats the first \code{p}
+    columns of \code{y} as known factors }
   \item{p}{ when performing regressions, \code{p} is the proportion of the
     number of columns to rows in the design matrix before an
     alternative regression \code{method} (those above) is performed as if
@@ -48,7 +49,10 @@ monomvn(y, pre = TRUE, method = c("plsr", "pcr", "lasso", "lar",
     Alternatively, setting \code{p = 0}
     forces \code{method} to be used for \emph{every} regression.
     Intermediate settings of \code{p} allow the user to control when
-    least-squares regressions stop and the \code{method} ones start}
+    least-squares regressions stop and the \code{method} ones start.
+    When \code{method = "factor"} the \code{p} argument represents an
+    integer (positive) number of initial columns of \code{y} to treat
+    as known factors }
   \item{ncomp.max}{ maximal number of (principal) components to include
     in a \code{method}---only meaningful for the \code{"plsr"} or
     \code{"pcr"} methods.  Large settings can cause the execution to be
@@ -223,9 +227,6 @@ monomvn(y, pre = TRUE, method = c("plsr", "pcr", "lasso", "lar",
 \author{ Robert B. Gramacy \email{bobby@statslab.cam.ac.uk}}
 
 \note{
-  Note that the covariances used throughout are the MLE, i.e., not
-  unbiased ones which have an \code{N-1} in the denominator
-
   The CV in \pkg{plsr} and \pkg{lars} are random in nature, and so
   can be dependent on the random seed.  Use \code{validation=LOO} for
   deterministic (but slower) result
@@ -264,39 +265,39 @@ xmiss <- rmono(xmuS$x)
 ## plsr
 oplsr <- monomvn(xmiss, obs=TRUE)
 oplsr
-rmse.muS(oplsr$mu, oplsr$S, xmuS$mu, xmuS$S)
+Ellik.norm(oplsr$mu, oplsr$S, xmuS$mu, xmuS$S)
 
 ## calculate the complete and observed RMSEs
 n <- nrow(xmiss) - max(oplsr$na)
 x.c <- xmiss[1:n,]
 mu.c <- apply(x.c, 2, mean)
 S.c <- cov(x.c)*(n-1)/n
-rmse.muS(mu.c, S.c, xmuS$mu, xmuS$S)
-rmse.muS(oplsr$mu.obs, oplsr$S.obs, xmuS$mu, xmuS$S)
+Ellik.norm(mu.c, S.c, xmuS$mu, xmuS$S)
+Ellik.norm(oplsr$mu.obs, oplsr$S.obs, xmuS$mu, xmuS$S)
 
 ## plcr
 opcr <- monomvn(xmiss, method="pcr")
-rmse.muS(opcr$mu, opcr$S, xmuS$mu, xmuS$S)
+Ellik.norm(opcr$mu, opcr$S, xmuS$mu, xmuS$S)
 
 ## ridge regression
 oridge <- monomvn(xmiss, method="ridge")
-rmse.muS(oridge$mu, oridge$S, xmuS$mu, xmuS$S)
+Ellik.norm(oridge$mu, oridge$S, xmuS$mu, xmuS$S)
 
 ## lasso
 olasso <- monomvn(xmiss, method="lasso")
-rmse.muS(olasso$mu, olasso$S, xmuS$mu, xmuS$S)
+Ellik.norm(olasso$mu, olasso$S, xmuS$mu, xmuS$S)
 
 ## lar
 olar <- monomvn(xmiss, method="lar")
-rmse.muS(olar$mu, olar$S, xmuS$mu, xmuS$S)
+Ellik.norm(olar$mu, olar$S, xmuS$mu, xmuS$S)
 
 ## forward.stagewise
 ofs <- monomvn(xmiss, method="forward.stagewise")
-rmse.muS(ofs$mu, ofs$S, xmuS$mu, xmuS$S)
+Ellik.norm(ofs$mu, ofs$S, xmuS$mu, xmuS$S)
 
 ## stepwise
 ostep <- monomvn(xmiss, method="stepwise")
-rmse.muS(ostep$mu, ostep$S, xmuS$mu, xmuS$S)
+Ellik.norm(ostep$mu, ostep$S, xmuS$mu, xmuS$S)
 }
 
 \keyword{ multivariate }

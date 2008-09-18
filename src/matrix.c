@@ -138,9 +138,10 @@ double ** new_matrix(unsigned int n1, unsigned int n2)
 double ** new_matrix_bones(double *v, unsigned int n1, unsigned int n2)
 {
   double **M;
+  int i;
   M = (double **)  malloc(sizeof(double*) * n1);
   M[0] = v;
-  for(int i=1; i<n1; i++) M[i] = M[i-1] + n2;
+  for(i=1; i<n1; i++) M[i] = M[i-1] + n2;
   return(M);
 }
 
