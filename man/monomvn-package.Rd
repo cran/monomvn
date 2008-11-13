@@ -8,15 +8,15 @@
   parsimonious/shrinkage regressions (plsr, pcr, lasso, ridge, etc.),
   where standard regressions fail, the package can handle an 
   (almost) arbitrary amount of missing data.  The current version 
-  supports maximum likelihood inference and beta implementation
+  supports maximum likelihood inference and implementation
   of a Bayesian version employing a Bayesian lasso.  A fully 
-  functional standalone (beta) interface to the Bayesian lasso 
+  functional stand-alone interface to the Bayesian lasso
   (from Park & Casella) and ridge regression with model selection 
   via Reversible Jump is also provided
 }
 \details{
 For a fuller overview including a complete list of functions, demos and
-vignettes, please use \code{help(package="tgp")}.
+vignettes, please use \code{help(package="monomvn")}.
 }
 \author{
 Robert B. Gramacy \email{bobby@statslab.cam.ac.uk}

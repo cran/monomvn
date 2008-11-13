@@ -6,7 +6,7 @@
 \title{ Summarizing monomvn output }
 \description{
   Summarizing, printing, and plotting the contents of a
-\code{"monomvn"}-class object
+  \code{"monomvn"}-class object
 }
 \usage{
 \method{summary}{monomvn}(object, Si = FALSE, ...)
@@ -15,7 +15,7 @@
      xlab = "number of zeros", ...)
 }
 \arguments{
-  \item{object}{ a \code{"monomvn"}-class object for that must be named
+  \item{object}{ a \code{"monomvn"}-class object that must be named
     \code{object} for the generic methods \code{\link{summary.monomvn}} }
   \item{x}{ a \code{"monomvn"}-class object that must be named \code{x}
     for generic printing and plotting via
@@ -28,18 +28,21 @@
   \item{gt0}{ boolean indicating whether the histograms in
     \code{\link{plot.summary.monomvn}} should exclude columns
     of \code{object$S} or \code{Si} without any zero entries }
-  \item{main}{ text to be added to the main title of the histograms
+  \item{main}{ optional text to be added to the main title of the histograms
     produced by the generic \code{\link{plot.summary.monomvn}} }
   \item{xlab}{label for the x-axes of the histograms produced by
-    \code{\link{plot.summary.monomvn}} }
+    \code{\link{plot.summary.monomvn}}; otherwise default
+    automatically-generated text is used }
   \item{...}{ passed to \code{\link{print.monomvn}}, or
       \code{\link{plot.default}}}
 }
 \details{
+  These functions work on the output from both \code{\link{monomvn}}
+  and \code{\link{bmonomvn}}.
 
   \code{\link{print.monomvn}} prints the \code{call} followed by a
   summary of the regression  method used at each iteration of the
-  algorithm.  It also indicates how  many completely observed features
+  algorithm.  It also indicates how many completely observed features
   (columns) there were in the data.
   For non-least-squares regressions (i.e., \pkg{plsr}, \pkg{lars}
   and \code{\link[MASS]{lm.ridge}} methods)
@@ -59,8 +62,9 @@
   zeros in the columns of \code{object$S} and its inverse
 }
 \value{
-  \code{\link{summary.monomvn}} returns a \code{"summary.monomvn"}-class
-  object, which is a list containing (a subset of) the items below.  The other
+  \code{\link{summary.monomvn}} returns a
+  \code{"summary.monomvn"}-class object, which is a \code{list}
+  containing (a subset of) the items below.  The other
   functions do not return values.
 
   \item{obj}{ the \code{"monomvn"}-class \code{object} }
@@ -77,6 +81,11 @@
 \references{
 \url{http://www.statslab.cam.ac.uk/~bobby/monomvn.html}
 }
-\seealso{ \code{\link{monomvn}} }
+\note{
+  There is one further S3 function for \code{"monomvn"}-class
+  objects that has its own help file: \code{\link{plot.monomvn}}
+}
+\seealso{ \code{\link{bmonomvn}}, \code{\link{monomvn}},
+  \code{\link{plot.monomvn}} }
 \keyword{ methods }
 \keyword{ hplot }

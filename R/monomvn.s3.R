@@ -46,8 +46,8 @@ function(object, Si=FALSE, ...)
       Si <- solve(object$S)
       rl$cond <- sum(Si == 0)/prod(dim(Si))
       rl$Si0 <- apply(Si, 2, function(x) { sum(x == 0) })
-    } 
-    
+    }
+
     ## print it or return it
     rl
   }
@@ -84,7 +84,7 @@ function(object, Si=FALSE, ...)
     cat(" (pairwise conditionally uncorrelated [CI])\n", sep="")
     p <- p + 1
   }
-
+  
   ## add another newline if we added anything to print.monomvn
   if(p > 0) cat("\n")
 }
@@ -183,12 +183,115 @@ function(x, ...)
       cat("see $thin column-wise dynamic thinning level;\n", sep="")
       if(x$rao.s2) cat("Rao-Blackwellized s2 draws were used\n")
       else cat("Standard Park & Casella s2 full-conditional draws were used\n")
+
+      ## say something about the reversible jump scheme that was used
+      if(x$RJ != "none") {
+        cat("\nReversible Jump (RJ) was used to average over\n")
+        cat("subsets of columns in the design matrix, for\n")
+        if(x$RJ == "p") cat("every parsimonious regression, with a\n")
+        else cat("every big-p-small-n regression, with a\n")
+        
+        ## add in info about the prior
+        if(x$mprior == 0)
+          cat("uniform prior on m in {1,...,M[i]}\n", sep="")
+        else
+          cat("Bin(m|n=M[i]", ",p=", x$mprior, ") prior\n", sep="")
+      }
       cat("\n")
 
       ## check if there are traces
       if(!is.null(x$trace)) {
-        cat("Traces are recorded in the $trace field\n")
-        cat("\n")
+        cat("Traces are recorded in the $trace field\n\n")
+      }
+
+      ## check if there are draws from QP solutions
+      if(!is.null(x$QP)) {
+        cat("Samples from QP solutions are in the $W field;\n",
+            "try summary(obj$W), with monomvn-object \"obj\"\n\n",
+            sep="")
       }
     }
   }
+
+
+## plot.monomvn
+##
+## generic print method for monomvn class objects,
+## summarizing the results of a bmonomvn call
+## (only works for bmonomvn at this point)
+
+`plot.monomvn` <-
+function(x, which=c("mu", "S", "QP"), xaxis=c("numna","index"), main=NULL,
+         uselog=FALSE, ...)
+{
+  ## check that we have bmonomnv (Bayesian) output
+  if(is.null(x$B)) stop("plots only supported for bmonomvn output")
+
+  ## check the which argument
+  which <- match.arg(which)
+
+  ## check the xaxis argument and construct the x-axis
+  xaxis <- match.arg(xaxis)
+  if(xaxis == "numna") {
+    labs <- x$na[x$o]
+    xlab <- "number missing"
+  } else {
+    labs <- 1:length(x$mu)
+    xlab <- "index"
+  }
+
+  ## check the uselog argument
+  if(length(uselog) > 1 || !is.logical(uselog))
+    stop("uselog should be a scalar logical")
+  if(uselog) uselog <- "log"
+  else uselog <- NULL
+  
+  ## plot info about mu
+  if(which == "mu") {
+    y <- sqrt(x$mu.var[x$o])
+    if(is.null(main)) main <- paste(uselog, "sd(mu) by", xlab) 
+    plot(labs, y, xlab=xlab, ylab=paste("sd(", which, ")", sep=""))
+    title(main)
+
+  } else if(which == "S") { ## plot info about S
+
+    ## generate unique lables by divding up the unit interval
+    ## because image() requires it
+    if(xaxis == "numna") {
+      d <- labs[duplicated(labs)]
+      if(length(d) > 0) {
+        for(i in 1:length(d)) {
+          rl <- labs == d[i]
+          s <- c(0,cumsum(rep(1/(sum(rl)),sum(rl)-1)))
+          labs[rl] <- labs[rl] + s
+        }
+      }
+    }
+
+    ## construct the image
+    y <- sqrt(x$S.var[x$o, x$o])
+    if(is.null(main)) main <- paste(uselog, "sd(S) by", xlab)
+    image(labs, labs, y, xlab=xlab, ylab=xlab)
+    title(main)
+
+  } else { ## plot a summary of the weights W
+
+    ## check to make sure QP=TRUE was used to sample from W
+    if(is.null(x$W)) stop("must run bmonomvn with QP=TRUE to sample W")
+
+    ## arrange the xaxis differently since the boxplot uses names
+    if(xaxis=="numna")  W <- data.frame(x$W[,x$o])
+    else W <- data.frame(x$W)
+    xlab <- paste("ordered by", xlab)
+
+    ## make the boxplot
+    if(is.null(main)) main <- "Boxplots of QP weights w"
+    boxplot(W, ylab="w", xlab=xlab, main=main, ...)
+
+    ## add the MAP point
+    points(as.numeric(W[x$which.map,]), col=2, pch=21)
+
+    ## consider adding a legend, or making logical legend argument
+    ## to this function
+  }
+}

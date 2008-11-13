@@ -10,12 +10,12 @@
 }
 \usage{
 bridge(X, y, T = 1000, thin = NULL, RJ = TRUE, M = NULL,
-       beta = NULL, lambda2 = 1, s2 = 1, rd = NULL,
-       ab = NULL, rao.s2 = TRUE, normalize = TRUE,
-       verb = 1)
+       beta = NULL, lambda2 = 1, s2 = 1, mprior = 0,
+       rd = NULL, ab = NULL, rao.s2 = TRUE,
+       normalize = TRUE, verb = 1)
 blasso(X, y, T = 1000, thin = NULL, RJ = TRUE, M = NULL,
        beta = NULL, lambda2 = 1, s2 = 1, ridge = FALSE,
-       rd = NULL, ab = NULL, rao.s2 = TRUE,
+       mprior = 0, rd = NULL, ab = NULL, rao.s2 = TRUE,
        normalize = TRUE, verb = 1)
 }
 
@@ -43,29 +43,36 @@ blasso(X, y, T = 1000, thin = NULL, RJ = TRUE, M = NULL,
     of \code{X}) is not in the initial model.  When input \code{RJ =
       FALSE} (no RJ) and \code{lambda2 > 0} (use lasso) then no
     components are allowed to be exactly zero.  The default setting is
-    therefore contextual.  See below for details }
+    therefore contextual; see below for details }
   \item{lambda2}{ square of the initial lasso penalty parameter.  If
     zero, then least squares regressions are used }
   \item{s2}{ initial variance parameter }
   \item{ridge}{ specifies if ridge regression should be done instead
     of the lasso; only meaningful when \code{lambda2 > 0} }
-  \item{rd}{ \code{=c(r, delta)}, the alpha (shape) parameter and beta
-    (rate) parameter to the gamma distribution prior for
-    the \eqn{\lambda^2}{lambda2} parameter under the lasso model;
-    or, the alpha (shape) parameter and beta (scale) parameter to the
-    inverse-gamma distribution prior for the \eqn{\lambda^2}{lambda2}
+  \item{mprior}{ prior on the number of non-zero regression coefficients
+    (and therefore covariates) \code{m} in the model. The default
+    (\code{mprior = 0}) encode the uniform prior on \code{0 <= m <= M}.
+    A scalar value \code{0 < mprior < 1} implies a Binomial prior
+    \code{Bin(m|n=M,p=mprior)}}
+  \item{rd}{ \code{=c(r, delta)}, the alpha (shape) parameter and
+    \eqn{\beta}{beta} (rate) parameter to the gamma distribution prior
+    \code{G(r,delta)} for the \eqn{\lambda^2}{lambda2} parameter under
+    the lasso model; or, the \eqn{\alpha}{alpha} (shape) parameter and
+    \eqn{\beta}{beta} (scale) parameter to the
+    inverse-gamma distribution \code{IG(r/2, delta/2)} prior for
+    the \eqn{\lambda^2}{lambda2}
     parameter under the ridge regression model. A default of \code{NULL}
    generates appropriate non-informative values depending on the
    nature of the regression.  See the details below for information
    on the special settings of this paper for ridge regression }
- \item{ab}{ \code{=c(a, b)}, the alpha (shape) parameter and the beta
-   (scale) parameter for the inverse-gamma distribution
-   prior for the variance parameter \code{s2}.  A default of \code{NULL}
-   generates appropriate non-informative values depending on the
-   nature of the regression }
-  \item{rao.s2 }{indicates whether to use Rao-Blackwellized samples for
-    \eqn{\sigma^2}{s^2} should be used (default \code{TRUE}), see
-    the details section, below}
+ \item{ab}{ \code{=c(a, b)}, the \eqn{\alpha}{alpha} (shape)
+   parameter and the \eqn{\beta}{beta} (scale) parameter for the
+   inverse-gamma distribution prior \code{IG(a,b)} for the variance parameter
+   \code{s2}.  A default of \code{NULL} generates appropriate
+   non-informative values depending on the nature of the regression }
+  \item{rao.s2 }{indicates whether Rao-Blackwellized samples for
+    \eqn{\sigma^2}{s^2} should be used (default \code{TRUE}); see
+    below for more details }
   \item{normalize}{ if \code{TRUE}, each variable is standardized to have unit
     L2-norm, otherwise it is left alone; default is \code{TRUE} }
   \item{verb}{ verbosity level; currently only \code{verb = 0} and
@@ -80,7 +87,7 @@ blasso(X, y, T = 1000, thin = NULL, RJ = TRUE, M = NULL,
   for improved mixing, and the model selections by RJ described below.
   When input argument \code{lambda2 = 0} is
   supplied, the model is a simple hierarchical linear model where
-  \eqn{(\beta,\sigma^2)}{(beta,s2)} is given an Jeffrey's prior
+  \eqn{(\beta,\sigma^2)}{(beta,s2)} is given a Jeffrey's prior
 
   Specifying \code{RJ = TRUE} causes Bayesian model selection and
   averaging to commence for choosing which of the columns of the
@@ -89,20 +96,20 @@ blasso(X, y, T = 1000, thin = NULL, RJ = TRUE, M = NULL,
   specify which columns are in the initial model, and
   \code{M} specifies the maximal number of columns.
 
-  The RJ mechanism distinguishes implementation of the Bayesian lasso
-  model selection from the one described by Hans (2008),
+  The RJ mechanism implemented here for the Bayesian lasso model
+  selection differs from the one described by Hans (2008),
   which is based on an idea from Geweke (1996).
   Those methods require departing from the Park \& Casella
   (2008) latent-variable model and requires sampling from each conditional
   \eqn{\beta_i | \beta_{(-i)}, \dots}{beta[i] | beta[-i], ...} for all
   \eqn{i}{i}, since a mixture prior with a point-mass at zero is
-  placed on each \eqn{\beta_i}{beta[i]}.  The method implemented
+  placed on each \eqn{\beta_i}{beta[i]}.  Out implementation
   here requires no such special prior and retains the joint sampling
   from the full \eqn{\beta}{beta} vector of non-zero entries, which
   we believe yields better mixing in the Markov chain.  RJ
   proposals to increase/decrease the number of non-zero entries
   does proceed component-wise, but the acceptance rates are high due
-  to an optimal second--order proposal (Ehlers \& Brooks, 2005).
+  due to marginalized between-model moves (Troughton \& Godsill, 1997)
 
   Bayesian ridge regression is implemented as a special case via the
   \code{bridge} function.  This essentially calls \code{blasso}
@@ -115,7 +122,7 @@ blasso(X, y, T = 1000, thin = NULL, RJ = TRUE, M = NULL,
 }
 \value{
   \code{blasso} returns an object of class \code{"blasso"}, which is a
-  list containing a copy of all of the input arguments as well as
+  \code{list} containing a copy of all of the input arguments as well as
   of the components listed below.
 
   \item{call }{a copy of the function call as used}
@@ -143,9 +150,10 @@ blasso(X, y, T = 1000, thin = NULL, RJ = TRUE, M = NULL,
 }
 
 \references{
-  Park, T., Casella, G. (2008).
-  \emph{The Bayesian Lasso}, (unpublished)\cr
-  \url{http://www.stat.ufl.edu/~casella/Papers/bayeslasso.pdf}
+  Park, T., Casella, G. (2008). \emph{The Bayesian Lasso.}\cr
+  Journal of the American Statistical Association, Volume 103,
+  Number 482, June 2008 , pp. 681-686(6)\cr
+  \url{http://www.stat.ufl.edu/~casella/Papers/Lasso.pdf}
 
   Chris Hans. (2008). \emph{Bayesian Lasso regression.}
   Technical Report No. 810, Department of Statistics,
@@ -155,11 +163,13 @@ blasso(X, y, T = 1000, thin = NULL, RJ = TRUE, M = NULL,
   Geweke, J. (1996). \emph{Variable selection and model comparison
     in regression.} In Bayesian Statistics 5.  Editors: J.M. Bernardo,
   J.O. Berger, A.P. Dawid and A.F.M. Smith, 609-620. Oxford Press.
-  
-  Ehlers, R.S. and Brooks, S.P. (2005).
-  \emph{Efficient Construction of Reversible Jump MCMC Proposals for
-    Autoregressive Time Series Models.} (unpublished)\cr
-  \url{http://www.statslab.cam.ac.uk/~steve/mypapers/ehlb02.ps}
+
+
+  Paul T. Troughton and Simon J. Godsill (1997).
+  \emph{A reversible jump sampler for autoregressive time series,
+    employing full conditionals to achieve efficient model space moves.}
+  Technical Report CUED/F-INFENG/TR.304, Cambridge University
+  Engineering Department.
   
   \url{http://www.statslab.cam.ac.uk/~bobby/monomvn.html}
 }
@@ -191,7 +201,8 @@ reg.blas <- blasso(x, y)
 plot(reg.blas, burnin=200)
 points(drop(reg.las$b), col=2, pch=20)
 points(drop(reg.ols$b), col=3, pch=18)
-legend("topleft", c("lasso", "lsr"), col=2:3, pch=c(20,18))
+legend("topleft", c("blasso-map", "lasso", "lsr"),
+       col=c(2,2,3), pch=c(21,20,18))
 
 ## plot the size of different models visited
 plot(reg.blas, burnin=200, which="m")
@@ -237,8 +248,8 @@ sqrt(mean((oml$b[-1] - beta)^2))
 ## now try both Bayesian & ML ridge regression
 obr <- bridge(X, Y, verb=0)
 omr <- regress(X, Y, method="ridge")
-sqrt(mean((omr$b[-1] - beta)^2))
 sqrt(mean((apply(obr$beta[-c(1:200),], 2, mean) - beta)^2))
+sqrt(mean((omr$b[-1] - beta)^2))
 }
 
 % Add one or more standard keywords, see file 'KEYWORDS' in the

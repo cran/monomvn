@@ -1,15 +1,17 @@
 blasso                  Bayesian Lasso Regression from Park & Casella
-bmonomvn                Bayesian Estimation of Multivariate Normal Data
-                        with Monotone Missingness
-cement                  Hald's Cement Data
-kl.norm                 KL Divergence Between Two Multivariate Normal
-                        Distributions
-monomvn                 Maximum Likelihood Estimation of Multivariate
-                        Normal Data with Monotone Missingness
-monomvn-package         Estimation for Multivariate Normal Data with
+bmonomvn                Bayesian Estimation of Multivariate Normal Data with 
                         Monotone Missingness
+cement                  Hald's Cement Data
+kl.norm                 KL Divergence Between Two Multivariate Normal Distributions
+Ellik.norm              Expected Log Likelihood "Distance" Between Two Multivariate 
+                        Normal Distributions	
+rmse.muS                Root-Mean-Squared-Error Between the Mean and Covariance 
+			Matrices of Two Multivariate Normal Distributions
+monomvn                 Maximum Likelihood Estimation of Multivariate Normal Data 
+                        with Monotone Missingness
+monomvn-package         Estimation for Multivariate Normal Data with Monotone 
+                        Missingness
 posdef.approx           Find the Nearest Positive Definite Matrix
-randmvn                 Randomly Generate a Multivariate Normal
-                        Distribution
+randmvn                 Randomly Generate a Multivariate Normal Distribution
 rmono                   Randomly Impose a Monotone Missingness Pattern
 rwish                   Draw from the Wishart Distribution

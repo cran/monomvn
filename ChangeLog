@@ -1,3 +1,31 @@
+1.5 (13 Nov 2008)
+---
+
+Implemented Throughton & Godsill RJ proposals that 
+integrate out beta -- need to consider integrating
+out s2 as in tgp
+
+added Mprior argument to allow Binomial(m|M,Mprior)
+option when Mprior != 0, and Unif over 0,...,M
+otherwise
+
+switched back to Ellik.norm for bmonomvn.Rd examples
+
+now tallying lpost in the traces of blasso regressions
+within bmonomvn
+
+added plot.monomvn which currently only supports 
+visualization of the variance of mu and S under the
+Bayesian posterior (bmonomvn)
+
+added structures for calculating the mean and variance
+of mu and S to accomodate the MAP versions of the same
+
+added the ability to sample from the posterior 
+distribution of the solution to a Quadratic Program
+based on (samples) of mu and Sigma
+	
+
 1.4-1 (18 Sept 2008)
 -----
 

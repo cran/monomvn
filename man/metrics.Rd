@@ -26,7 +26,7 @@ kl.norm(mu1, S1, mu2, S2, quiet=FALSE, symm=FALSE)
     the \pkg{accuracy} package cannot be loaded to deal with (possibly)
     non-positive definite \code{S1} and \code{S2}}
   \item{symm}{ when \code{TRUE} a symmetrized version of the
-  KL divergence is used.  See the note below }
+  KL divergence is used; see the note below }
 }
 \details{
   The root-mean-squared-error is calculated between the entries of
@@ -62,7 +62,7 @@ kl.norm(mu1, S1, mu2, S2, quiet=FALSE, symm=FALSE)
 }
 \value{
   In the case of the expected log likelihood the result is
-  a real number.  the RMSE is a positive real number.
+  a real number.  The RMSE is a positive real number.
   The KL divergence method returns a positive
   real number depicting the \emph{distance} between the
   two normal distributions

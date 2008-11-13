@@ -176,18 +176,25 @@ function(x, ...)
 
     ## print the monomvn object
     cat("\nrun for T=", x$T, " MCMC samples, with thin=", x$thin,
-        " rounds between\n", sep="")
-    cat("each sample\n")
+        " rounds\nbetween each sample\n", sep="")
 
-    ## say something about lasso and RJ
+    ## say something about lasso
     if(!is.null(x$tau2i))
       cat("\nLasso was used to shrink regression coefficients\n")
     else if(!is.null(x$lambda2)) {
       cat("\nA ridge parameter was used to shrink regression coefficients\n")
     }
+
+    ## say something about model selection
     if(x$RJ) {
-      cat("\nReversible Jump (RJ) was used to average over subsets\n")
-      cat("of columns in the design matrix, allowing a maximum of", x$M, "\n")
+      cat("\nReversible Jump (RJ) was used to average over\n")
+      cat("subsets of columns in the design matrix, using a\n")
+
+      ## add in info about the prior
+      if(x$mprior == 0)
+        cat("uniform prior on m in {0,...,", x$M, "}\n", sep="")
+      else
+        cat("Bin(m|n=", x$M, ",p=", x$mprior, ") prior\n", sep="")
     }
 
     ## suggestion

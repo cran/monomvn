@@ -30,6 +30,12 @@ extern "C"
 #include "Rmath.h"
 #include "R.h"
 #include "assert.h"
+
+/* for Quadratic Programming in solve.QP.f */
+#define qpgen2 qpgen2_
+extern void qpgen2(double*, double*, int*, int*, double*, double*, double*,
+		   double*, int*, int*, int*, int*, int*, int*, double*, 
+		   int*);
 }
 #include "bmonomvn.h"
 #include "blasso.h"
@@ -75,8 +81,11 @@ Bmonomvn::Bmonomvn(const unsigned int M, const unsigned int N, double **Y,
   S = new_zero_matrix(M, M);
 
   /* initialize the summary vectors to NULL */
-  lambda2_sum = m_sum = mu_sum = mu2_sum = NULL;
-  S_sum = S2_sum = NULL;
+  mom1 = mom2 = NULL;
+  lambda2_sum = m_sum = NULL;
+
+  /* initialize the QP samples to NULL */
+  qps = NULL;
 
   /* allocate blasso array */
   blasso = (Blasso**) malloc(sizeof(Blasso*) * M);
@@ -87,6 +96,10 @@ Bmonomvn::Bmonomvn(const unsigned int M, const unsigned int N, double **Y,
   s21 = new_zero_vector(M);
   y = new_vector(N);
   s2 = 1.0;
+
+  /* initialize posterior probabilities */
+  lpost_bl = lpost_map = -1e300*1e300;
+  which_map = -1;
 
   /* initialize trace files to NULL */
   trace_mu = trace_S = NULL;
@@ -158,10 +171,11 @@ Bmonomvn::~Bmonomvn(void)
  */
 
 void Bmonomvn::InitBlassos(const unsigned int method, const unsigned int RJm,
-			   const bool capm, double *mu_start, double **S_start, 
-			   int *ncomp_start, double *lambda_start, const double r, 
-			   const double delta, const bool rao_s2, const bool economy, 
-			   const bool trace)
+			   const bool capm, double *mu_start, double **S_start,
+			   int *ncomp_start, double *lambda_start, 
+			   const double mprior, const double r, 
+			   const double delta,  const bool rao_s2, 
+			   const bool economy, const bool trace)
 {
   /* initialize each of M regressions */
   for(unsigned int i=0; i<M; i++) {
@@ -171,7 +185,7 @@ void Bmonomvn::InitBlassos(const unsigned int method, const unsigned int RJm,
 
     /* choose baseline regression model to be modified by method & RJ */
     REG_MODEL rm = OLS;
-    bool RJ = false;
+    bool RJ = false; /* corresponds to RJm = 2 */
 
     /* re-set RJ and method vi the p parameter */
     if(p*((double)n[i]) <= i) {
@@ -183,8 +197,9 @@ void Bmonomvn::InitBlassos(const unsigned int method, const unsigned int RJm,
       }
       
       /* now deal with RJ */
-      if(RJm == 1) RJ = true;
-      else if(RJm == 0 && n[i] <= (int) i) RJ = true;
+      if(RJm == 1) RJ = true; /* RJ whenever parsimonious applied */
+      else if(RJm == 0 && n[i] <= (int) i) 
+	RJ = true; /* RJ whenever ill-posed regression */
     }
 
     /* choose the maximum number of columns */
@@ -209,8 +224,8 @@ void Bmonomvn::InitBlassos(const unsigned int method, const unsigned int RJm,
 
     /* set up the j-th regression, with initial params */
     double Xnorm_scale = ((double) n[i])/N;
-    blasso[i] = new Blasso(i, n[i], Y, Xnorm, Xnorm_scale, Xmean, M, 
-			   y, RJ, mmax, beta_start, s2, lambda2, r, 
+    blasso[i] = new Blasso(i, n[i], Y, Xnorm, Xnorm_scale, Xmean, M, y, 
+			   RJ, mmax, beta_start, s2, lambda2, mprior, r, 
 			   delta, rm, rao_s2, verb-1);
     if(!economy) blasso[i]->Init();
   }
@@ -247,7 +262,7 @@ void Bmonomvn::InitTrace(unsigned int i)
   assert(trace_lasso[i]);
 
   /* add the R-type header */
-  fprintf(trace_lasso[i], "s2 mu ");
+  fprintf(trace_lasso[i], "lpost s2 mu ");
   if(blasso[i]->UsesRJ()) fprintf(trace_lasso[i], "m ");
   for(unsigned int j=0; j<i; j++)
     fprintf(trace_lasso[i], "beta.%d ", j);
@@ -277,7 +292,7 @@ void Bmonomvn::PrintTrace(unsigned int i)
   assert(trace_lasso && trace_lasso[i]);
   
   /* add the mean and variance to the line */
-  fprintf(trace_lasso[i], "%.20f %.20f ", s2, mu_s);
+  fprintf(trace_lasso[i], "%20f %.20f %.20f ", lpost_bl, s2, mu_s);
   if(blasso[i]->UsesRJ()) fprintf(trace_lasso[i], "%d ", m);
 
   /* add the regression coeffs to the file */
@@ -327,7 +342,7 @@ void Bmonomvn::Rounds(const unsigned int T, const unsigned int thin,
 		      const bool economy, const bool burnin)
 {
   /* sanity check */
-  if(!burnin) assert(mu_sum && mu2_sum && S_sum && S2_sum);
+  if(!burnin) assert(mom1 && mom2 && m_sum && lambda2_sum);
 
   /* for helping with periodic interrupts */
   time_t itime = time(NULL);
@@ -339,7 +354,7 @@ void Bmonomvn::Rounds(const unsigned int T, const unsigned int thin,
       myprintf(stdout, "t=%d\n", t+1);
 
     /* take one draw after thinning */
-    Draw(thin, economy, burnin);
+    double lpost = Draw(thin, economy, burnin);
 
     /* record samples unless burning in */
     if(! burnin) {
@@ -348,14 +363,19 @@ void Bmonomvn::Rounds(const unsigned int T, const unsigned int thin,
       if(trace_mu) printVector(mu, M, trace_mu, MACHINE);
       if(trace_S) printSymmMatrixVector(S, M, trace_S, MACHINE);
       
-      /* add vectors and matrices for later mean calculations */
-      add_vector(1.0, mu_sum, 1.0, mu, M);
-      for(unsigned int i=0; i<M; i++) mu[i] *= mu[i];
-      add_vector(1.0, mu2_sum, 1.0, mu, M);
-      add_matrix(1.0, S_sum, 1.0, S, M, M);
-      for(unsigned int i=0; i<M; i++)
-	for(unsigned int j=0; j<M; j++) S[i][j] *= S[i][j];
-      add_matrix(1.0, S2_sum, 1.0, S, M, M);
+      /* add vectors and matrices for later mean & var calculations */
+      MVN_add(mom1, mu, S, M);
+      MVN_add2(mom2, mu, S, M);
+
+      /* check for new best MAP */
+      if(lpost > lpost_map) {
+	lpost_map = lpost;
+	MVN_copy(map, mu, S, M);
+	which_map = t;
+      }
+
+      /* calculate the QP solution */
+      if(qps) QPsolve(qps, t, M, mu, S);
     }
 
     /* periodically check R for interrupts and flush console every second */
@@ -373,10 +393,14 @@ void Bmonomvn::Rounds(const unsigned int T, const unsigned int thin,
  * and the other calculations are skipped.
  */
 
-void Bmonomvn::Draw(const unsigned int thin, const bool economy, const bool burnin)
+double Bmonomvn::Draw(const unsigned int thin, const bool economy, 
+		    const bool burnin)
 {
   /* sanity checks */
   if(!burnin) assert(lambda2_sum && m_sum);
+
+  /* for accumulating log posterior probability */
+  double lpost = 0.0;
 
   /* for each column of Y */
   for(unsigned int i=0; i<M; i++) {
@@ -385,13 +409,16 @@ void Bmonomvn::Draw(const unsigned int thin, const bool economy, const bool burn
     if(economy) blasso[i]->Init();
     
     /* obtain a draw from the i-th Bayesian lasso parameters */
-    blasso[i]->Draw(thin, &lambda2, &mu_s, beta, &m, &s2, tau2i, &lpost);
+    blasso[i]->Draw(thin, &lambda2, &mu_s, beta, &m, &s2, tau2i, &lpost_bl);
 
     /* now un-init if economizing */
     if(economy) blasso[i]->Economize();
 
     /* nothing more to do when burning in */
     if(burnin) continue;
+
+    /* tally log posterior probability */
+    lpost += lpost_bl;
 
     /* possibly add a line to the trace file */
     if(trace_lasso) PrintTrace(i);
@@ -419,6 +446,9 @@ void Bmonomvn::Draw(const unsigned int thin, const bool economy, const bool burn
       S[i][i] = s2 + linalg_ddot(i, s21, 1, beta, 1);
     }
   }
+
+  /* return the log posterior probability of the draw */
+  return lpost;
 }
 
 
@@ -472,15 +502,341 @@ int Bmonomvn::Verb(void)
  * outside the module 
  */
 
-void Bmonomvn::SetSums(double *mu_sum, double *mu2_sum, double **S_sum, 
-		       double **S2_sum, double *lambda2_sum, double *m_sum)
+void Bmonomvn::SetSums(MVNsum *mom1, MVNsum *mom2, double *lambda2_sum, double *m_sum,
+		       MVNsum *map)
 {
-  this->mu_sum = mu_sum;
-  this->mu2_sum = mu2_sum;
-  this->S_sum = S_sum;
-  this->S2_sum = S2_sum;
+  /* should also write zeros in the matrices and vectors if they are
+     really meant to be sums */
+  this->mom1 = mom1;
+  this->mom2 = mom2;
   this->lambda2_sum = lambda2_sum;
   this->m_sum = m_sum;
+  this->map = map;
+}
+
+
+/*
+ * SetQP:
+ *
+ * set the pointers to the QPsamp strutcture with pointers to 
+ * memory allocated outside the module 
+ */
+
+void Bmonomvn::SetQPsamp(QPsamp *qps)
+{
+  this->qps = qps;
+}
+
+
+/*
+ * Lpost:
+ *
+ * return the log posterior probability of the maximum
+ * a' posteriori (MAP) estimate of mu and S -- also
+ * copies back the time index of the MAP sample
+ */
+
+double Bmonomvn::LpostMAP(int *which)
+{
+  *which = which_map;
+  return lpost_map;
+}
+
+
+/*
+ * new_MVNsum_R:
+ *
+ * take pointers (allocated in R) and collect them into a
+ * MVMsum object for tallying a mean or variance for the
+ * MVN mean vector and covariance matrix
+ */
+
+MVNsum* new_MVNsum_R(const unsigned int m, double* mu, double* S)
+{
+  MVNsum* mvnsum = (MVNsum*) malloc(sizeof(struct MVNsum));
+  mvnsum->m = m;
+  mvnsum->T = 0;
+  mvnsum->mu = mu;
+  mvnsum->S = new_matrix_bones(S, m, m);
+  return(mvnsum);
+}
+
+
+/*
+ * delete_MVNsum_R:
+ *
+ * destroy the MVNsum structure that had most
+ * of its memory allocated in R
+ */
+
+void delete_MVNsum_R(MVNsum *mvnsum)
+{
+  free(mvnsum->S);
+  free(mvnsum);
+}
+
+
+/*
+ * MVN_add:
+ *
+ * add in the mu and S mean -- the covariance paramerers -- 
+ * into the structure accumulating the first moment
+ */
+
+void MVN_add(MVNsum *mom1, double *mu, double **S, const unsigned int m)
+{
+  /* sanity check */
+  assert(mom1->m == m);
+
+  /* add in the mean and covariance */
+  add_vector(1.0, mom1->mu, 1.0, mu, m);
+  add_matrix(1.0, mom1->S, 1.0, S, m, m);
+  
+
+  /* increment the counter of the number of things in the sum */
+  (mom1->T)++;
+}
+
+/*
+ * MVN_add:
+ *
+ * add in the square of mu and S -- the mean and covariance params --
+ * into the structure accumulating the second moment
+ *
+ * COULD make this function omre general by adding a function pointer
+ * to the sq function to allow for other functions than sq 
+  */
+
+void MVN_add2(MVNsum *mom2, double *mu, double **S, const unsigned int m)
+{
+  /* sanity check */
+  assert(mom2->m == m);
+
+  /* add in the square of the mean */
+  for(unsigned int i=0; i<m; i++) 
+    mom2->mu[i] += sq(mu[i]);
+
+  /* add in the square of covariance */
+  for(unsigned int i=0; i<m; i++)
+    for(unsigned int j=0; j<m; j++) 
+      mom2->S[i][j] += sq(S[i][j]);
+
+  /* increment the counter of the number of things in the sum */
+  (mom2->T)++;
+}
+
+
+/*
+ * MVN_mean:
+ *
+ * calculate the mean of mu and S -- the mean and covariance params --
+ * from the first moment by dividing by T and then resetting T;
+ * result is in mom1 
+ */
+
+void MVN_mean(MVNsum *mom1, const unsigned int T)
+{
+  /* sanity check */
+  assert(mom1->T == T);
+
+  /* divite by T */
+  scalev(mom1->mu, mom1->m, 1.0/T);
+  scalev(*(mom1->S), (mom1->m)*(mom1->m), 1.0/T);
+
+  /* reset T */
+  mom1->T = 0;
+}
+
+
+/* 
+ * MVn_var:
+ * valculate the variance of mu and S -- the mean and covariance params --
+ * from the mean and second moment, then reset T; result is in mom2
+ */
+
+void MVN_var(MVNsum *mom2, MVNsum *mean, const unsigned int T)
+{
+  /* sanity check */
+  assert(mom2->T == T);
+  assert(mean->T == 0);
+
+  /* calculate the variance of the mean */
+  scalev(mom2->mu, mom2->m, 1.0/T);
+  for(unsigned int i=0; i< mom2->m; i++) 
+    mom2->mu[i] -= sq(mean->mu[i]);
+
+  /* calculate the variance of the covariance matrix */
+  scalev(*(mom2->S), (mom2->m)*(mom2->m), 1.0/T);
+  for(unsigned int i=0; i<mom2->m; i++) 
+    for(unsigned int j=0; j<mom2->m; j++)
+      mom2->S[i][j] -= sq(mean->S[i][j]);
+
+  /* reset T */
+  mom2->T = 0;
+}
+
+
+/*
+ * MVN_copy:
+ *
+ * copy in the mu and S -- the covariance paramerers -- 
+ * into the structure (for the maximum a posteriori)
+ */
+
+void MVN_copy(MVNsum *map, double *mu, double **S, const unsigned int m)
+{
+  /* sanity check */
+  assert(map->m == m);
+
+  /* add in the mean and covariance */
+  dupv(map->mu, mu, m);
+  dupv(*(map->S), *S, m*m);
+  
+  /* record that these vectors and matricies are not empty */
+  map->T = 1;
+}
+
+
+/*
+ * new_QPsamp_R:
+ *
+ * allocate the structure used to store the Quadratic Programmig
+ * inputs and the space for samples from the solution(s) -- 
+ * everything allocated in R
+ */
+
+QPsamp* new_QPsamp_R(const unsigned int m, const unsigned int T, 
+		     double *dvec, const bool dmu, double *Amat, double *b0, 
+		     int *mu_constr, const unsigned int q, 
+		     const unsigned int meq, double *w)
+{
+  /* check if QP is required */
+  if(w == NULL) return NULL;
+
+  /* sanity check */
+  assert(q > 0);
+
+  /* allocate the QPsamp structure */
+  QPsamp* qps = (QPsamp*) malloc(sizeof(struct QPsamp));
+
+  /* record dimensional parameters */
+  qps->m = m;
+  qps->T = T;
+
+  /* make space to copy S sampls into */
+  qps->S_copy = new_vector(m*m);
+
+  /* copy dvec (which could be mu-samples) */
+  qps->dvec = dvec;
+  qps->dvec_copy = new_vector(m);
+  qps->dmu = dmu;
+
+  /* copy the linear constraints */
+  qps->q = q;
+  qps->Amat = Amat;
+  qps->b0 = b0;
+  qps->meq = meq;
+
+  /* copy the info on mu in constraints */
+  qps->mu_c_len = (unsigned int) *mu_constr;
+  if(qps->mu_c_len == 0) {
+    qps->mu_c = NULL;
+    qps->Amat_copy = qps->Amat;
+    qps->b0_copy = qps->b0;
+  } else {
+    qps->mu_c = mu_constr + 1;
+    qps->Amat_copy = new_vector(q*m);
+    qps->b0_copy = new_vector(q);
+  }
+
+
+  /* allocate workspace */
+  unsigned int r = q;
+  if(m < q) r = m;
+  qps->iact = new_zero_ivector(q);
+  qps->work = new_zero_vector(2*m + r*(r+5)/2 + 2*q + 1);
+
+  /* turn the W (or B) samples of w (or b) into a matrix */
+  qps->W = new_matrix_bones(w, T, m);
+
+  /* return the new structure */
+  return qps;
+}
+
+
+/*
+ * delete_QPsamp_R:
+ *
+ * destroy the QPsamp structure that had most
+ * of its memory allocated in R
+ */
+
+void delete_QPsamp_R(QPsamp *qps)
+{
+  free(qps->S_copy);
+  free(qps->dvec_copy);
+  if(qps->mu_c_len > 0) {
+    free(qps->Amat_copy);
+    free(qps->b0_copy);
+  }
+  free(qps->iact);
+  free(qps->work);
+  free(qps->W);
+  free(qps);
+}
+
+
+/*
+ * QPsolve:
+ *
+ * solve the Quadric Program with the current value
+ * of mu and S and store the result in W[t], thus
+ * taking the t-th sample of the solution w (or b)
+ */
+
+void QPsolve(QPsamp *qps, const unsigned int t, const unsigned int m,
+	     double *mu, double **S)
+{
+  int ierr, nact;
+  int iter[2];
+  double crval;
+
+  /* sanity checks */
+  assert(qps);
+  assert(qps->m == m);
+  assert(t < qps->T);
+
+  /* check to see if we should fill in dvec with the mean */
+  dupv(qps->dvec_copy, qps->dvec, m);
+  if(qps->dmu) for(unsigned int i=0; i<m; i++)
+    qps->dvec_copy[i] *= mu[i];
+
+  /* copy S */
+  dupv(qps->S_copy, S[0], m*m);
+
+  /* copy Amat and b0 */
+  if(qps->mu_c_len != 0) {
+    dupv(qps->b0_copy, qps->b0, qps->q);
+    dupv(qps->Amat_copy, qps->Amat, (qps->q)*m);
+  }
+
+  /* check to see if we should fill in rows of Amat with mu */
+  for(unsigned int i=0; i<qps->mu_c_len; i++)
+    for(unsigned int j=0; j<m; j++)
+      qps->Amat_copy[m*(qps->mu_c[i]-1)+j] *= mu[j];
+  
+  /* ready to solve */
+  ierr = 0;  /* indicates S is not decomposed */
+  qpgen2(qps->S_copy, qps->dvec_copy, (int*) &m, (int*) &m, 
+	 qps->W[t], &crval, qps->Amat_copy, qps->b0_copy, (int*) &m, 
+	 (int*) &(qps->q), (int*) &(qps->meq), qps->iact, &nact, 
+	 iter, qps->work, &ierr);
+
+  /* MIGHT make all of the W's positive, and then renormalize */
+  
+  /* MIGHT want to check ierr */
+  // myprintf(stdout, "ierr = %d\n", ierr);
+  assert(ierr==0);
 }
 
 
@@ -492,6 +848,9 @@ void Bmonomvn::SetSums(double *mu_sum, double *mu2_sum, double **S_sum,
  * and reconstruct the resulting intercepts, regression vectors
  * and variances that would have been used by the monomvn
  * algorithm -- to extract the m-th components
+ *
+ * IT MAY BE POSSIBLE TO SPEED THIS UP WITH SOME CLEVER 
+ * ITERATIVE INVERSES
  */
 
 void get_regress(const unsigned int m, double *mu, double *s21, double **s11, 
@@ -563,18 +922,33 @@ extern "C"
 double **Y = NULL;
 Bmonomvn *bmonomvn = NULL;
 
-/* starting matrices */
+/* starting structures and matrices */
+MVNsum *MVNmean = NULL;
+MVNsum *MVNvar = NULL;
+MVNsum *MVNmap = NULL;
+QPsamp *qps = NULL;
 double **S_start = NULL;
-double **S_mean = NULL;
-double **S_var = NULL;
 
-void bmonomvn_R(int *B, int *T, int *thin, int *M, int *N, double *Y_in, 
+void bmonomvn_R(
+		/* estimation inputs */
+		int *B, int *T, int *thin, int *M, int *N, double *Y_in, 
 		int *n,	double *p, int *method, int *RJ, int *capm, 
 		double *mu_start, double *S_start_in, int *ncomp_start, 
-		double *lambda_start, double *rd, int *rao_s2, int *economy, 
-		int *verb, int *trace, double *mu_mean, double *mu_var, 
-		double *S_mean_out, double *S_var_out, int *methods, 
-		int *thin_out, double *lambda2_mean, double *m_mean)
+		double *lambda_start, double *mprior, double *rd, 
+		int *rao_s2, int *economy, int *verb, int *trace, 
+
+		/* Quadratic Programming inputs */
+		double *dvec, int *dmu, double *Amat, double *b0, 
+		int *mu_constr, int *q, int *meq,
+
+		/* estimation outputs */
+		double *mu_mean, double *mu_var, double *S_mean, 
+		double *S_var, double* mu_map, double *S_map,
+		double *lpost_map, int *which_map, int *methods, 
+		int *thin_out, double *lambda2_mean, double *m_mean,
+
+		/* Quadratic Programming outputs */
+		double *w)
 {
   /* copy the vector input Y into matrix form */
   Y = new_matrix_bones(Y_in, *N, *M);
@@ -582,9 +956,15 @@ void bmonomvn_R(int *B, int *T, int *thin, int *M, int *N, double *Y_in,
   /* copy the vector input S_start into matrix form */
   if(S_start_in) S_start = new_matrix_bones(S_start_in, *M, *M);
 
-  /* copy the vectors S_out S_var_out into matrix form */
-  S_mean = new_matrix_bones(S_mean_out, *M, *M);
-  S_var = new_matrix_bones(S_var_out, *M, *M);
+  /* load copy the vectors mu, S_mean, mu_var, and S_var
+     into the MVNsum structures */
+  MVNmean = new_MVNsum_R(*M, mu_mean, S_mean);
+  MVNvar = new_MVNsum_R(*M, mu_var, S_var);
+  MVNmap = new_MVNsum_R(*M, mu_map, S_map);
+
+  /* load Quadratic Programming inputs into the QP structure */
+  qps = new_QPsamp_R(*M, *T, dvec, (bool) *dmu, Amat, b0, mu_constr, 
+		     *q, *meq, w);
 
   /* get the random number generator state from R */
   GetRNGstate();
@@ -592,9 +972,9 @@ void bmonomvn_R(int *B, int *T, int *thin, int *M, int *N, double *Y_in,
   /* create a new Bmonomvn object */
   bmonomvn = new Bmonomvn(*M, *N, Y, n, *p, *verb, (bool) (*trace));
 
-  /* PERHAPS CONSIDER MOVING THIS CALL TO OUTSIDE THIS CONSTRUCTOR */
+  /* initialize the Bayesian lasso regressios with the bmonomvn module */
   bmonomvn->InitBlassos(*method, *RJ, (bool) (*capm), mu_start, S_start, 
-			ncomp_start, lambda_start, rd[0], rd[1], 
+			ncomp_start, lambda_start, *mprior, rd[0], rd[1],
 			(bool) (*rao_s2), (bool) *economy, (bool) (*trace));
 
   /* do burn-in rounds */
@@ -602,28 +982,24 @@ void bmonomvn_R(int *B, int *T, int *thin, int *M, int *N, double *Y_in,
   bmonomvn->Rounds(*B, *thin, (bool) *economy, true);
   
   /* set up the mu and S sums for calculating means and variances */
-  bmonomvn->SetSums(mu_mean, mu_var, S_mean, S_var, lambda2_mean, m_mean);
+  bmonomvn->SetSums(MVNmean, MVNvar, lambda2_mean, m_mean, MVNmap);
+  /* set the QPsamp */
+  bmonomvn->SetQPsamp(qps);
 
   /* and now sampling rounds */
   if(*verb) myprintf(stdout, "%d sampling rounds\n", *T);
   bmonomvn->Rounds(*T, *thin, (bool) *economy, false);
 
-  /* copy back the mean and variance of mu */
-  scalev(mu_mean, *M, 1.0/(*T));
-  scalev(mu_var, *M, 1.0/(*T));
-  for(unsigned int i=0; i<(unsigned) *M; i++) mu_var[i] -= sq(mu_mean[i]);
+  /* copy back the mean and variance of mu and S */
+  MVN_mean(MVNmean, *T);
+  MVN_var(MVNvar, MVNmean, *T);
 
-  /* copy back the mean and variance of S */
-  scalev(*S_mean, (*M)*(*M), 1.0/(*T));
-  scalev(*S_var, (*M)*(*M), 1.0/(*T));
-  for(unsigned int i=0; i<(unsigned) (*M); i++) 
-    for(unsigned int j=0; j<(unsigned) (*M); j++)
-      S_var[i][j] -= sq(S_mean[i][j]);
+  /* get/check the MAP */
+  assert(MVNmap->T == 1);
+  *lpost_map = bmonomvn->LpostMAP(which_map);
 
-  /* bopy back the mean lambda2s */
+  /* copy back the mean lambda2s and ms */
   scalev(lambda2_mean, *M, 1.0/(*T));
-
-  /* bopy back the mean ms */
   scalev(m_mean, *M, 1.0/(*T));
 
   /* get the actual methods and thinning level used for each regression */
@@ -640,8 +1016,10 @@ void bmonomvn_R(int *B, int *T, int *thin, int *M, int *N, double *Y_in,
   /* clean up */
   free(Y); Y = NULL;
   free(S_start); S_start = NULL;
-  free(S_mean); S_mean = NULL;
-  free(S_var); S_var = NULL;
+  delete_MVNsum_R(MVNmean); MVNmean = NULL;
+  delete_MVNsum_R(MVNvar); MVNvar = NULL;
+  delete_MVNsum_R(MVNmap); MVNmap = NULL;
+  if(qps) { delete_QPsamp_R(qps); qps = NULL; }
  }
 
 
@@ -659,7 +1037,7 @@ void bmonomvn_cleanup(void)
   /* free bmonomvn model */
   if(bmonomvn) { 
     if(bmonomvn->Verb() >= 1)
-      myprintf(stderr, "INTERRUPT: bmonomvn model leaked, is now destroyed\n");
+      myprintf(stderr, "INTERRUPT: bmonomvn model leaked, is now destroyed\n\n");
     delete bmonomvn; 
     bmonomvn = NULL; 
   }
@@ -667,8 +1045,10 @@ void bmonomvn_cleanup(void)
   /* clean up matrix pointers */
   if(Y) { free(Y); Y = NULL; }
   if(S_start) { free(S_start); S_start = NULL; }
-  if(S_mean){ free(S_mean); S_mean = NULL; }
-  if(S_var){ free(S_var); S_var = NULL; }
+  if(MVNmean){ delete_MVNsum_R(MVNmean); MVNmean = NULL; }
+  if(MVNvar){ delete_MVNsum_R(MVNvar); MVNvar = NULL; }
+  if(MVNmap){ delete_MVNsum_R(MVNmap); MVNmap = NULL; }
+  if(qps){ delete_QPsamp_R(qps); qps = NULL; }
 }
 
 

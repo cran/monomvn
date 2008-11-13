@@ -9,7 +9,8 @@
   approximate Cholesky decomposition from which to recover an
   approximate covariance matrix which is positive definite.
   If that doesn't do the trick, then \code{.Machine$double.eps} is
-  added to the diagonal until a positive definite matrix can be returned
+  added to the diagonal (as a last-ditch effort) until a positive
+  definite matrix can be returned
 }
 \usage{
 posdef.approx(S, name = "S", quiet=FALSE)
@@ -17,14 +18,15 @@ posdef.approx(S, name = "S", quiet=FALSE)
 \arguments{
   \item{S}{ square \code{matrix} which is supposed to be positive
     definite }
-  \item{name}{ name of the matrix -- used for printing errors and
-    warnings}
+  \item{name}{ optional name of the matrix -- used for printing
+    errors and warnings}
   \item{quiet}{ whether or not to print a \code{warning} when a
     non-positive definite matrix is found }
 }
 \value{
   Returns a \code{matrix} which is positive definite:
-  either the original matrix, or a nearby positive definite approximation.
+  either the original matrix, or a nearby positive definite
+  approximation
 }
 \references{
     Micah Altman, Jeff Gill and Michael McDonald (2003).

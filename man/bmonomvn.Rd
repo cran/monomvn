@@ -7,18 +7,18 @@
 \description{
   Bayesian estimation via sampling from the posterior distribution of the
   of the mean and covariance matrix of multivariate normal (MVN)
-  distributed data with a monotone missingness pattern via Gibbs Sampling.
+  distributed data with a monotone missingness pattern, via Gibbs Sampling.
   Through the use of parsimonious/shrinkage regressions (lasso & ridge),
-  where standard regressions fail,
-  this function can handle an (almost) arbitrary amount of missing data.
+  where standard regressions fail, this function can handle an (almost)
+  arbitrary amount of missing data
 }
 
 \usage{
 bmonomvn(y, pre = TRUE, p = 0.9, B = 100, T = 200, thin = 1,
          economy = FALSE, method = c("lasso", "ridge", "lsr"),
          RJ = c("bpsn", "p", "none"), capm = method!="lasso",
-         start = NULL, rd = NULL, rao.s2 = TRUE, verb = 1,
-         trace = FALSE)
+         start = NULL, mprior = 0, rd = NULL, rao.s2 = TRUE,
+         QP = NULL, verb = 1,trace = FALSE)
 }
 
 \arguments{
@@ -33,11 +33,11 @@ bmonomvn(y, pre = TRUE, p = 0.9, B = 100, T = 200, thin = 1,
    alternative regression (lasso, ridge, or RJ) is performed as if
    least-squares regression has \dQuote{failed}.  Least-squares regression is
    known to fail when the number of columns equals the number of rows,
-   hence a default of \code{p = 0.9} close to \code{1}.
-   Alternatively, setting \code{p = 0}
-   forces lasso to be used for \emph{every} regression.
-   Intermediate settings of \code{p} allow the user to control when
-   least-squares regressions stop and the lasso ones start}
+   hence a default of \code{p = 0.9 <= 1}. Alternatively, setting
+   \code{p = 0} forces a parsimonious method to be used for
+   \emph{every} regression. Intermediate settings of \code{p} allow
+   the user to control when least-squares regressions stop and the
+   parsimonious ones start}
  \item{B}{ number of Burn-In MCMC sampling rounds,
    during which samples are discarded }
   \item{T}{ total number of MCMC sampling rounds to take
@@ -74,18 +74,30 @@ bmonomvn(y, pre = TRUE, p = 0.9, B = 100, T = 200, thin = 1,
     The relevant fields are the mean vector \code{$mu}, covariance
     matrix \code{$S}, monotone ordering \code{$o} (for sanity checking
     with input \code{y}), component vector \code{$ncomp} and
-    penalty parameter vector \code{$lambda}.  See note below }
+    penalty parameter vector \code{$lambda}; see note below }
+  \item{mprior}{ prior on the number of non-zero regression coefficients
+    (and therefore covariates) \code{m} in the model. The default
+    (\code{mprior = 0}) encodes the uniform prior on \code{0 < m < M}.
+    A scalar value \code{0 <= mprior <= 1} implies a Binomial prior
+    \code{Bin(m|n=M,p=mprior)}}
   \item{rd}{ \code{=c(r,delta)}; a 2-vector of prior parameters for
     \eqn{\lambda^2}{lambda^2}
     which depends on the regression method.  When \code{method =
-      "lasso"} then the components are the alpha (shape) and beta (rate)
-    parameters to the a gamma distribution \code{G(r,d)};
-    when \code{method = "ridge"} the components are the alpha (shape)
-    and beta (scale) parameters
-    to an inverse-gamma distribution \code{IG(r/2,d/2)} }
-  \item{rao.s2 }{indicates whether to use Rao-Blackwellized samples for
-    \eqn{\sigma^2}{s^2} should be used (default \code{TRUE}), see
+      "lasso"} then the components are the \eqn{\alpha}{alpha}
+    (shape) and \eqn{\beta}{beta} (rate) parameters to the a
+    gamma distribution \code{G(r,delta)};
+    when \code{method = "ridge"} the components are the
+    \eqn{\alpha}{alpha} (shape) and \eqn{\beta}{beta} (scale) parameters
+    to an inverse-gamma distribution \code{IG(r/2,delta/2)} }
+  \item{rao.s2 }{indicates whether to  Rao-Blackwellized samples for
+    \eqn{\sigma^2}{s^2} should be used (default \code{TRUE}); see
     the details section of \code{\link{blasso}} for more information }
+  \item{QP }{ if non-\code{NULL} this argument should either be
+    \code{TRUE} or contain a \code{list} specifying a Quadratic
+    Program to solve as a function of the samples of \code{mu = dvec} and
+    \code{Sigma = Dmat} in the notation of \code{\link[quadprog]{solve.QP}};
+    see \code{\link{default.QP}} for a default specification that
+    is used when \code{QP = TRUE} is given; more details are below }
   \item{verb}{ verbosity level; currently only \code{verb = 0} and
     \code{verb = 1} are supported }
   \item{trace}{ if \code{TRUE} then samples from the regressions are
@@ -94,18 +106,18 @@ bmonomvn(y, pre = TRUE, p = 0.9, B = 100, T = 200, thin = 1,
 }
 
 \details{
-   If \code{pre = TRUE} then \code{bmonomvn} first re-arranges the columns
+  If \code{pre = TRUE} then \code{bmonomvn} first re-arranges the columns
   of \code{y} into nondecreasing order with respect to the number of
   missing (\code{NA})  entries. Then (at least) the first column should
   be completely observed.
 
-  Samples from the posterior distribution of the Multivariate
-  Normal mean vector and covariance matrix are obtained sampling
+  Samples from the posterior distribution of the MVN mean vector and
+  covariance matrix are obtained sampling
   from the posterior distribution of Bayesian regression models.
   The methodology for converting these to samples from the mean vector
   and covariance matrix is outlined in the \code{\link{monomvn}}
   documentation, detailing a similarly structured maximum likelihood
-  approach.  See also the references below.
+  approach.  Also see the references below.
 
   Whenever the regression model is ill--posed (i.e., when there are
   more  covariates than  responses, or a
@@ -119,22 +131,38 @@ bmonomvn(y, pre = TRUE, p = 0.9, B = 100, T = 200, thin = 1,
   As in \code{\link{monomvn}} the \code{p} argument can be used to
   turn on lasso or ridge regressions (possibly with RJ) at other times.  
 
+  Samples from a function of samples of \code{mu} and \code{Sigma}
+  can be obtained by specifying a Quadratic program via the
+  argument \code{QP}.  The idea is to allow for the calculation of
+  the distribution of minimum variance and mean--variance portfolios,
+  although the interface is quite general.  See \code{\link{default.QP}}
+  for more details, as \code{\link{default.QP}(ncol(y))} is used
+  when the argument \code{QP = TRUE} is given
 }
 
 \value{
-  \code{bmonomvn} returns an object of class \code{"monomvn"}, which is a
-  list containing the inputs above and a subset of the components below.
+  \code{bmonomvn} returns an object of class \code{"monomvn"},
+  which is a \code{list} containing the inputs above and a
+  subset of the components below.
 
   \item{call }{a copy of the function call as used}
   \item{mu }{estimated mean vector with columns corresponding to the
     columns of \code{y} }
   \item{S }{estimated covariance matrix with rows and columns
     corresponding to the columns of \code{y} }
-  \item{mu.var }{estimated variance of mean vector with columns
+  \item{mu.var }{estimated variance of the mean vector with columns
     corresponding to the columns of \code{y} }
   \item{S.var }{estimated variance of the individual components of the
     covariance matrix with columns and rows corresponding to the columns
     of \code{y}}
+  \item{mu.map }{estimated maximum \emph{a' posteriori} (MAP) of the
+    mean vector with columns corresponding to the columns of \code{y} }
+  \item{S.map }{estimated MAP of the individual
+    components of the covariance matrix with columns and rows
+    corresponding to the columns of \code{y}}
+  \item{lpost.map}{ log posterior probability of the MAP estimate}
+  \item{which.map}{ gives the time index of the sample corresponding to
+    the MAP estimate}
   \item{na }{ when \code{pre = TRUE} this is a vector containing number of
     \code{NA} entries in each column of \code{y}}
   \item{o }{ when \code{pre = TRUE} this is a vector containing the
@@ -145,20 +173,20 @@ bmonomvn(y, pre = TRUE, p = 0.9, B = 100, T = 200, thin = 1,
   \item{thin }{ the number of thinning rounds used for the regression
     (\code{method}) column}
   \item{lambda2 }{ records the mean \eqn{\lambda^2}{lambda^2} value
-    found in the trace of the Bayesian Lasso regressions.  This value
-    will be zero if the corresponding column corresponds to a complete
-    case or a ordinary least squares regression (these would be
+    found in the trace of the Bayesian Lasso regressions.  Zero-values
+    result when the column corresponds to a complete
+    case or an ordinary least squares regression (these would be
     \code{NA} entries from \code{\link{monomvn}}) }
   \item{ncomp }{ records the mean number of components
     (columns of the design matrix) used in the regression model for
     each column of \code{y}. If input \code{RJ = FALSE} then this simply
     corresponds to the monotone ordering (these would correspond to
-    the \code{NA} entries from \code{\link{monomvn}}.  When \code{RJ = TRUE}
+    the \code{NA} entries from \code{\link{monomvn}}).  When \code{RJ = TRUE}
     the monotone ordering is an upper bound (on each entry)}
   \item{trace}{ if input \code{trace = TRUE} then this field contains
-    traces of the samples of \code{mu} in the field \code{$mu} and
-    of \code{S} in the field \code{$S}, and of all regression parameters
-    for each of the \code{m = length(mu)} columns in the field
+    traces of the samples of \eqn{\mu}{mu} in the field \code{$mu} and
+    of \eqn{\Sigma}{S} in the field \code{$S}, and of all regression
+    parameters for each of the \code{m = length(mu)} columns in the field
     \code{$reg}. This \code{$reg} field is a stripped-down
     \code{"blasso"}-class object so that the methods of that object
     may be used for analysis}
@@ -169,7 +197,18 @@ bmonomvn(y, pre = TRUE, p = 0.9, B = 100, T = 200, thin = 1,
   \item{r}{ from inputs: alpha (shape) parameter to the gamma
       distribution prior for the lasso parameter lambda }
   \item{delta}{ from inputs: beta (rate) parameter to the gamma
-      distribution prior for the lasso parameter lambda }
+    distribution prior for the lasso parameter lambda }
+  \item{QP}{ if a valid (non--\code{FALSE} or \code{NULL}) \code{QP}
+    argument is given, then this field contains the specification of
+    a Quadratic Program in the form of a list with entries including
+    \code{$dvec}, \code{$Amat}, \code{$b0}, and \code{$meq}, similar
+    to the usage in \code{\link[quadprog]{solve.QP}}, and some
+    others; see \code{\link{default.QP}} for more details}
+  \item{W}{ when input \code{QP = TRUE} is given, then this field
+    contains a \code{T*ncol(y)} matrix of samples from the posterior
+    distribution of the solution to the Quadratic Program, which can
+    be visualized via \code{\link{plot.monomvn}} using the argument
+    \code{which = "QP"} }
 }
 
 \references{
@@ -207,8 +246,9 @@ bmonomvn(y, pre = TRUE, p = 0.9, B = 100, T = 200, thin = 1,
 }
 
 \seealso{ \code{\link{blasso}}, \code{\link{monomvn}},
-  \code{\link[norm]{em.norm}} in the \pkg{norm} package,
-  and \code{\link[mvnmle]{mlest}} in the \pkg{mvnmle} package}
+  \code{\link{default.QP}}, \code{\link[norm]{em.norm}} in the
+  \pkg{norm} package, and \code{\link[mvnmle]{mlest}} in the
+  \pkg{mvnmle} package}
 
 \examples{
 ## standard usage, duplicating the results in
@@ -229,32 +269,58 @@ xmuS <- randmvn(100, 20)
 ## randomly impose monotone missingness
 xmiss <- rmono(xmuS$x)
 
-## using least squares only when necessary
-obl <- bmonomvn(xmiss)
+## using least squares only when necessary,
+## and gathering samples from the Quadratic Program
+obl <- bmonomvn(xmiss, QP=TRUE)
 obl
-rmse.muS(obl$mu, obl$S, xmuS$mu, xmuS$S)
+
+## look at the posterior variability
+par(mfrow=c(1,2))
+plot(obl)
+plot(obl, "S")
+
+## compare to maximum likelihood
+Ellik.norm(obl$mu, obl$S, xmuS$mu, xmuS$S)
 oml <- monomvn(xmiss, method="lasso")
-rmse.muS(oml$mu, oml$S, xmuS$mu, xmuS$S)
+Ellik.norm(oml$mu, oml$S, xmuS$mu, xmuS$S)
+
+## plot the QP weights
+plot(obl, "QP", xaxis="index")
+
+## add mean and MLE comparison, requires the
+## quadprog library for the solve.QP function
+library(quadprog)
+W.mean <- solve.QP(obl$S, obl$QP$dvec, obl$QP$Amat,
+                   obl$QP$b0, meq=obl$QP$meq)$sol
+W.mle <- solve.QP(oml$S, obl$QP$dvec, obl$QP$Amat,
+                   obl$QP$b0, meq=obl$QP$meq)$sol
+points(apply(obl$W, 2, mean), col=3, pch=18)
+points(W.mean, col=4, pch=17)
+points(W.mle, col=5, pch=16)
+legend("topright",
+      c("MAP", "mean(W)", "w(S.mean)", "MLE"),
+      col=2:5, pch=c(21,18:16))
 
 ## using least squares sparingly
 obls <- bmonomvn(xmiss, p=0.25)
-rmse.muS(obls$mu, obls$S, xmuS$mu, xmuS$S)
+Ellik.norm(obls$mu, obls$S, xmuS$mu, xmuS$S)
 omls <- monomvn(xmiss, p=0.25, method="lasso")
-rmse.muS(omls$mu, omls$S, xmuS$mu, xmuS$S)
+Ellik.norm(omls$mu, omls$S, xmuS$mu, xmuS$S)
 
-#### compare to ridge regression
+## compare to ridge regression
 obrs <- bmonomvn(xmiss, p=0.25, method="ridge")
-rmse.muS(obrs$mu, obrs$S, xmuS$mu, xmuS$S)
+Ellik.norm(obrs$mu, obrs$S, xmuS$mu, xmuS$S)
 omrs <- monomvn(xmiss, p=0.25, method="ridge")
-rmse.muS(omrs$mu, omrs$S, xmuS$mu, xmuS$S)
+Ellik.norm(omrs$mu, omrs$S, xmuS$mu, xmuS$S)
 
 ## using the maximum likelihood solution to initialize
 ## the Markov chain and avoid burn-in.  
 ob2s <- bmonomvn(xmiss, p=0.25, B=0, start=omls, RJ="p")
-rmse.muS(ob2s$mu, ob2s$S, xmuS$mu, xmuS$S)
+Ellik.norm(ob2s$mu, ob2s$S, xmuS$mu, xmuS$S)
 }
 
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.
 \keyword{ multivariate }
 \keyword{ regression }
+\keyword{ optimize }
