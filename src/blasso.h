@@ -34,16 +34,16 @@ typedef enum MAT_STATE {NOINIT=1001,COV=1002,CHOLCOV=1003} MAT_STATE;
 typedef struct bayesreg
 {
   unsigned int m;           /* dimension of these matrices and vectors */
-  double *bmu;              /* posterior mean for beta */
-  double BtAB;              /* in R syntax: t(bmu) %*% A %*% bmu */
   double *XtX_diag;         /* diagonal entries of XtX */
   double **A;               /* inverse of Vb unscaled by s2 */
-  double **A_util;          /* utility for inverting A */
+  double **A_chol;          /* utility for inverting A via cholesky */
   double **Ai;              /* inverse of A */
-  double *ABmu;             /* in R syntax: A %*% bmu */
-  double **Vb;              /* posterior covariance matrix for beta */
+  double ldet_Ai;           /* log(det(Ai)) */
+  double *bmu;              /* posterior mean for beta */
+  double BtAB;              /* in R: BtAB = t(bmu) %*% A %*% bmu */
+  double *ABmu;             /* in R: ABmu = A %*% bmu */
+  double **Vb;              /* posterior covariance matrix for beta Vb = s2*Ai */
   MAT_STATE Vb_state;       /* state of the Vb matrix */
-
 } BayesReg;
 
 
@@ -91,21 +91,24 @@ class Blasso
   double YtY;               /* in R syntax: t(Y) %*% Y, or SSy */
   double *resid;            /* in R syntax: Y - X %*% beta */
 
-  /* model parameters except beta */
+  /* model parameters */
   double lambda2;           /* the lasso penalty parameter */
   double s2;                /* the noise variance */
-  bool rao_s2;              /* indicates not to use beta when drawing s2 (when TRUE) */
+  double *tau2i;            /* inverse of diagonal of beta normal prior cov matrix */
+  double *beta;             /* sampled regression coefficients, conditional on breg */
+
+  /* regressions utility structure(s) */
+  BayesReg *breg;           /* matrices and vectors of regression quantities */
+
+  /* prior parameters */
   double a;                 /* IG alpha (scale) prior parameter for s2 */
   double b;                 /* IG beta (inverse-scale) prior parameter for s2 */
-  double *tau2i;            /* inverse of diagonal of beta normal prior cov matrix */
+  bool rao_s2;              /* indicates not to use beta when drawing s2 (when TRUE) */
+  double mprior;            /* Bin(m|M,mprior) or Unif[0,M] if mprior=0 prior for m */
   double r;                 /* Gamma alpha (shape) prior parameter for lambda */
   double delta;             /* Gamma beta (scale) prior parameter for lambda */
 
-  BayesReg *breg;           /* matrices and vectors of regression quantities */
-  double *beta;             /* sampled regression coefficients, conditional on breg */
-  double beta_lprob;        /* the (log) probability of the sampled beta coeffs 
-			       (density) of beta ~ N(bmu,Vb) */
-
+  /* posterior probability evaluation */
   double lpost;             /* log posterior of parameters *not including mu) */
 
   /* other useful vectors */
@@ -148,14 +151,15 @@ class Blasso
   /* constructors and destructors */
   Blasso(const unsigned int m, const unsigned int n, double **X, double *Y, 
 	 const bool RJ, const unsigned int Mmax, double *beta, const double lambda2, 
-	 const double s2, double *tau2i, const double r, const double delta, 
-	 const double a, const double b, const bool rao_s2, const bool normalize, 
-	 const unsigned int verb);
+	 const double s2, double *tau2i, const double mprior, const double r, 
+	 const double delta, const double a, const double b, const bool rao_s2, 
+	 const bool normalize, const unsigned int verb);
   Blasso(const unsigned int m, const unsigned int n, double **Xorig, double *Xnorm,
 	 const double Xnorm_scale, double *Xmean, const unsigned int ldx, double *Y, 
 	 const bool RJ, unsigned int Mmax, double *beta_start, const double s2, 
-	 const double lambda2_start, const double r, const double delta, 
-	 const REG_MODEL reg_model, bool rao_s2, const unsigned int verb);
+	 const double lambda2_start, const double mprior, const double r, 
+	 const double delta, const REG_MODEL reg_model, bool rao_s2, 
+	 const unsigned int verb);
   ~Blasso();
   void Economize(void);
 
@@ -211,17 +215,20 @@ double mvnpdf_log_dup(double *x, double *mu, double **cov,
 double mvnpdf_log(double *x, double *mu, double **cov, 
 		  const unsigned int n);
 double log_determinant_chol(double **M, const unsigned int n);
+double lprior_model(const unsigned int m, const unsigned int Mmax, 
+		    const double mprior);
 
 /* for modular reversible jump */
 double mh_accep_ratio(unsigned int n, double *resid, double *x, double bnew, 
 		      double t2i, double mub, double vb, double s2);
-double draw_beta(const unsigned int m, double *beta, BayesReg* breg, 
-	       const double s2, double *rn, const bool lprob);
+void draw_beta(const unsigned int m, double *beta, BayesReg* breg, 
+	       const double s2, double *rn);
 double log_posterior(const unsigned int n, const unsigned int m, 
 		     double *resid, double *beta, const double s2, 
 		     double *tau2i, const double lambda2, 
 		     const double a, const double b, const double r,
-		     const double delta);
+		     const double delta, const unsigned int Mmax, 
+		     const double mprior);
 
 /* regression utility structure */
 BayesReg* new_BayesReg(const unsigned int m, const unsigned int n, 
@@ -231,6 +238,8 @@ bool compute_BayesReg(const unsigned int m, double *XtY, double *tau2i,
 		      const double lambda2, const double s2, BayesReg *breg);
 void refresh_Vb(BayesReg *breg, const double s2);
 double beta_lprob(const unsigned int m, double *beta, BayesReg *breg);
+double rj_betas_lratio(BayesReg *b1, BayesReg *b2, 
+		       const double s2, const double tau2);
 void alloc_rest_BayesReg(BayesReg* breg);
 BayesReg* plus1_BayesReg(const unsigned int m, const unsigned int n,
 			 BayesReg *old, double *xnew, double **Xp);

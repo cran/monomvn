@@ -18,6 +18,7 @@
 \alias{blasso.cleanup}
 \alias{bmonomvn.cleanup}
 \alias{check.start}
+\alias{check.QP}
 \alias{table2blasso}
 \alias{getR}
 
@@ -27,7 +28,7 @@
 }
 \details{
   These are not to be called by the user (or in some cases are just
-  waiting for proper documentation to be written :)).
+  waiting for proper documentation to be written :))
 }
 %\references{
 %\url{http://www.statslab.cam.ac.uk/~bobby/monomvn.html}

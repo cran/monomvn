@@ -14,7 +14,8 @@ rmono(x, m = 7, ab = NULL)
   \item{x}{ data \code{matrix} }
   \item{m}{ minimum number of non-\code{NA} entries in each column }
   \item{ab}{ a two-vector of \eqn{\alpha}{alpha} (\code{ab[1]}) and
-    \eqn{\beta}{beta} (\code{ab[2]}) parameters to a beta distribution
+    \eqn{\beta}{beta} (\code{ab[2]}) parameters to a
+    Beta\eqn{(\alpha, \beta)}{(alpha, beta)} distribution
     describing the proportion of \code{NA} entries in each column.
     The default setting \code{ab = NULL} yields a uniform distribution }
 }
@@ -27,7 +28,7 @@ rmono(x, m = 7, ab = NULL)
   \eqn{\beta}{beta} (\code{ab[2]})
 }
 \value{
-  returns a matrix with the same dimensions as the input \code{x}
+  returns a \code{matrix} with the same dimensions as the input \code{x}
 }
 \author{ Robert B. Gramacy \email{bobby@statslab.cam.ac.uk}}
 \references{

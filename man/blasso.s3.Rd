@@ -20,7 +20,7 @@
 }
 
 \arguments{
-  \item{object}{ a \code{"blasso"}-class object for that must be named
+  \item{object}{ a \code{"blasso"}-class object that must be named
     \code{object} for the generic methods \code{\link{summary.blasso}} }
   \item{x}{ a \code{"blasso"}-class object that must be named \code{x}
     for the generic printing and plotting methods 
@@ -29,8 +29,8 @@
   \item{burnin}{ number of burn-in rounds to discard before
     reporting summaries and making plots.  Must be non-negative
     and less than \code{x$T}}
-  \item{which}{ indicates the parameter whose characteristics should be plotted;
-     does not apply to the \code{\link{summary}} }
+  \item{which}{ indicates the parameter whose characteristics
+    should be plotted; does not apply to the \code{\link{summary}} }
   \item{...}{ passed to \code{\link{print.blasso}}, or
       \code{\link{plot.default}}}
   }
@@ -41,8 +41,8 @@
   the summary and plot commands.  
 
   \code{\link{plot.blasso}} uses an appropriate
-  \code{\link{plot}} command
-  on the list entries of the \code{"blasso"}-class object thus
+  \code{\link{plot}} command on the \code{list} entries of the
+  \code{"blasso"}-class object thus
   visually summarizing the samples from the posterior distribution of
   each parameter in the model depending on the \code{which}
   argument supplied.
@@ -58,7 +58,7 @@
 }
 \value{
   \code{\link{summary.blasso}} returns a \code{"summary.blasso"}-class
-  object, which is a list containing (a subset of) the items below.
+  object, which is a \code{list} containing (a subset of) the items below.
   The other functions do not return values.
 
   \item{B}{ a copy of the input argument \code{thin} }

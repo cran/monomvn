@@ -9,7 +9,7 @@ Maximum likelihood estimation of the mean and covariance matrix of
 multivariate normal (MVN) distributed data with a monotone missingness pattern.
 Through the use of parsimonious/shrinkage regressions (e.g., plsr, pcr,
 ridge, lasso, etc.), where standard regressions fail,
-this function can handle an (almost) arbitrary amount of missing data.
+this function can handle an (almost) arbitrary amount of missing data
 }
 \usage{
 monomvn(y, pre = TRUE, method = c("plsr", "pcr", "lasso", "lar",
@@ -45,9 +45,8 @@ monomvn(y, pre = TRUE, method = c("plsr", "pcr", "lasso", "lar",
     alternative regression \code{method} (those above) is performed as if
     least-squares regression has \dQuote{failed}.  Least-squares regression is
     known to fail when the number of columns equals the number of rows,
-    hence a default of \code{p = 0.9} close to \code{1}.
-    Alternatively, setting \code{p = 0}
-    forces \code{method} to be used for \emph{every} regression.
+    hence a default of \code{p = 0.9 <= 1}. Alternatively, setting
+    \code{p = 0} forces \code{method} to be used for \emph{every} regression.
     Intermediate settings of \code{p} allow the user to control when
     least-squares regressions stop and the \code{method} ones start.
     When \code{method = "factor"} the \code{p} argument represents an
@@ -74,11 +73,11 @@ monomvn(y, pre = TRUE, method = c("plsr", "pcr", "lasso", "lar",
     \pkg{lars} package (e.g. lasso) support model choice via the
     \code{"Cp"} statistic, which defaults to the \code{"CV"} method
     when least squares fails.  This argument is ignored for the
-  \code{"ridge"} method, see details below}
+  \code{"ridge"} method; see details below}
   \item{obs}{ logical indicating whether or not to (additionally)
     compute a mean vector and covariance matrix based only on the observed
     data, without regressions.  I.e., means are calculated as averages
-    of each non-\code{NA} entry in each column of \code{y}, and entries
+    of each non-\code{NA} entry in the columns of \code{y}, and entries
     \code{(a,b)} of the
     covariance matrix are calculated by applying \code{\link{cov}(ya,yb)}
     to the jointly non-\code{NA} entries of columns \code{a} and \code{b}
@@ -135,9 +134,9 @@ monomvn(y, pre = TRUE, method = c("plsr", "pcr", "lasso", "lar",
   If \code{quiet = FALSE} then a \code{\link{warning}}
   is given whenever the first choice for a regression fails.
   
-  For \pkg{pls} methods, RMSEs
-  are calculated for a number of components in \code{1:ncomp.max} where
-  \code{is.null(ncomp.max)} it is replaced with
+  For \pkg{pls} methods, RMSEs are calculated for a number of
+  components in \code{1:ncomp.max} where
+  a \code{NULL} value for \code{ncomp.max} it is replaced with
 
   \code{ncomp.max <- min(ncomp.max, ncol(y2), nrow(y1)-1)}
 
@@ -167,7 +166,7 @@ monomvn(y, pre = TRUE, method = c("plsr", "pcr", "lasso", "lar",
 }
 \value{
   \code{monomvn} returns an object of class \code{"monomvn"}, which is a
-  list containing a subset of the components below.
+  \code{list} containing a subset of the components below.
 
   \item{call }{a copy of the function call as used}
   \item{mu }{estimated mean vector with columns corresponding to the

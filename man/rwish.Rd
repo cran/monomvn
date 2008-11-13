@@ -11,8 +11,8 @@
 }
 
 \arguments{
-    \item{v}{Degrees of freedom (scalar).}
-    \item{S}{Inverse scale matrix \eqn{(p \times p)}{(p x p)}.}
+    \item{v}{degrees of freedom (scalar)}
+    \item{S}{inverse scale matrix \eqn{(p \times p)}{(p x p)}}
 }
 
 \value{
@@ -26,7 +26,7 @@ and inverse scale matrix \code{S} is \eqn{vS}{vS}.
 }
 
 \references{
-  This was copied from \pkg{MCMCpack}.
+  This was copied from the \pkg{MCMCpack} package
 }
 
 \examples{

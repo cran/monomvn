@@ -40,9 +40,10 @@ regress(X, y, method = c("lsr", "plsr", "pcr", "lasso", "lar",
     is the proportion of the
     number of columns to rows in the design matrix before an
     alternative regression \code{method} (except \code{"lsr"})
-    is performed as if  least-squares regression \dQuote{fails}.
+    is performed as if  least-squares regression \dQuote{failed}.
     Least-squares regression is
-    known to fail when the number of columns equals the number of rows.
+    known to fail when the number of columns is greater than or
+    equal to the number of rows.
     The default setting, \code{p = 0}, forces the specified
     \code{method} to be used for \emph{every} regression unless
     \code{method = "lsr"} is specified but is unstable.
@@ -55,7 +56,7 @@ regress(X, y, method = c("lsr", "plsr", "pcr", "lasso", "lar",
   \item{ncomp.max}{ maximal number of (principal) components to consider
     in a \code{method}---only meaningful for the \code{"plsr"} or
     \code{"pcr"} methods.  Large settings can cause the execution to be
-    slow as they drastically increases the cross-validation (CV) time}
+    slow as they drastically increase the cross-validation (CV) time}
   \item{validation}{ method for cross validation when applying 
     a \emph{parsimonious} regression method.  The default setting
     of \code{"CV"} (randomized 10-fold cross-validation) is the faster method, 
@@ -68,7 +69,7 @@ regress(X, y, method = c("lsr", "plsr", "pcr", "lasso", "lar",
   \pkg{lars} package (e.g. lasso) support model choice via the
   \code{"Cp"} statistic, which defaults to the \code{"CV"} method
   when least squares fails.  This argument is ignored for the
-  \code{"ridge"} method, see details below}
+  \code{"ridge"} method; see details below}
   \item{verb}{ whether or not to print progress indicators.  The default
     (\code{verb = 0}) keeps quiet.  This argument is provided for
     \code{\link{monomvn}} and is not intended to be set by the user
@@ -92,7 +93,7 @@ regress(X, y, method = c("lsr", "plsr", "pcr", "lasso", "lar",
   
   For \pkg{pls} methods, RMSEs
   are calculated for a number of components in \code{1:ncomp.max} where
-  \code{is.null(ncomp.max)} it is replaced with
+  a \code{NULL} value for \code{ncomp.max} it is replaced with
 
   \code{ncomp.max <- min(ncomp.max, ncol(y), nrow(X)-1)}
 
@@ -110,7 +111,7 @@ regress(X, y, method = c("lsr", "plsr", "pcr", "lasso", "lar",
   function on the \code{GCV} output.
 }
 \value{
-  \code{regress} returns a list containing
+  \code{regress} returns a \code{list} containing
   the components listed below.
 
   \item{call }{a copy of the function call as used}

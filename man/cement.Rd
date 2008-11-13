@@ -12,7 +12,7 @@ data(cement)
 data(cement.miss)
 }
 \format{
-  A data frame with 13 observations on the following 5 variables.
+  A \code{data.frame} with 13 observations on the following 5 variables.
   \describe{
     \item{x1 }{percentage weight in clinkers of 3CaO.Al2O3}
     \item{x2 }{percentage weight in clinkers of 3CaO.SiO2}
@@ -27,7 +27,7 @@ data(cement.miss)
   demonstrating estimation of multivariate means and variances when
   the missing data pattern is monotone.  These are indicated by
   \code{NA} in \code{cement.miss}.  See the examples section of
-  \code{\link{monomvn}} for a re-working of the example from the textbook.
+  \code{\link{monomvn}} for a re-working of the example from the textbook
 }
 \source{
 Woods, H., Steinour, H. H. and Starke, H. R. (1932) 
@@ -50,7 +50,7 @@ Wilely.  Page 154.
 
 \seealso{
   \code{\link{monomvn}} --  Several other \R packages also include
-    this data set.
+    this data set
   }
 
 \examples{

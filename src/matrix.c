@@ -1309,7 +1309,7 @@ void matrix_t_to_file(const char* file_str, double** matrix, unsigned int n1,
 
 
 /*
- * sub_pcols_matrix:
+ * sub_p_matrix:
  *
  * copy the cols v[1:n1][p[n2]] to V.  
  * must have nrow(v) == nrow(V) and ncol(V) >= lenp
@@ -1670,6 +1670,20 @@ double sumv(double *v, unsigned int n)
 double meanv(double *v, unsigned int n)
 {
   return(sumv(v, n)/n);
+}
+
+
+/*
+ * equalv:
+ *
+ * returns 1 if the vectors are equal, 0 otherwise
+ */
+
+int equalv(double *v1, double *v2, int n)
+{
+  unsigned int i;
+  for(i=0; i<n; i++) if(v1[i] != v2[i]) return(0);
+  return(1);
 }
 
 

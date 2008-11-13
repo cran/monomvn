@@ -30,12 +30,13 @@
 
 'bridge' <-
 function(X, y, T=1000, thin=NULL, RJ=TRUE, M=NULL, beta=NULL,
-         lambda2=1, s2=1, rd=NULL, ab=NULL, rao.s2=TRUE,
-         normalize=TRUE, verb=1)
+         lambda2=1, s2=1, mprior=0, rd=NULL, ab=NULL,
+         rao.s2=TRUE, normalize=TRUE, verb=1)
   {
     blasso(X=X, y=y, T=T, thin=thin, RJ=RJ, M=M, beta=beta,
-           lambda2=lambda2, s2=s2, ridge=TRUE, rd=rd, ab=ab,
-           rao.s2=rao.s2, normalize=normalize, verb=verb)
+           lambda2=lambda2, s2=s2, ridge=TRUE, mprior=mprior,
+           rd=rd, ab=ab, rao.s2=rao.s2, normalize=normalize,
+           verb=verb)
   }
 
 
@@ -47,8 +48,8 @@ function(X, y, T=1000, thin=NULL, RJ=TRUE, M=NULL, beta=NULL,
 
 'blasso' <-
 function(X, y, T=1000, thin=NULL, RJ=TRUE, M=NULL, beta=NULL,
-         lambda2=1, s2=1, ridge=FALSE, rd=NULL, ab=NULL,
-         rao.s2=TRUE, normalize=TRUE, verb=1)
+         lambda2=1, s2=1, ridge=FALSE, mprior=0, rd=NULL,
+         ab=NULL, rao.s2=TRUE, normalize=TRUE, verb=1)
   {
     ## (quitely) double-check that blasso is clean before-hand
     blasso.cleanup()
@@ -146,6 +147,14 @@ function(X, y, T=1000, thin=NULL, RJ=TRUE, M=NULL, beta=NULL,
       tau2i <- as.double(rep(tau2i, T))
     }
 
+    ## check mprior
+    if(length(mprior) != 1 || mprior < 0 || mprior > 1) {
+      stop("mprior should be a scalar 0 <= mprior < 1");
+    } else if(mprior != 0 && RJ == FALSE) {
+      warning(paste("setting mprior=", mprior, " ignored since RJ=FALSE",
+                    sep=""))
+    }
+
     ## check r and delta (rd)
     if(is.null(rd)) {
       if(ridge) { ## if using ridge regression IG prior
@@ -202,6 +211,7 @@ function(X, y, T=1000, thin=NULL, RJ=TRUE, M=NULL, beta=NULL,
             s2 = as.double(rep(s2, T)),
             tau2i = tau2i,
             lpost = double(T),
+            mprior = as.double(mprior),
             r = as.double(rd[1]),
             delta = as.double(rd[2]),
             a = as.double(ab[1]),
