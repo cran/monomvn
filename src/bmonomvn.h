@@ -27,43 +27,7 @@
 
 #include <fstream>
 #include "blasso.h"
-
-
-/* 
- * MultiVariate Normal cumulative sum collector for 
- * collecting the posterior mean and variance of
- * the mean vector and covariance matrix 
- */
-
-typedef struct MVNsum
-{
-  unsigned int m;           /* dimension of these matrices and vectors */
-  unsigned int T;           /* number of accumulated samples in the sum */
-  double *mu;               /* cumulative mean vector */
-  double **S;               /* cumulative covariance matrix */
-} MVNsum;
-
-
-typedef struct QPsamp
-{
-  unsigned int m;           /* number of weights/rows in Amat/cols in W */
-  unsigned int T;           /* total number of samples/rows in W */
-  double *S_copy;           /* copy of S for qpgen2 */
-  double *dvec;             /* vector of length m, either mu-samples or zeros */
-  double *dvec_copy;        /* copy of dvec for qpgen2 */
-  bool dmu;                 /* indicates if d should be replaced with mu-samps */
-  double *Amat;             /* matrix of linear constraints t(A) %*% b >= b0 */
-  double *Amat_copy;        /* copy of Amat for qpgen2 and mu_constr */
-  double *b0;               /* vector of linear constraints t(A) %*% b >= b0 */
-  double *b0_copy;          /* copy of b0 for qpgen2 mu_constr */
-  int *mu_c;                /* which rows of Amat should mu be copied into */
-  unsigned int mu_c_len;    /* length(mu_constr) */
-  unsigned int q;           /* number of columns in Amat */
-  int* iact;                /* workspace of length q */
-  unsigned int meq;         /* first meq constraints are treated as equality */
-  double *work;             /* workspace of length 2*n + r*(r+5)/2 + 2*q + 1 */
-  double **W;               /* T-x-m samples of weights (b as above) */
-} QPsamp;
+#include "ustructs.h"
 
 
 /*
@@ -80,14 +44,15 @@ class Bmonomvn
   /* inputs */
   unsigned int M;            /* ncol(Y) */
   unsigned int N;            /* nrow(Y) */
-  int *n;                    /* number of non-NA in each col of Y */
   double **Y;                /* the data matrix */
+  int *n;                    /* number of non-NA in each col of Y */
+  Rmiss *R;                  /* the missingness pattern structure */
+  int *n2;                   /* number of R=2's in each col of R for DA */
   double p;                  /* the parsimony proportion */
 
   /* large normed design matrix used in regressions */
   double *Xnorm;            /* normalization constants for the cols of X */
   double *Xmean;            /* mean of Xorig for centering */
-  double **X;               /* the (normd and centered) design matrix */
 
   /* model parameters */
   double *mu;                /* estimated mean vector (in round t) */
@@ -116,12 +81,13 @@ class Bmonomvn
   
   /* utility vectors for addy, used for all i */
   double *s21;               /* utility vector for calcing S from beta */
-  double *y;                 /* for (temporarily) storing columns of y */
+  double *yvec;              /* for (temporarily) storing columns of Y */
   
   /* for printing traces */
   FILE *trace_mu;            /* traces of the mean */
   FILE *trace_S;             /* traces of the covariance */
   FILE **trace_lasso;        /* traces of the individual regressions */
+  FILE *trace_DA;            /* traces of the inputs sampled by data augmentation */
 
   /* for collecting means and variances -- allocated externally */
   MVNsum *mom1;              /* retains the sum of mu and S samples */
@@ -136,16 +102,19 @@ class Bmonomvn
  protected:
 
   double Draw(const unsigned int thin, const bool economize, const bool burnin);
+  void DataAugment(unsigned int col, const double mu, double *beta, 
+		   const double s2);
 
  public:
 
   /* constructors and destructors */
   Bmonomvn(const unsigned int M, const unsigned int N, double **Y, int *n,
-	   const double p, const unsigned int verb, const bool trace);
+	   Rmiss *R, const double p, const unsigned int verb, 
+	   const bool trace);
   ~Bmonomvn();
 
   /* Initialization */
-  void InitBlassos(const unsigned int method, const unsigned int RJm, 
+  void InitBlassos(const unsigned int method, int *facts, const unsigned int RJm, 
 		   const bool capm, double *mu_start, double ** S_start, 
 		   int *ncomp_start, double *lambda_start, const double mprior,
 		   const double r, const double delta, const bool rao_s2, 
@@ -157,8 +126,8 @@ class Bmonomvn
 
   /* printing and tracing */
   double LpostMAP(int *which);
-  void PrintRegressions(FILE *outfile);
-  void InitTrace(unsigned int m);
+  void InitBlassoTrace(unsigned int m);
+  void InitBlassoTrace(const bool trace);
   void PrintTrace(unsigned int m);
   void Methods(int *methods);
   void Thin(const unsigned int thin, int *thin_out);
@@ -171,28 +140,8 @@ class Bmonomvn
 };
 
 
-/* functions used on MVNsum structures for caluclating 
-   means and variances from Monte Carlo samples of mu and S */
-MVNsum* new_MVNsum_R(const unsigned int m, double* mu, double* S);
-void delete_MVNsum_R(MVNsum *mvnsum);
-void MVN_add(MVNsum *mom1, double *mu, double **S, const unsigned int m);
-void MVN_add2(MVNsum *mom2, double *mu, double **S, const unsigned int m);
-void MVN_mean(MVNsum *mom1, const unsigned int T);
-void MVN_var(MVNsum *mom2, MVNsum *mean, const unsigned int T);
-void MVN_copy(MVNsum *map, double *mu, double **S, const unsigned int m);
-
-/* functions used on QPsamp structures for Quadratic Programming */
-QPsamp* new_QPsamp_R(const unsigned int m, const unsigned int T, 
-		     double *dvec, const bool dmu, double *Amat, double *b0, 
-		     const unsigned int q, const unsigned int meq, 
-		     double *w);
-void delete_QPsamp_R(QPsamp *qps);
-void QPsolve(QPsamp *qps, const unsigned int t, const unsigned int m,
-	     double *mu, double **S);
-
 /* getting the regression coefficients from a mean vector and covariance matrix */
 void get_regress(const unsigned int m, double *mu, double *s21, double **s11, 
 		 const unsigned int ncomp, double *mu_out, double *beta_out, 
 		 double *s2_out);
-
 #endif

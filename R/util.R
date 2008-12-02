@@ -1,3 +1,27 @@
+#******************************************************************************* 
+#
+# Estimation for Multivariate Normal Data with Monotone Missingness
+# Copyright (C) 2007, University of Cambridge
+# 
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+# 
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+# 
+# You should have received a copy of the GNU Lesser General Public
+# License along with this library; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+#
+# Questions? Contact Robert B. Gramacy (bobby@statslab.cam.ac.uk)
+#
+#******************************************************************************
+
+
 ## Igamma.inv:
 ##
 ## calculate the beta parameter of an Inverse Gamma
@@ -22,7 +46,7 @@ Igamma.inv <- function(a, y, lower=FALSE, log=FALSE)
 ## mvnpdf.C:
 ##
 ## function used to test C code for evaluating
-## the densift of an MVN distributoin with mean
+## the densify of an MVN distributoin with mean
 ## mu and covariance S
 
 mvnpdf.C <- function(x, mu, S, log=FALSE)
@@ -32,11 +56,31 @@ mvnpdf.C <- function(x, mu, S, log=FALSE)
        mu = as.double(mu),
        S = as.double(S),
        n = as.integer(length(x)),
-       result =  double(1)
-       ,PACKAGE = "monomvn")
+       result =  double(1),
+       PACKAGE = "monomvn")
 
     if(log) return(r$result)
     else return(exp(r$result))
+  }
+
+
+## adjust.list.C:
+##
+## function used to test C code for adjusting
+## one exclusion list in light of another
+## existing exclusion list
+
+adjust.elist.C <- function(l1, l2)
+  {
+    r <- .C("adjust_elist_R",
+            l1 = as.integer(l1),
+            n1 = as.integer(length(l1)),
+            l2 = as.integer(l2),
+            n2 = as.integer(length(l2)),
+            l1.new = integer(length(l1)),
+            PACKAGE = "monomvn")
+
+    return(r$l1.new)
   }
 
 

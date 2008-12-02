@@ -15,7 +15,7 @@
 
 \usage{
 bmonomvn(y, pre = TRUE, p = 0.9, B = 100, T = 200, thin = 1,
-         economy = FALSE, method = c("lasso", "ridge", "lsr"),
+         economy = FALSE, method = c("lasso", "ridge", "lsr", "factor"),
          RJ = c("bpsn", "p", "none"), capm = method!="lasso",
          start = NULL, mprior = 0, rd = NULL, rao.s2 = TRUE,
          QP = NULL, verb = 1,trace = FALSE)
@@ -37,7 +37,9 @@ bmonomvn(y, pre = TRUE, p = 0.9, B = 100, T = 200, thin = 1,
    \code{p = 0} forces a parsimonious method to be used for
    \emph{every} regression. Intermediate settings of \code{p} allow
    the user to control when least-squares regressions stop and the
-   parsimonious ones start}
+   parsimonious ones start;  When \code{method = "factor"} the \code{p}
+   argument represents an integer (positive) number of initial columns
+   of \code{y} to treat as known factors}
  \item{B}{ number of Burn-In MCMC sampling rounds,
    during which samples are discarded }
   \item{T}{ total number of MCMC sampling rounds to take
@@ -56,7 +58,8 @@ bmonomvn(y, pre = TRUE, p = 0.9, B = 100, T = 200, thin = 1,
   \item{method}{ indicates the Bayesian parsimonious regression
     specification to be used, choosing between the lasso (default)
     of Park \& Casella, a ridge regression special case of the lasso,
-    and least-squares}
+    and least-squares. The \code{"factor"} method treats the first
+    \code{p} columns of \code{y} as known factors}
   \item{RJ }{ indicates the Reversible Jump strategy to be employed.
     The default argument of \code{"bpsn"} only uses RJ for
     regressions with \code{p >= n}.  The \code{"p"} method uses
@@ -93,14 +96,16 @@ bmonomvn(y, pre = TRUE, p = 0.9, B = 100, T = 200, thin = 1,
     \eqn{\sigma^2}{s^2} should be used (default \code{TRUE}); see
     the details section of \code{\link{blasso}} for more information }
   \item{QP }{ if non-\code{NULL} this argument should either be
-    \code{TRUE} or contain a \code{list} specifying a Quadratic
-    Program to solve as a function of the samples of \code{mu = dvec} and
+    \code{TRUE}, a positive integer, or contain a \code{list}
+    specifying a Quadratic Program to solve as a function of the s
+    amples of \code{mu = dvec} and
     \code{Sigma = Dmat} in the notation of \code{\link[quadprog]{solve.QP}};
     see \code{\link{default.QP}} for a default specification that
-    is used when \code{QP = TRUE} is given; more details are below }
+    is used when \code{QP = TRUE} or a positive integer is is given;
+    more details are below }
   \item{verb}{ verbosity level; currently only \code{verb = 0} and
     \code{verb = 1} are supported }
-  \item{trace}{ if \code{TRUE} then samples from the regressions are
+  \item{trace}{ if \code{TRUE} then samples from all parameters are
     saved to files in the CWD, and then read back into the
     \code{"monomvn"}-class object upon return }
 }
@@ -120,7 +125,7 @@ bmonomvn(y, pre = TRUE, p = 0.9, B = 100, T = 200, thin = 1,
   approach.  Also see the references below.
 
   Whenever the regression model is ill--posed (i.e., when there are
-  more  covariates than  responses, or a
+  more covariates than  responses, or a
   \dQuote{big \code{p} small \code{n}} problem) then
   Bayesian lasso or ridge regressions -- possibly augmented with Reversible
   Jump (RJ) for model selection -- are used instead.
@@ -129,7 +134,10 @@ bmonomvn(y, pre = TRUE, p = 0.9, B = 100, T = 200, thin = 1,
   combination setting of \code{method="lsr"} and \code{RJ="none"}
   is not allowed.
   As in \code{\link{monomvn}} the \code{p} argument can be used to
-  turn on lasso or ridge regressions (possibly with RJ) at other times.  
+  turn on lasso or ridge regressions (possibly with RJ) at other times.
+  The exception is the \code{"factor"} method which always involves
+  an OLS regression on (a subset of) the first \code{p}
+  columns of \code{y}.
 
   Samples from a function of samples of \code{mu} and \code{Sigma}
   can be obtained by specifying a Quadratic program via the
@@ -137,7 +145,15 @@ bmonomvn(y, pre = TRUE, p = 0.9, B = 100, T = 200, thin = 1,
   the distribution of minimum variance and mean--variance portfolios,
   although the interface is quite general.  See \code{\link{default.QP}}
   for more details, as \code{\link{default.QP}(ncol(y))} is used
-  when the argument \code{QP = TRUE} is given
+  when the argument \code{QP = TRUE} is given.  When a positive integer
+  is given, then the first \code{QP} columns of \code{y} are treated
+  as factors by using
+
+  \code{\link{default.QP}(ncol(y) - QP)}
+
+  instead. The result is that the corresponding components of (samples of)
+  \code{mu} and rows/cols of \code{S} are not factored into the
+  specification of the resulting Quadratic Program
 }
 
 \value{
@@ -189,7 +205,16 @@ bmonomvn(y, pre = TRUE, p = 0.9, B = 100, T = 200, thin = 1,
     parameters for each of the \code{m = length(mu)} columns in the field
     \code{$reg}. This \code{$reg} field is a stripped-down
     \code{"blasso"}-class object so that the methods of that object
-    may be used for analysis}
+    may be used for analysis.  If data augmentation is required to
+    complete the monotone missingness pattern, then samples from these
+    entries of \code{Y} are contained in \code{$DA} where the column
+    names indicate the \code{i}-\code{j} entry of \code{Y} sampled;
+    see the \code{R} output below }
+  \item{R}{ gives a \code{matrix} version of the missingness pattern
+    used: \code{0}-entries mean observed; \code{1}-entries indicate
+    missinng values conforming to a monotone pattern; \code{2}-entries
+    indicate missing values that require data augmentation to complete
+    a monotone missingness pattern }
   \item{B}{ from inputs: number of Burn-In MCMC sampling rounds,
     during which samples are discarded }
   \item{T}{ from inputs: total number of MCMC sampling rounds to take
@@ -212,7 +237,7 @@ bmonomvn(y, pre = TRUE, p = 0.9, B = 100, T = 200, thin = 1,
 }
 
 \references{
-  Robert B. Gramacy and Joo Hee Lee (2007).
+  Robert B. Gramacy, Joo Hee Lee, and Ricardo Silva (2008).
   \emph{On estimating covariances between many assets with histories 
   of highly variable length}. Preprint available on arXiv:0710.5837:\cr
   \url{http://arxiv.org/abs/0710.5837}
@@ -248,7 +273,7 @@ bmonomvn(y, pre = TRUE, p = 0.9, B = 100, T = 200, thin = 1,
 \seealso{ \code{\link{blasso}}, \code{\link{monomvn}},
   \code{\link{default.QP}}, \code{\link[norm]{em.norm}} in the
   \pkg{norm} package, and \code{\link[mvnmle]{mlest}} in the
-  \pkg{mvnmle} package}
+  \pkg{mvnmle} package, \code{\link{returns}}}
 
 \examples{
 ## standard usage, duplicating the results in
@@ -270,8 +295,7 @@ xmuS <- randmvn(100, 20)
 xmiss <- rmono(xmuS$x)
 
 ## using least squares only when necessary,
-## and gathering samples from the Quadratic Program
-obl <- bmonomvn(xmiss, QP=TRUE)
+obl <- bmonomvn(xmiss)
 obl
 
 ## look at the posterior variability
@@ -284,24 +308,44 @@ Ellik.norm(obl$mu, obl$S, xmuS$mu, xmuS$S)
 oml <- monomvn(xmiss, method="lasso")
 Ellik.norm(oml$mu, oml$S, xmuS$mu, xmuS$S)
 
-## plot the QP weights
-plot(obl, "QP", xaxis="index")
+##
+## a min-variance portfolio allocation example
+##
+
+## get the returns data, and use 20 random cols
+data(returns)
+train <- returns[,sample(1:ncol(returns), 20)]
+
+## missingness pattern requires DA; also gather
+## samples from the solution to a QP
+obl.da <- bmonomvn(train, p=0, QP=TRUE)
+
+## plot the QP weights distribution
+plot(obl.da, "QP", xaxis="index")
+
+## get ML solution: will warn about monotone violations
+suppressWarnings(oml.da <- monomvn(train, method="lasso"))
 
 ## add mean and MLE comparison, requires the
 ## quadprog library for the solve.QP function
-library(quadprog)
-W.mean <- solve.QP(obl$S, obl$QP$dvec, obl$QP$Amat,
-                   obl$QP$b0, meq=obl$QP$meq)$sol
-W.mle <- solve.QP(oml$S, obl$QP$dvec, obl$QP$Amat,
-                   obl$QP$b0, meq=obl$QP$meq)$sol
-points(apply(obl$W, 2, mean), col=3, pch=18)
-points(W.mean, col=4, pch=17)
-points(W.mle, col=5, pch=16)
-legend("topright",
-      c("MAP", "mean(W)", "w(S.mean)", "MLE"),
-      col=2:5, pch=c(21,18:16))
+add.pe.QP(obl.da, oml.da)
 
-## using least squares sparingly
+## now consider adding in the market as a factor
+data(market)
+mtrain <- cbind(market, train)
+
+## fit the model using only factor regressions
+obl.daf <- bmonomvn(mtrain, method="factor", p=1, QP=1)
+plot(obl.daf, "QP", xaxis="index", main="using only factors")
+suppressWarnings(oml.daf <- monomvn(mtrain, method="factor"))
+add.pe.QP(obl.daf, oml.daf)
+
+
+##
+## a Bayes/MLE comparison using least squares sparingly
+##
+
+## fir bayesian and classical lasso
 obls <- bmonomvn(xmiss, p=0.25)
 Ellik.norm(obls$mu, obls$S, xmuS$mu, xmuS$S)
 omls <- monomvn(xmiss, p=0.25, method="lasso")

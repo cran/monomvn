@@ -29,17 +29,11 @@ extern "C"
 #include "linalg.h"
 #include "Rmath.h"
 #include "R.h"
-#include "assert.h"
-
-/* for Quadratic Programming in solve.QP.f */
-#define qpgen2 qpgen2_
-extern void qpgen2(double*, double*, int*, int*, double*, double*, double*,
-		   double*, int*, int*, int*, int*, int*, int*, double*, 
-		   int*);
+#include <assert.h>
 }
+#include "ustructs.h"
 #include "bmonomvn.h"
 #include "blasso.h"
-
 
 /*
  * Bmonomvn:
@@ -51,7 +45,7 @@ extern void qpgen2(double*, double*, int*, int*, double*, double*, double*,
  */
 
 Bmonomvn::Bmonomvn(const unsigned int M, const unsigned int N, double **Y, 
-		   int *n, const double p, const unsigned int verb, 
+		   int *n, Rmiss *R, const double p, const unsigned int verb, 
 		   const bool trace)
 {
   /* copy inputs */
@@ -59,23 +53,29 @@ Bmonomvn::Bmonomvn(const unsigned int M, const unsigned int N, double **Y,
   this->N = N;
   this->n = n;
   this->Y = Y;
+  this->R = R;
+  this->n2 = n2;
   this->verb = verb;
   this->p = p;
 
-  /* calculate the mean of each column of X*/
+  /* calculate the mean of each column of X where not missing */
   Xmean = new_zero_vector(M);
-  wmean_of_columns(Xmean, this->Y, N, M, NULL);
+  mean_of_each_col_miss(Xmean, this->Y, (unsigned int *) n, M, R);
   
   /* center X */
-  X = new_dup_matrix(Y, N, M);
+  double **X = new_dup_matrix(Y, N, M);
   center_columns(X, Xmean, N, M);
   
   /* normalize X */
   Xnorm = new_zero_vector(M);
-  sum_of_each_column_f(Xnorm, X, (unsigned int *) n, M, sq);
-  for(unsigned int i=0; i<M; i++) Xnorm[i] = sqrt(Xnorm[i]);
-  norm_columns(X, Xnorm, N, M);
-
+  sum_of_each_col_miss_f(Xnorm, X, (unsigned int *) n, M, R, sq);
+  for(unsigned int i=0; i<M; i++) {
+    Xnorm[i] = sqrt(Xnorm[i]);
+    if(R) Xnorm[i] *= sqrt(((double)n[i])/(n[i] - R->n2[i]));
+  }
+  /* norm_columns(X, Xnorm, N, M); */
+  delete_matrix(X);
+  
   /* allocate the mean vector and covariance matrix */
   mu = new_zero_vector(M);
   S = new_zero_matrix(M, M);
@@ -94,7 +94,7 @@ Bmonomvn::Bmonomvn(const unsigned int M, const unsigned int N, double **Y,
   beta = new_zero_vector(M);
   tau2i = new_zero_vector(M);
   s21 = new_zero_vector(M);
-  y = new_vector(N);
+  yvec = new_vector(N);
   s2 = 1.0;
 
   /* initialize posterior probabilities */
@@ -102,13 +102,17 @@ Bmonomvn::Bmonomvn(const unsigned int M, const unsigned int N, double **Y,
   which_map = -1;
 
   /* initialize trace files to NULL */
-  trace_mu = trace_S = NULL;
+  trace_DA = trace_mu = trace_S = NULL;
   trace_lasso = NULL;
    
   /* open the trace files */
   if(trace) {
     trace_mu = fopen("mu.trace", "w");
     trace_S = fopen("S.trace", "w");
+    if(R) { 
+      trace_DA = fopen("DA.trace", "w");
+      print_Rmiss_Xhead(R, trace_DA);
+    }
   } 
 
   /* need to call InitBlassos immediately */
@@ -126,7 +130,6 @@ Bmonomvn::Bmonomvn(const unsigned int M, const unsigned int N, double **Y,
 Bmonomvn::~Bmonomvn(void)
 {
   /* copied and normalized design matrices */
-  if(X) delete_matrix(X);
   if(Xnorm) free(Xnorm);
   if(Xmean) free(Xmean);
 
@@ -145,12 +148,13 @@ Bmonomvn::~Bmonomvn(void)
   if(beta) free(beta);
   if(tau2i) free(tau2i);
   if(s21) free(s21);
-  if(y) free(y); 
+  if(yvec) free(yvec); 
 
   /* clean up traces */
+  if(trace_mu) fclose(trace_mu);
+  if(trace_S) fclose(trace_S);
+  if(trace_DA) fclose(trace_DA);
   if(trace_lasso) {
-    fclose(trace_mu);
-    fclose(trace_S);
     for(unsigned int i=0; i<M; i++) 
       fclose(trace_lasso[i]);
     free(trace_lasso);
@@ -170,8 +174,9 @@ Bmonomvn::~Bmonomvn(void)
  * passes contrl back to R for cleanup
  */
 
-void Bmonomvn::InitBlassos(const unsigned int method, const unsigned int RJm,
-			   const bool capm, double *mu_start, double **S_start,
+void Bmonomvn::InitBlassos(const unsigned int method, int* facts, 
+			   const unsigned int RJm, const bool capm, 
+			   double *mu_start, double **S_start,
 			   int *ncomp_start, double *lambda_start, 
 			   const double mprior, const double r, 
 			   const double delta,  const bool rao_s2, 
@@ -180,19 +185,28 @@ void Bmonomvn::InitBlassos(const unsigned int method, const unsigned int RJm,
   /* initialize each of M regressions */
   for(unsigned int i=0; i<M; i++) {
     
-    /* get the j-th column */
-    for(unsigned int j=0; j<(unsigned)n[i]; j++) y[j] = Y[j][i];
+    /* get the i-th column of Y */
+    for(unsigned int j=0; j<(unsigned)n[i]; j++)  yvec[j] = Y[j][i];
 
     /* choose baseline regression model to be modified by method & RJ */
     REG_MODEL rm = OLS;
+    unsigned int nf = 0;
+    if(method == 3) { 
+      rm = FACTOR;
+      assert(facts);
+      nf = (unsigned int) p;
+    }
+
+    /* initialize RJ method */
     bool RJ = false; /* corresponds to RJm = 2 */
 
     /* re-set RJ and method vi the p parameter */
-    if(p*((double)n[i]) <= i) {
+    if(rm != FACTOR && p*((double)n[i]) <= i) {
       switch (method) {
       case 0: rm = LASSO; break;
       case 1: rm = RIDGE; break;
       case 2: rm = OLS; break;
+      case 3: rm = FACTOR; break;
       default: error("regression method %d not supported", method);
       }
       
@@ -223,32 +237,48 @@ void Bmonomvn::InitBlassos(const unsigned int method, const unsigned int RJm,
     }
 
     /* set up the j-th regression, with initial params */
-    double Xnorm_scale = ((double) n[i])/N;
-    blasso[i] = new Blasso(i, n[i], Y, Xnorm, Xnorm_scale, Xmean, M, y, 
-			   RJ, mmax, beta_start, s2, lambda2, mprior, r, 
-			   delta, rm, rao_s2, verb-1);
+    double Xnorm_scale = sqrt(((double) n[i])/N);
+    if(R) Xnorm_scale = sqrt(((double)(n[i] - R->n2[i]))/N);
+    blasso[i] = new Blasso(i, n[i], Y, R, Xnorm, Xnorm_scale, Xmean, M, 
+			   yvec, RJ, mmax, beta_start, s2, lambda2, mprior, 
+			   r, delta, rm, facts, nf, rao_s2, verb-1);
     if(!economy) blasso[i]->Init();
   }
 
+  /* initialize traces if we're gathering them */
+  InitBlassoTrace(trace);
+}
+
+
+/*
+ * InitBlassoTrace:
+ *
+ * initialize the traces for all of the Blasso objects
+ * by looping over InitBlassoTrace(i) -- if no traces, then
+ * do nothing
+ */
+
+void Bmonomvn::InitBlassoTrace(const bool trace)
+{
   /* initialize traces if we're gathering them */
   if(trace) {
     trace_lasso = (FILE**) malloc(sizeof(FILE*) * M);
     for(unsigned int i=0; i<M; i++) {
       trace_lasso[i] = NULL;
-      InitTrace(i);
+      InitBlassoTrace(i);
     }
   }
 }
 
 
 /* 
- * InitTrace:
+ * InitBlassoTrace:
  *
  * open the m-th trace file and and write the
  * appropriate header in the file 
  */
 
-void Bmonomvn::InitTrace(unsigned int i)
+void Bmonomvn::InitBlassoTrace(unsigned int i)
 {
   /* sanity checks */
   assert(i < M);
@@ -314,23 +344,6 @@ void Bmonomvn::PrintTrace(unsigned int i)
 
 
 /*
- * PrintRegressions:
- *
- * print the input information about each regression
- * to the specified outfile
- */
-
-void Bmonomvn::PrintRegressions(FILE *outfile)
-{
-  for(unsigned int i=0; i<M; i++) {
-    myprintf(outfile, "regression %d\n", i);
-    blasso[i]->PrintInputs(outfile);
-    myprintf(outfile, "\n");
-  }
-}
-
-
-/*
  * Rounds:
  *
  * sample from the posterior distribution of the monomvn
@@ -362,6 +375,7 @@ void Bmonomvn::Rounds(const unsigned int T, const unsigned int thin,
       /* possibly add trace samples to the files */
       if(trace_mu) printVector(mu, M, trace_mu, MACHINE);
       if(trace_S) printSymmMatrixVector(S, M, trace_S, MACHINE);
+      if(trace_DA) print_Rmiss_X(R, Y, N, M, trace_DA, MACHINE);
       
       /* add vectors and matrices for later mean & var calculations */
       MVN_add(mom1, mu, S, M);
@@ -411,6 +425,9 @@ double Bmonomvn::Draw(const unsigned int thin, const bool economy,
     /* obtain a draw from the i-th Bayesian lasso parameters */
     blasso[i]->Draw(thin, &lambda2, &mu_s, beta, &m, &s2, tau2i, &lpost_bl);
 
+    /* perform data augmentation */
+    DataAugment(i, mu_s, beta, s2);
+
     /* now un-init if economizing */
     if(economy) blasso[i]->Economize();
 
@@ -449,6 +466,40 @@ double Bmonomvn::Draw(const unsigned int thin, const bool economy,
 
   /* return the log posterior probability of the draw */
   return lpost;
+}
+
+
+/*
+ * DataAugment:
+ *
+ * perform Data Augmentation on a particular column of the 
+ * design matrix with the regression parameters provided
+ *
+ * CAN DO BETTER THAN THIS BY INTEGRATING OUT BETA, BY
+ * USING Blasso::breg->bmu and breg->Vb, BUT BOTH WOULD NEED
+ * SOME SCALING
+ */
+
+void Bmonomvn::DataAugment(unsigned int col, const double mu, 
+			   double *beta, const double s2)
+{
+  /* sanity checks */
+  assert(col <= M);
+
+  /* check to see if there is any Data Augmentation to do */
+  if(!R || R->n2[col] == 0) return;
+
+  /* get the list of rows that need infilling */
+  unsigned int *R2 = R->R2[col];
+
+  /* deal with each row */
+  double ss2 = sqrt(s2);
+  for(unsigned int i=0; i<R->n2[col]; i++) {
+    assert((int) i < n[col]);
+    double muy = mu;
+    muy += linalg_ddot(col, beta, 1, Y[R2[i]], 1);
+    Y[R2[i]][col] = rnorm(muy, ss2);
+  }
 }
 
 
@@ -502,8 +553,8 @@ int Bmonomvn::Verb(void)
  * outside the module 
  */
 
-void Bmonomvn::SetSums(MVNsum *mom1, MVNsum *mom2, double *lambda2_sum, double *m_sum,
-		       MVNsum *map)
+void Bmonomvn::SetSums(MVNsum *mom1, MVNsum *mom2, double *lambda2_sum, 
+		       double *m_sum, MVNsum *map)
 {
   /* should also write zeros in the matrices and vectors if they are
      really meant to be sums */
@@ -540,303 +591,6 @@ double Bmonomvn::LpostMAP(int *which)
 {
   *which = which_map;
   return lpost_map;
-}
-
-
-/*
- * new_MVNsum_R:
- *
- * take pointers (allocated in R) and collect them into a
- * MVMsum object for tallying a mean or variance for the
- * MVN mean vector and covariance matrix
- */
-
-MVNsum* new_MVNsum_R(const unsigned int m, double* mu, double* S)
-{
-  MVNsum* mvnsum = (MVNsum*) malloc(sizeof(struct MVNsum));
-  mvnsum->m = m;
-  mvnsum->T = 0;
-  mvnsum->mu = mu;
-  mvnsum->S = new_matrix_bones(S, m, m);
-  return(mvnsum);
-}
-
-
-/*
- * delete_MVNsum_R:
- *
- * destroy the MVNsum structure that had most
- * of its memory allocated in R
- */
-
-void delete_MVNsum_R(MVNsum *mvnsum)
-{
-  free(mvnsum->S);
-  free(mvnsum);
-}
-
-
-/*
- * MVN_add:
- *
- * add in the mu and S mean -- the covariance paramerers -- 
- * into the structure accumulating the first moment
- */
-
-void MVN_add(MVNsum *mom1, double *mu, double **S, const unsigned int m)
-{
-  /* sanity check */
-  assert(mom1->m == m);
-
-  /* add in the mean and covariance */
-  add_vector(1.0, mom1->mu, 1.0, mu, m);
-  add_matrix(1.0, mom1->S, 1.0, S, m, m);
-  
-
-  /* increment the counter of the number of things in the sum */
-  (mom1->T)++;
-}
-
-/*
- * MVN_add:
- *
- * add in the square of mu and S -- the mean and covariance params --
- * into the structure accumulating the second moment
- *
- * COULD make this function omre general by adding a function pointer
- * to the sq function to allow for other functions than sq 
-  */
-
-void MVN_add2(MVNsum *mom2, double *mu, double **S, const unsigned int m)
-{
-  /* sanity check */
-  assert(mom2->m == m);
-
-  /* add in the square of the mean */
-  for(unsigned int i=0; i<m; i++) 
-    mom2->mu[i] += sq(mu[i]);
-
-  /* add in the square of covariance */
-  for(unsigned int i=0; i<m; i++)
-    for(unsigned int j=0; j<m; j++) 
-      mom2->S[i][j] += sq(S[i][j]);
-
-  /* increment the counter of the number of things in the sum */
-  (mom2->T)++;
-}
-
-
-/*
- * MVN_mean:
- *
- * calculate the mean of mu and S -- the mean and covariance params --
- * from the first moment by dividing by T and then resetting T;
- * result is in mom1 
- */
-
-void MVN_mean(MVNsum *mom1, const unsigned int T)
-{
-  /* sanity check */
-  assert(mom1->T == T);
-
-  /* divite by T */
-  scalev(mom1->mu, mom1->m, 1.0/T);
-  scalev(*(mom1->S), (mom1->m)*(mom1->m), 1.0/T);
-
-  /* reset T */
-  mom1->T = 0;
-}
-
-
-/* 
- * MVn_var:
- * valculate the variance of mu and S -- the mean and covariance params --
- * from the mean and second moment, then reset T; result is in mom2
- */
-
-void MVN_var(MVNsum *mom2, MVNsum *mean, const unsigned int T)
-{
-  /* sanity check */
-  assert(mom2->T == T);
-  assert(mean->T == 0);
-
-  /* calculate the variance of the mean */
-  scalev(mom2->mu, mom2->m, 1.0/T);
-  for(unsigned int i=0; i< mom2->m; i++) 
-    mom2->mu[i] -= sq(mean->mu[i]);
-
-  /* calculate the variance of the covariance matrix */
-  scalev(*(mom2->S), (mom2->m)*(mom2->m), 1.0/T);
-  for(unsigned int i=0; i<mom2->m; i++) 
-    for(unsigned int j=0; j<mom2->m; j++)
-      mom2->S[i][j] -= sq(mean->S[i][j]);
-
-  /* reset T */
-  mom2->T = 0;
-}
-
-
-/*
- * MVN_copy:
- *
- * copy in the mu and S -- the covariance paramerers -- 
- * into the structure (for the maximum a posteriori)
- */
-
-void MVN_copy(MVNsum *map, double *mu, double **S, const unsigned int m)
-{
-  /* sanity check */
-  assert(map->m == m);
-
-  /* add in the mean and covariance */
-  dupv(map->mu, mu, m);
-  dupv(*(map->S), *S, m*m);
-  
-  /* record that these vectors and matricies are not empty */
-  map->T = 1;
-}
-
-
-/*
- * new_QPsamp_R:
- *
- * allocate the structure used to store the Quadratic Programmig
- * inputs and the space for samples from the solution(s) -- 
- * everything allocated in R
- */
-
-QPsamp* new_QPsamp_R(const unsigned int m, const unsigned int T, 
-		     double *dvec, const bool dmu, double *Amat, double *b0, 
-		     int *mu_constr, const unsigned int q, 
-		     const unsigned int meq, double *w)
-{
-  /* check if QP is required */
-  if(w == NULL) return NULL;
-
-  /* sanity check */
-  assert(q > 0);
-
-  /* allocate the QPsamp structure */
-  QPsamp* qps = (QPsamp*) malloc(sizeof(struct QPsamp));
-
-  /* record dimensional parameters */
-  qps->m = m;
-  qps->T = T;
-
-  /* make space to copy S sampls into */
-  qps->S_copy = new_vector(m*m);
-
-  /* copy dvec (which could be mu-samples) */
-  qps->dvec = dvec;
-  qps->dvec_copy = new_vector(m);
-  qps->dmu = dmu;
-
-  /* copy the linear constraints */
-  qps->q = q;
-  qps->Amat = Amat;
-  qps->b0 = b0;
-  qps->meq = meq;
-
-  /* copy the info on mu in constraints */
-  qps->mu_c_len = (unsigned int) *mu_constr;
-  if(qps->mu_c_len == 0) {
-    qps->mu_c = NULL;
-    qps->Amat_copy = qps->Amat;
-    qps->b0_copy = qps->b0;
-  } else {
-    qps->mu_c = mu_constr + 1;
-    qps->Amat_copy = new_vector(q*m);
-    qps->b0_copy = new_vector(q);
-  }
-
-
-  /* allocate workspace */
-  unsigned int r = q;
-  if(m < q) r = m;
-  qps->iact = new_zero_ivector(q);
-  qps->work = new_zero_vector(2*m + r*(r+5)/2 + 2*q + 1);
-
-  /* turn the W (or B) samples of w (or b) into a matrix */
-  qps->W = new_matrix_bones(w, T, m);
-
-  /* return the new structure */
-  return qps;
-}
-
-
-/*
- * delete_QPsamp_R:
- *
- * destroy the QPsamp structure that had most
- * of its memory allocated in R
- */
-
-void delete_QPsamp_R(QPsamp *qps)
-{
-  free(qps->S_copy);
-  free(qps->dvec_copy);
-  if(qps->mu_c_len > 0) {
-    free(qps->Amat_copy);
-    free(qps->b0_copy);
-  }
-  free(qps->iact);
-  free(qps->work);
-  free(qps->W);
-  free(qps);
-}
-
-
-/*
- * QPsolve:
- *
- * solve the Quadric Program with the current value
- * of mu and S and store the result in W[t], thus
- * taking the t-th sample of the solution w (or b)
- */
-
-void QPsolve(QPsamp *qps, const unsigned int t, const unsigned int m,
-	     double *mu, double **S)
-{
-  int ierr, nact;
-  int iter[2];
-  double crval;
-
-  /* sanity checks */
-  assert(qps);
-  assert(qps->m == m);
-  assert(t < qps->T);
-
-  /* check to see if we should fill in dvec with the mean */
-  dupv(qps->dvec_copy, qps->dvec, m);
-  if(qps->dmu) for(unsigned int i=0; i<m; i++)
-    qps->dvec_copy[i] *= mu[i];
-
-  /* copy S */
-  dupv(qps->S_copy, S[0], m*m);
-
-  /* copy Amat and b0 */
-  if(qps->mu_c_len != 0) {
-    dupv(qps->b0_copy, qps->b0, qps->q);
-    dupv(qps->Amat_copy, qps->Amat, (qps->q)*m);
-  }
-
-  /* check to see if we should fill in rows of Amat with mu */
-  for(unsigned int i=0; i<qps->mu_c_len; i++)
-    for(unsigned int j=0; j<m; j++)
-      qps->Amat_copy[m*(qps->mu_c[i]-1)+j] *= mu[j];
-  
-  /* ready to solve */
-  ierr = 0;  /* indicates S is not decomposed */
-  qpgen2(qps->S_copy, qps->dvec_copy, (int*) &m, (int*) &m, 
-	 qps->W[t], &crval, qps->Amat_copy, qps->b0_copy, (int*) &m, 
-	 (int*) &(qps->q), (int*) &(qps->meq), qps->iact, &nact, 
-	 iter, qps->work, &ierr);
-
-  /* MIGHT make all of the W's positive, and then renormalize */
-  
-  /* MIGHT want to check ierr */
-  // myprintf(stdout, "ierr = %d\n", ierr);
-  assert(ierr==0);
 }
 
 
@@ -912,14 +666,12 @@ void get_regress(const unsigned int m, double *mu, double *s21, double **s11,
 
 extern "C"
 {
-/*
- * bmonomvn_R
- *
- * function currently used for testing the above functions
- * using R input and output
- */
+
+/* for re-arranged poitners to global variables with memory in R */
+void free_R_globals(void);
 
 double **Y = NULL;
+Rmiss *R = NULL;
 Bmonomvn *bmonomvn = NULL;
 
 /* starting structures and matrices */
@@ -929,17 +681,26 @@ MVNsum *MVNmap = NULL;
 QPsamp *qps = NULL;
 double **S_start = NULL;
 
+
+/*
+ * bmonomvn_R:
+ *
+ * function currently used for testing the above functions
+ * using R input and output
+ */
+
 void bmonomvn_R(
 		/* estimation inputs */
 		int *B, int *T, int *thin, int *M, int *N, double *Y_in, 
-		int *n,	double *p, int *method, int *RJ, int *capm, 
-		double *mu_start, double *S_start_in, int *ncomp_start, 
-		double *lambda_start, double *mprior, double *rd, 
-		int *rao_s2, int *economy, int *verb, int *trace, 
+		int *n, int *R_in, double *p, int *method, int *facts,
+		int *RJ, int *capm, double *mu_start, double *S_start_in, 
+		int *ncomp_start, double *lambda_start, double *mprior, 
+		double *rd, int *rao_s2, int *economy, int *verb, 
+		int *trace, 
 
 		/* Quadratic Programming inputs */
-		double *dvec, int *dmu, double *Amat, double *b0, 
-		int *mu_constr, int *q, int *meq,
+		int *qpnf, double *dvec, int *dmu, double *Amat, 
+		double *b0, int *mu_constr, int *q, int *meq,
 
 		/* estimation outputs */
 		double *mu_mean, double *mu_var, double *S_mean, 
@@ -950,8 +711,9 @@ void bmonomvn_R(
 		/* Quadratic Programming outputs */
 		double *w)
 {
-  /* copy the vector input Y into matrix form */
+  /* copy the vector(s) input Y and R into matrix form */
   Y = new_matrix_bones(Y_in, *N, *M);
+  R = new_Rmiss_R(R_in, *N, *M);
 
   /* copy the vector input S_start into matrix form */
   if(S_start_in) S_start = new_matrix_bones(S_start_in, *M, *M);
@@ -963,17 +725,17 @@ void bmonomvn_R(
   MVNmap = new_MVNsum_R(*M, mu_map, S_map);
 
   /* load Quadratic Programming inputs into the QP structure */
-  qps = new_QPsamp_R(*M, *T, dvec, (bool) *dmu, Amat, b0, mu_constr, 
-		     *q, *meq, w);
+  qps = new_QPsamp_R(qpnf[0], *T, (qpnf+1), dvec, 
+		     (bool) *dmu, Amat, b0, mu_constr, *q, *meq, w);
 
   /* get the random number generator state from R */
   GetRNGstate();
 
   /* create a new Bmonomvn object */
-  bmonomvn = new Bmonomvn(*M, *N, Y, n, *p, *verb, (bool) (*trace));
+  bmonomvn = new Bmonomvn(*M, *N, Y, n, R, *p, *verb, (bool) (*trace));
 
   /* initialize the Bayesian lasso regressios with the bmonomvn module */
-  bmonomvn->InitBlassos(*method, *RJ, (bool) (*capm), mu_start, S_start, 
+  bmonomvn->InitBlassos(*method, facts, *RJ, (bool) (*capm), mu_start, S_start, 
 			ncomp_start, lambda_start, *mprior, rd[0], rd[1],
 			(bool) (*rao_s2), (bool) *economy, (bool) (*trace));
 
@@ -1014,11 +776,24 @@ void bmonomvn_R(
   PutRNGstate();
 
   /* clean up */
-  free(Y); Y = NULL;
-  free(S_start); S_start = NULL;
-  delete_MVNsum_R(MVNmean); MVNmean = NULL;
-  delete_MVNsum_R(MVNvar); MVNvar = NULL;
-  delete_MVNsum_R(MVNmap); MVNmap = NULL;
+  free_R_globals();
+}
+
+
+/*
+ * free_R_globals:
+ *
+ * free the global variables that are necessary to re-arrange
+ * the pointers to memory that are passed in from R
+ */ 
+
+void free_R_globals(void) {
+  if(Y) { free(Y); Y = NULL; }
+  if(R) { delete_Rmiss_R(R); R = NULL; }
+  if(S_start) { free(S_start); S_start = NULL; }
+  if(MVNmean) { delete_MVNsum_R(MVNmean); MVNmean = NULL; }
+  if(MVNvar) { delete_MVNsum_R(MVNvar); MVNvar = NULL; }
+  if(MVNmap) { delete_MVNsum_R(MVNmap); MVNmap = NULL; }
   if(qps) { delete_QPsamp_R(qps); qps = NULL; }
  }
 
@@ -1043,12 +818,7 @@ void bmonomvn_cleanup(void)
   }
 
   /* clean up matrix pointers */
-  if(Y) { free(Y); Y = NULL; }
-  if(S_start) { free(S_start); S_start = NULL; }
-  if(MVNmean){ delete_MVNsum_R(MVNmean); MVNmean = NULL; }
-  if(MVNvar){ delete_MVNsum_R(MVNvar); MVNvar = NULL; }
-  if(MVNmap){ delete_MVNsum_R(MVNmap); MVNmap = NULL; }
-  if(qps){ delete_QPsamp_R(qps); qps = NULL; }
+  free_R_globals();
 }
 
 
