@@ -121,6 +121,10 @@ function(y, pre=TRUE,
       y <- y[,nao]
     } else nao <- 1:m
 
+    ## check to make sure the factors remain in the first positions
+    if(method == "factor" && length(setdiff(nao[1:p],1:p)) != 0)
+      stop("the ", p, " factor(s) must be the most observed columns of y")
+
     ## get indices where the missingness pattern changes,
     ## in particular where the missingness increases
     if(batch) {

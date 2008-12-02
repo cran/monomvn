@@ -36,6 +36,7 @@
   
   ## number of regressions
   numreg <- ncol(y2); if(is.null(numreg)) numreg <- 1
+  if(numf > numreg) numf <- numreg
   
   ## add to progress meter
   if(verb > 0) cat(paste("using fact ", sep=""))

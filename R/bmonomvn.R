@@ -31,7 +31,8 @@
 
 'bmonomvn' <-
 function(y, pre=TRUE, p=0.9, B=100, T=200, thin=1, economy=FALSE,
-         method=c("lasso", "ridge", "lsr"), RJ=c("bpsn", "p", "none"),
+         method=c("lasso", "ridge", "lsr", "factor"),
+         RJ=c("bpsn", "p", "none"),
          capm=method!="lasso", start=NULL, mprior= 0, rd=NULL,
          rao.s2=TRUE, QP=NULL, verb=1, trace=FALSE)
   {
@@ -49,12 +50,10 @@ function(y, pre=TRUE, p=0.9, B=100, T=200, thin=1, economy=FALSE,
     M <- ncol(y)
     N <- nrow(y)
     
-    ## check p argument
-    if(length(p) != 1 || p > 1 || p < 0) {
-      warning("should have scalar 0 <= p <= 1, using default p=1")
-      p <- 1
-    }
-
+    ## check pre
+    if(length(pre) != 1 || !is.logical(pre))
+      stop("pre must be a scalar logical")
+    
     ## check B
     if(length(B) != 1 || B < 0)
       stop("B must be a scalar integer >= 0")
@@ -70,17 +69,31 @@ function(y, pre=TRUE, p=0.9, B=100, T=200, thin=1, economy=FALSE,
     ## check rao.s2
     if(length(rao.s2) != 1 || !is.logical(rao.s2))
       stop("rao.s2 must be a scalar logical")
-
+    
     ## check economy
     if(length(economy) != 1 || !is.logical(economy))
       stop("economy must be a scalar logical")
+
+    ## check economy
+    if(length(trace) != 1 || !is.logical(trace))
+      stop("trace must be a scalar logical")
 
     ## check method, and change to an integer
     method <- match.arg(method)
     mi <- 0  ## lasso
     if(method == "ridge") mi <- 1
     else if(method == "lsr") mi <- 2
+    else if(method == "factor") mi <- 3
 
+    ## check p argument
+    if(method == "factor" && (length(p) != 1 || p < 1)) {
+      warning("should have scalar p >= 1 for factor method, using default p=1")
+      p <- 1
+    } else if(length(p) != 1 || p > 1 || p < 0) {
+      warning("should have scalar 0 <= p <= 1, using default p=1")
+      p <- 1
+    }
+    
     ## check RJ, and change to an integer
     RJ <- match.arg(RJ)
     RJi <- 0  ## bpsn: "big-p small-n"
@@ -118,47 +131,36 @@ function(y, pre=TRUE, p=0.9, B=100, T=200, thin=1, economy=FALSE,
         
     ## save the call
     cl <- match.call()
-    
-    ## get the number of nas in each column
-    nas <- apply(y, 2, function(x) {sum(is.na(x))})
 
-    ## check for cols with all NAs
-    if(sum(nas == N) > 0) {
-      cat("cols with no data:\n")
-      print((1:M)[nas == N])
-      stop("remove these columns and try again")
-    }
-    
-    ## re-order the columns to follow the monotone pattern
-    if(pre) {
-      nao <- order(nas)
-    } else nao <- 1:ncol(y)
+    ## reorder the rows and columsn of y
+    dap <- da.perm(y, pre)
+    nas <- dap$nas; nao <- dap$nao;
+    y <- dap$y; R <- dap$R
+    n <- N - apply(R, 2, function(x){ sum(x == 1) }) ## number of non-ones
+    ## if(sum(R == 2) != 0) stop("missingness pattern in y is not monotone")
 
-    ## re-order the rows by NA too, since the more general monotone
-    ## pattern finding is not currently implemented
-    r <- apply(y, 1, function(x){ sum(is.na(x)) })
-    y <- y[order(r),nao]
-    ## this could be problematic in the future if we want to take
-    ## use a non--iid approach, say, with change-points on time
-    ## or exponential decay
-    
-    ## get the R matrix and n
-    R <- getR(y)
-    n <- N - apply(R, 2, function(x){ sum(x == 1) })
-    if(sum(R == 2) != 0) stop("missingness pattern in y is not monotone")
-    ## the real n would be reduced by the number of 2's in each column
+    ## create the reverse ordering
+    if(!is.null(nao)) oo <- order(nao)
+    else oo <- NULL
+
+    ## get the indices of the factors in the case of method = "factor"
+    if(method == "factor") {
+      if(is.null(oo)) facts <- 1:p
+      else facts <- oo[1:p]
+    } else facts <- NULL
     
     ## check the start argument
     start <- check.start(start, nao, M)
 
     ## check the QP argument
-    QPin <- check.QP(QP, M, nao)
+    QPin <- check.QP(QP, M, nao, oo)
     if(is.logical(QP) && QP == FALSE) QP <- NULL
 
-    ## save old y and then replace NA with Inf
+    ## save old y and then replace NA with zeros
     Y <- y
     Y[is.na(Y)] <- 0
 
+    ## possibly add a new long if verbose printing
     if(verb >=1) cat("\n")
     
     ## call the C routine
@@ -172,8 +174,10 @@ function(y, pre=TRUE, p=0.9, B=100, T=200, thin=1, economy=FALSE,
             N = as.integer(N),
             Y = as.double(t(Y)),
             n = as.integer(n),
+            R = as.integer(t(R)),
             p = as.double(p),
             mi = as.integer(mi),
+            facts = as.integer(facts-1),
             RJi = as.integer(RJi),
             capm = as.integer(capm),
             smu = as.double(start$mu),
@@ -188,6 +192,7 @@ function(y, pre=TRUE, p=0.9, B=100, T=200, thin=1, economy=FALSE,
             trace = as.integer(trace),
 
             ## begin Quadratic Progamming inputs
+            QPcols = as.integer(c(length(QPin$cols), QPin$cols-1)),
             QPd = as.double(QPin$dvec),
             QPdmu = as.integer(QPin$dmu),
             QPA = as.double(QPin$Amat),
@@ -211,12 +216,14 @@ function(y, pre=TRUE, p=0.9, B=100, T=200, thin=1, economy=FALSE,
             ncomp = double(M),
 
             ## begin Quadratic Programming outputs
-            W = double(T*M*(!is.null(QPin$Amat))),
+            W = double(T*length(QPin$cols)*(!is.null(QPin$Amat))),
             
             PACKAGE = "monomvn")
 
     ## copy the inputs back into the returned R-object
-    r$Y <- NULL; r$y <- y
+    r$Y <- NULL; r$y <- y;
+    if(sum(R == 2) == 0) r$R <- NULL
+    else r$R <- R
 
     ## make S into a matrix
     r$S <- matrix(r$S, ncol=M)
@@ -236,7 +243,6 @@ function(y, pre=TRUE, p=0.9, B=100, T=200, thin=1, economy=FALSE,
     
     ## put the original ordering back
     if(pre) {
-      oo <- order(nao)
       r$mu <- r$mu[oo]
       r$mu.var <- r$mu.var[oo]
       r$mu.map <- r$mu.map[oo]
@@ -247,7 +253,7 @@ function(y, pre=TRUE, p=0.9, B=100, T=200, thin=1, economy=FALSE,
       r$lambda2 <- r$lambda2[oo]
       r$methods <- r$methods[oo]
       r$thin <- r$thin.act[oo]
-    } else oo <- NULL
+    }
 
     ## deal with names
     if(! is.null(nam)) {
@@ -268,8 +274,8 @@ function(y, pre=TRUE, p=0.9, B=100, T=200, thin=1, economy=FALSE,
 
     ## read the trace in the output files, and then delete them
     if(trace)
-      r$trace <- bmonomvn.read.traces(r$N, r$n, r$M, oo, nam, capm, mprior,
-                                      cl, thin, r$verb)
+      r$trace <- bmonomvn.read.traces(r$N, r$n, r$M, nao, oo, nam,
+                                      capm, mprior, R, cl, thin, r$verb)
     else r$trace <- NULL
     
     ## final line
@@ -290,48 +296,17 @@ function(y, pre=TRUE, p=0.9, B=100, T=200, thin=1, economy=FALSE,
     r$which.map <- r$which.map + 1
 
     ## record Quadratic Programming info
-    r$QPd <- r$QPA <- r$QPb0 <- r$QPq <- r$QPmeq <- NULL
+    r$QPd <- r$QPA <- r$QPb0 <- r$QPq <- r$QPmeq <- NULL;
+    r$QPmc <- r$QPcols <- r$QPdmu <- NULL
     if(!is.null(QP)) {
-
-      ## save the QP inputs
-      r$QP <- QPin
-      r$QP$q <- NULL
-
-      ## convert the W-vector into a matrix
-      r$W <- matrix(r$W, ncol=M, nrow=T, byrow=TRUE)
-      if(!is.null(oo)) { ## reorder rows or columns
-        r$QP$Amat <- r$QP$Amat[oo,]
-        r$W <- r$W[,oo]
-      }
-      if(! is.null(nam)) { ## name rows or columns
-        rownames(r$QP$Amat) <- nam
-        colnames(r$W) <- nam
-      }
-    }
+      QPW <- postprocess.QP(QPin, r$W, M, T, nam)
+      r$QP <- QPW$QP; r$W <- QPW$W
+    } else { r$QP <- r$W <- NULL }
     
     ## assign class, call and methods, and return
     r$call <- cl
     class(r) <- "monomvn"
     return(r)
-  }
-
-
-## getR:
-##
-## calculate which need to be imputed (2) with DA, and
-## which are simply missing in the monotone pattern (1);
-## else (0)
-
-getR <- function(y)
-  {
-    R <- matrix(2*as.numeric(is.na(y)), ncol=ncol(y))
-    for(j in ncol(y):1) {
-      for(i in nrow(y):1) {
-        if(R[i,j]) R[i,j] <- 1
-        else break
-      }
-    }
-    return(R)
   }
 
 
@@ -386,117 +361,6 @@ check.start <- function(start, nao, M)
 }
 
 
-## bmonomvn.read.traces:
-##
-## read the traces contained in the files written by the bmonomvn
-## C-side, process them as appropriate, and then delete the trace files
-
-"bmonomvn.read.traces" <-
-  function(N, n, M, oo, nam, capm, mprior, cl, thin, verb, rmfiles=TRUE)
-{
-  trace <- list()
-  if(verb >= 1) cat("\nGathering traces\n")
-  
-  ## read trace of the mean samples (mu)
-  if(file.exists(paste("./", "mu.trace", sep=""))) {
-    trace$mu <- read.table("mu.trace")
-    if(!is.null(oo)) trace$mu <- trace$mu[,oo]
-    if(!is.null(nam)) names(trace$mu) <- nam
-    if(rmfiles) unlink("mu.trace")
-    if(verb >= 1) cat("  mu traces done\n")
-  }
-
-  ## read trace of the Covar samples (S)
-  if(file.exists(paste("./", "S.trace", sep=""))) {
-    trace$S <- read.table("S.trace")
-
-    ## reorder the columns
-    if(!is.null(oo)) {
-      om <- matrix(NA, M, M)
-      om[lower.tri(om, diag=TRUE)] <- 1:((M+1)*M/2)
-      om[upper.tri(om)] <- t(om)[upper.tri(t(om))]
-      om <- om[oo,oo]
-      om <- om[lower.tri(om, diag=TRUE)]
-      trace$S <- trace$S[,om]
-    }
-
-    ## assign names to the columns
-    if(is.null(nam)) nam <- 1:length(n)
-    namm <- rep(NA, (M+1)*M/2)
-    k <- 1
-    for(i in 1:M) for(j in i:M) {
-      namm[k] <- paste(nam[i], ":", nam[j], sep="")
-      k <- k+1
-    }
-    names(trace$S) <- namm
-
-    ## delete the trace file
-    if(rmfiles) unlink("S.trace")
-    if(verb >= 1) cat("   S traces done\n")
-  }
-
-  ## read the blasso regression traces
-  for(i in 1:length(n)) {
-    fname <- paste("blasso_M", i-1, "_n", n[i], ".trace", sep="")
-    lname <- paste("M", i-1, ".n", n[i], sep="")
-    table <- read.table(fname, header=TRUE)
-    trace$reg[[lname]] <- table2blasso(table, thin, mprior, capm,
-                                       i-1, n[i], cl)
-    if(rmfiles) unlink(fname)
-
-    ## progress meter
-    if(verb >= 1) {
-      if(i==length(n)) cat(" reg traces 100% done  \r")
-      else cat(paste(" reg traces ", round(100*i/length(n)),
-                     "% done   \r", sep=""))
-    }
-  }
-
-  ## cap off with a final newline
-  if(verb >= 1) cat("\n")
-
-  return(trace)
-}
-
-
-## table2blasso:
-##
-## change the table trace read in and convert it into a
-## skeleton blasso class object so that the blasso methods
-## like print, plot, and summary can be used
-
-table2blasso <- function(table, thin, mprior, capm, m, n, cl)
-  {
-    ## first convert to a list
-    tl <- as.list(table)
-    
-    ## start with the easy scalars
-    l <- list(lpost=tl[["lpost"]], s2=tl[["s2"]], mu=tl[["mu"]],
-              m=tl[["m"]], lambda2=tl[["lambda2"]])
-
-    ## now the vectors
-    bi <- grep("beta.[0-9]+", names(table))
-    l$beta <- as.matrix(table[,bi])
-    ti <- grep("tau2i.[0-9]+", names(table))
-    l$tau2i <- as.matrix(table[,ti])
-    l$tau2i[l$tau2i == -1] <- NA
-
-    ## assign "inputs"
-    l$T <- nrow(l$beta)
-    l$thin <- "dynamic"
-    l$RJ <- !is.null(l$m)
-    l$mprior <- mprior
-    if(capm) l$M <- max(m, n) 
-    else l$M <- m
-    
-    ## assign the call and the class
-    l$call <- cl
-    class(l) <- "blasso"
-    
-    return(l)
-  }
-
-
 ## bmonomvn.cleanup
 ##
 ## gets called when the C-side is aborted by the R-side and enables
@@ -507,17 +371,27 @@ table2blasso <- function(table, thin, mprior, capm, m, n, cl)
 {
   .C("bmonomvn_cleanup", PACKAGE="monomvn")
 
+  ## should a newline be appended after trace removals
+  nl <- FALSE
+  
   ## get rid of trace of the mean samples (mu)
   if(file.exists(paste("./", "mu.trace", sep=""))) {
     unlink("mu.trace")
     if(verb >= 1) cat("NOTICE: removed mu.trace\n")
+    nl <- TRUE
   }
 
   ## get rid of trace of the Covar samples (S)
-  nl <- FALSE
   if(file.exists(paste("./", "S.trace", sep=""))) {
     unlink("S.trace")
     if(verb >= 1) cat("NOTICE: removed S.trace\n")
+    nl <- TRUE
+  }
+
+  ## get rid of trace of the Covar samples (S)
+  if(file.exists(paste("./", "DA.trace", sep=""))) {
+    unlink("DA.trace")
+    if(verb >= 1) cat("NOTICE: removed DA.trace\n")
     nl <- TRUE
   }
 
@@ -536,3 +410,64 @@ table2blasso <- function(table, thin, mprior, capm, m, n, cl)
   ## final newline
   if(verb >= 1 && nl) cat("\n")
 }
+
+
+## da.perm:
+## 
+## Re-order the columns and rows of y to follow the
+## monotone missingness pattern with the least number
+## of violations.  Return a re-ordered y, the missingness
+## matrix R with entries: 0 (observed), 1 (monotone missing)
+## and 2 (requires data augmentation), and vectors
+## describing the row and column permutations performed
+
+da.perm <- function(y, pre = TRUE)
+  {
+    ## dimensions of y
+    n <- nrow(y)
+    m <- ncol(y)
+    
+    ## forst re-order by column missingness
+    nas <- apply(y, 2, function(x) {sum(is.na(x))} )
+    
+    ## check for cols with all NAs
+    if(sum(nas == n) > 0) {
+      cat("cols with no data:\n")
+      print((1:m)[nas == n])
+      stop("remove these columns and try again")
+    }
+    
+    ## re-order the columns to follow the monotone pattern
+    if(pre) {
+      nao <- order(nas)
+      y <- y[,nao]
+    } else nao <- 1:m
+    
+    ## calculate initial R with ones and zeros only
+    R <- matrix(0, ncol=ncol(y), nrow=nrow(y))
+    R[is.na(y)] <- 1
+    
+    ## now see which indicies violate motonicity, and
+    ## put a 2 in the places found
+    for (j in 2:ncol(y)) {
+      
+      ## First check each of the next group of columns for monotonicity
+      for(i in 1:nrow(y)) {
+        if(R[i,j] == 0) { ## entry not missing
+
+          ## get entries which violate monotonicity
+          da <- (1:(j-1))[R[i,1:(j-1)] == 1]
+          R[i,da] <- 2
+        }
+      } 
+    }
+
+    ## re-order R and y by the numebr of 1s in the rows of R
+    r <- apply(R, 1, function(x){ sum(x == 1) })
+    or <- order(r)
+    y <- y[or,]
+    R <- R[or,]
+    
+    ## return R and y, in addition to the col and row orderings
+    return(list(y=y, R=R, nas=nas, nao=nao, or=or))
+  }

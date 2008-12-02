@@ -6,8 +6,11 @@
 \alias{get.lambda}
 \alias{get.regress}
 \alias{get.regress.C}
+\alias{adjust.elist.C}
 \alias{mvnpdf.C}
 \alias{bmonomvn.read.traces}
+\alias{read.DA.trace}
+\alias{read.muS.trace}
 \alias{addy}
 \alias{regress.ls}
 \alias{regress.lars}
@@ -19,8 +22,10 @@
 \alias{bmonomvn.cleanup}
 \alias{check.start}
 \alias{check.QP}
+\alias{postprocess.QP}
 \alias{table2blasso}
-\alias{getR}
+\alias{da.perm}
+\alias{add.pe.QP}
 
 \title{Internal Monomvn Functions}
 \description{

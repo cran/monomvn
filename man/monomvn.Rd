@@ -115,11 +115,14 @@ monomvn(y, pre = TRUE, method = c("plsr", "pcr", "lasso", "lar",
   The \code{k} next entries (indices \code{j:(j+k)}) of the mean vector,
   and the \code{j:(j+k)} rows and columns of the covariance matrix are
   obtained by multivariate regression of \code{y2} on \code{y1}.
-  The regression method used depends on the number of rows and columns
+  The regression method used (except in the case of \code{method =
+    "factor"} depends on the number of rows and columns
   in \code{y1} and on the \code{p} parameter.  Whenever \code{ncol(y1)
     < p*nrow(y1)} least-squares regression is used, otherwise
   \code{method = c("pcr", "plsr")}.  If ever a least-squares regression
-  fails due to co-linearity then one of the other \code{method}s is tried.
+  fails due to co-linearity then one of the other \code{method}s is
+  tried.  The \code{"factor"} method always involves an OLS regression
+  on (a subset of) the first \code{p} columns of \code{y}.
   
   All \code{method}s require a scheme for estimating the amount of
   variability explained by increasing the numbers of coefficients
@@ -194,7 +197,7 @@ monomvn(y, pre = TRUE, method = c("plsr", "pcr", "lasso", "lar",
     usually not positive definite }
 }
 \references{
-  Robert B. Gramacy and Joo Hee Lee (2007).
+  Robert B. Gramacy, Joo Hee Lee, and Ricardo Silva (2007).
   \emph{On estimating covariances between many assets with histories 
   of highly variable length}. Preprint available on arXiv:0710.5837:\cr
   \url{http://arxiv.org/abs/0710.5837}
@@ -228,7 +231,12 @@ monomvn(y, pre = TRUE, method = c("plsr", "pcr", "lasso", "lar",
 \note{
   The CV in \pkg{plsr} and \pkg{lars} are random in nature, and so
   can be dependent on the random seed.  Use \code{validation=LOO} for
-  deterministic (but slower) result
+  deterministic (but slower) result.
+
+  When using \code{method = "factor"} in the current version of
+  the package, the factors in the first \code{p}
+  columns of \code{y} must also obey the monotone pattern, and,
+  have no more \code{NA} entries than the other columns of \code{y}.
 
   Be warned that the \pkg{lars} implementation of
   \code{"forward.stagewise"} can sometimes get stuck in

@@ -58,7 +58,17 @@ default.QP(m, dmu = FALSE, mu.constr = NULL)
   \eqn{\mu^\top w}{t(mu)*w} must lie in the interval [1,2].
   So whereas \code{dmu = TRUE} allows the \code{mu} samples to
   enter the objective in s standard way, \code{mu.constr}
-  (\code{!= NULL}) allows it to enter the constraints
+  (\code{!= NULL}) allows it to enter the constraints.
+
+  The accompanying function \code{\link{monomvn.solve.QP}} can
+  act as an interface between the constructed (default) \code{QP}
+  object and estimates of the covariance matrix \eqn{\Sigma}{S} and
+  mean vector \eqn{\mu}{mu} that is identical to the one used on
+  the posterior-sample version implemented in \code{\link{bmonomvn}}.
+  The example below, and those in the documentation for
+  \code{\link{bmonomvn}} illustrate how this feature may be used
+  to extract mean and MLE solutions to the constructed
+  Quadratic Program
 }
 \value{
   This function returns a \code{list} that can be interpreted as
@@ -70,7 +80,8 @@ default.QP(m, dmu = FALSE, mu.constr = NULL)
   Note that the \code{Dmat} argument is not specified as
   \code{\link{bmonomvn}} will use samples from \code{S} (from the
   posterior) instead
-  
+
+  \item{m }{ \code{length(dvec)}, etc.}
   \item{dvec }{ a zero-vector \code{rep(0, m)}, or a one-vector
     \code{rep(1, m)} when \code{dmu = TRUE} as the real \code{dvec}
     that will be used by \code{\link[quadprog]{solve.QP}} will
@@ -93,12 +104,19 @@ default.QP(m, dmu = FALSE, mu.constr = NULL)
 
     and location \code{mu.constr[-1]} of the columns of \code{Amat}
     which require multiplication by samples of \code{mu} }
+
+  The \code{$QP} object that is returned from \code{\link{bmonomvn}}
+  will have the following additional field
+
+  \item{o}{ an integer vector of length \code{m} indicating the ordering
+    of the rows of \code{$Amat}, and thus the rows of solutions
+    \code{$W} that was used in the monotone factorization of the likelihood }
 }
 %\references{ ~put references to the literature/web site here ~ }
 
 \author{ Robert B. Gramacy \email{bobby@statslab.cam.ac.uk} }
 \seealso{ \code{\link{bmonomvn}} and \code{\link[quadprog]{solve.QP}}
-  in the \pkg{quadprog} package }
+  in the \pkg{quadprog} package, \code{\link{monomvn.solve.QP}} }
 \examples{
 ## generate N=100 samples from a 10-d random MVN
 ## and randomly impose monotone missingness
@@ -109,23 +127,29 @@ xmiss <- rmono(xmuS$x)
 ## and sample from the posterior of the solution space
 qp1 <- default.QP(ncol(xmiss))
 obl1 <- bmonomvn(xmiss, QP=qp1)
+m1 <- monomvn.solve.QP(obl1$S, qp1) ## calculate mean
 
 ## now obtain samples from the solution space of the
 ## mean-variance QP
 qp2 <- default.QP(ncol(xmiss), dmu=TRUE)
 obl2 <- bmonomvn(xmiss, QP=qp2)
+m2 <- monomvn.solve.QP(obl2$S, qp2, obl2$mu) ## calculate mean
 
 ## now obtain samples from minimum variance solutions
 ## where the mean weighted (samples) are constrained to be
 ## greater one
 qp3 <- default.QP(ncol(xmiss), mu.constr=1)
 obl3 <- bmonomvn(xmiss, QP=qp3)
+m3 <- monomvn.solve.QP(obl3$S, qp3, obl3$mu) ## calculate mean
 
 ## plot a comparison
 par(mfrow=c(3,1))
 plot(obl1, which="QP", xaxis="index", main="Minimum Variance")
+points(m1, col=3, pch=18) ## add mean
 plot(obl2, which="QP", xaxis="index", main="Mean Variance")
+points(m2, col=3, pch=18) ## add mean
 plot(obl3, which="QP", xaxis="index", main="Minimum Variance, mean >= 1")
+points(m3, col=3, pch=18) ## add mean
 
 ## for a further comparison of samples of the QP solution
 ## w under Bayesian and non-Bayesian monomvn, see the

@@ -164,7 +164,6 @@ blasso(X, y, T = 1000, thin = NULL, RJ = TRUE, M = NULL,
     in regression.} In Bayesian Statistics 5.  Editors: J.M. Bernardo,
   J.O. Berger, A.P. Dawid and A.F.M. Smith, 609-620. Oxford Press.
 
-
   Paul T. Troughton and Simon J. Godsill (1997).
   \emph{A reversible jump sampler for autoregressive time series,
     employing full conditionals to achieve efficient model space moves.}

@@ -169,8 +169,9 @@ function(x, ...)
           ncomp <- "ncomp"
         }
         if(u == "ridge") ncomp <- "lambda"
-        cat(paste(", ", ncomp, " range: [",
-                  signif(r[1],5), ",", signif(r[2],5), "]", sep=""))
+        if(u != "fact") 
+          cat(paste(", ", ncomp, " range: [",
+                    signif(r[1],5), ",", signif(r[2],5), "]", sep=""))
       }
       cat("\n")
     }
@@ -184,6 +185,13 @@ function(x, ...)
       if(x$rao.s2) cat("Rao-Blackwellized s2 draws were used\n")
       else cat("Standard Park & Casella s2 full-conditional draws were used\n")
 
+      ## say something about DA if any
+      if(!is.null(x$R)) {
+         cat("\nData Augmentation was used for",
+             sum(x$R == 2), "entries of y;\n")
+         cat("see the $R field for the missingness pattern\n")
+      }
+      
       ## say something about the reversible jump scheme that was used
       if(x$RJ != "none") {
         cat("\nReversible Jump (RJ) was used to average over\n")
@@ -243,12 +251,20 @@ function(x, which=c("mu", "S", "QP"), xaxis=c("numna","index"), main=NULL,
   ## check the uselog argument
   if(length(uselog) > 1 || !is.logical(uselog))
     stop("uselog should be a scalar logical")
-  if(uselog) uselog <- "log"
-  else uselog <- NULL
   
   ## plot info about mu
   if(which == "mu") {
-    y <- sqrt(x$mu.var[x$o])
+
+     ## construct the response
+    if(uselog) {
+      y <- log(sqrt(x$mu.var[x$o]))
+      uselog <- "log"
+    } else {
+      y <- sqrt(x$mu.var[x$o])
+      uselog <- NULL
+    }
+
+    ## plot it
     if(is.null(main)) main <- paste(uselog, "sd(mu) by", xlab) 
     plot(labs, y, xlab=xlab, ylab=paste("sd(", which, ")", sep=""))
     title(main)
@@ -268,8 +284,16 @@ function(x, which=c("mu", "S", "QP"), xaxis=c("numna","index"), main=NULL,
       }
     }
 
-    ## construct the image
-    y <- sqrt(x$S.var[x$o, x$o])
+    ## construct the response
+    if(uselog) {
+      y <- log(sqrt(x$S.var[x$o,x$o]))
+      uselog <- "log"
+    } else {
+      y <- sqrt(x$S.var[x$o,x$o])
+      uselog <- NULL
+    }
+    
+    ## create main title, image, and plot
     if(is.null(main)) main <- paste(uselog, "sd(S) by", xlab)
     image(labs, labs, y, xlab=xlab, ylab=xlab)
     title(main)
@@ -280,13 +304,22 @@ function(x, which=c("mu", "S", "QP"), xaxis=c("numna","index"), main=NULL,
     if(is.null(x$W)) stop("must run bmonomvn with QP=TRUE to sample W")
 
     ## arrange the xaxis differently since the boxplot uses names
-    if(xaxis=="numna")  W <- data.frame(x$W[,x$o])
-    else W <- data.frame(x$W)
+    if(xaxis=="numna"){
+      labs <- (x$na[-(1:(ncol(x$y)-x$QP$m))])[x$QP$o]
+      W <- data.frame(x$W[,x$QP$o])
+    } else {
+      labs <- ((ncol(x$y)-x$QP$m)+1):ncol(x$y)
+      W <- data.frame(x$W)
+    }
+
+    ## create a custom x label
     xlab <- paste("ordered by", xlab)
+    if(length(labs) > 10) names <- labs
+    else names <- names(W)
 
     ## make the boxplot
     if(is.null(main)) main <- "Boxplots of QP weights w"
-    boxplot(W, ylab="w", xlab=xlab, main=main, ...)
+    boxplot(W, ylab="w", names=names, xlab=xlab, main=main, ...)
 
     ## add the MAP point
     points(as.numeric(W[x$which.map,]), col=2, pch=21)
