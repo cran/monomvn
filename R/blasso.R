@@ -148,12 +148,15 @@ function(X, y, T=1000, thin=NULL, RJ=TRUE, M=NULL, beta=NULL,
     }
 
     ## check mprior
-    if(length(mprior) != 1 || mprior < 0 || mprior > 1) {
-      stop("mprior should be a scalar 0 <= mprior < 1");
-    } else if(mprior != 0 && RJ == FALSE) {
-      warning(paste("setting mprior=", mprior, " ignored since RJ=FALSE",
-                    sep=""))
-    }
+    if(any(mprior < 0)) stop("must have all(0 <= mprior)");
+    if(length(mprior) == 1) {
+      if(mprior != 0 && RJ == FALSE)
+        warning(paste("setting mprior=", mprior,
+                      " ignored since RJ=FALSE", sep=""))
+      if(mprior > 1) stop("must have scalar 0 <= mprior < 1")
+      mprior <- c(mprior, 0)
+    } else if(length(mprior) != 2)
+      stop("mprior should be a scalar or 2-vector in [0,1]")
 
     ## check r and delta (rd)
     if(is.null(rd)) {
@@ -210,6 +213,7 @@ function(X, y, T=1000, thin=NULL, RJ=TRUE, M=NULL, beta=NULL,
             m = as.integer(rep(sum(beta!=0), T)),
             s2 = as.double(rep(s2, T)),
             tau2i = tau2i,
+            pi = double(T*mprior[2]),
             lpost = double(T),
             mprior = as.double(mprior),
             r = as.double(rd[1]),
@@ -246,6 +250,12 @@ function(X, y, T=1000, thin=NULL, RJ=TRUE, M=NULL, beta=NULL,
     r$normalize = as.logical(r$normalize)
     r$RJ <- as.logical(r$RJ)
     r$rao.s2 <- as.logical(r$rao.s2)
+
+    ## transform mprior and pi
+    if(r$mprior[2] == 0) {
+      r$mprior <- r$mprior[-2]
+      r$pi <- NULL
+    }
 
     ## null-out redundancies
     r$col <- r$n <- r$cols <- r$verb <- NULL

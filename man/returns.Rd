@@ -7,7 +7,7 @@
 \title{Financial Returns data from NYSE and AMEX}
 \description{
 Monthly returns of common domestic stocks traded on the NYSE and the
-AMEX from April 1968 until 1998, and also the return to the market
+AMEX from April 1968 until 1998l; also contains the return to the market
 }
 \usage{
 data(returns)
@@ -16,9 +16,9 @@ data(market)
 data(market.test)
 }
 \format{
-  The returns provied are collected in a \code{data.frame} with
+  The returns provided are collected in a \code{data.frame} with
   1168 columns, and 360 rows in the case of \code{returns} and 12
-  rows for \code{returns.train}. The columns are uniquely coded to
+  rows for \code{returns.test}. The columns are uniquely coded to
   identify the stock traded on NYSE or AMEX.  The market return
   is in two vectors \code{market} and \code{market.test}
   of length 360 and 12, respectively
@@ -30,19 +30,19 @@ data(market.test)
   returns for 1997.  Both data sets have been cleaned in the following
   way.  All stocks have a share price greater than \$5 and a market
   capitalization greater than 20\% based on the size distribution of
-  NYSE firms.  Stocks with which did not have completely observed return
+  NYSE firms.  Stocks without completely observed return
   series in 1997 were also discarded.
 
   The market returns provided are essentially the monthly return on the
-  S\&P500 during the same period, which is highly correlated to the
-  raw monthly weighted by their market capitalization
+  S\&P500 during the same period, which is highly correlated with the
+  raw monthly returns weighted by their market capitalization
 }
 \source{
   This data is a subset of that originally used by Chan, Karceski,
-  and Lakonishok (1999), and subsequently by seceral others;
+  and Lakonishok (1999), and subsequently by several others;
   see the references below.  We use it as part of the \pkg{monomvn}
-  package as an example of a real world data set following a monotone
-  missingness pattern
+  package as an example of a real world data set following a
+  nearly monotone missingness pattern
 }
 \references{
   Louis K. Chan, Jason Karceski, and Josef Lakonishok (1999).
@@ -57,7 +57,7 @@ data(market.test)
 
   Robert B. Gramacy, Joo Hee Lee, and Ricardo Silva (2008).
   \emph{On estimating covariances between many assets with histories 
-  of highly variable length}. Preprint available on arXiv:0710.5837:\cr
+  of highly variable length}. \cr Preprint available on arXiv:0710.5837:
   \url{http://arxiv.org/abs/0710.5837}
 
   \url{http://www.statslab.cam.ac.uk/~ bobby/monomvn.html}

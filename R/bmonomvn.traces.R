@@ -29,7 +29,7 @@
 ##
 
 "bmonomvn.read.traces" <-
-  function(N, n, M, nao, nam, oo, capm, mprior, R, cl,
+  function(N, n, M, nao, oo, nam, capm, mprior, R, cl,
            thin, verb, rmfiles=TRUE)
 {
   ## initialize the list
@@ -150,6 +150,7 @@ read.DA.trace <- function(nao, verb, rmfiles)
   }
 
 
+
 ## table2blasso:
 ##
 ## change the table trace read in and convert it into a
@@ -163,7 +164,7 @@ table2blasso <- function(table, thin, mprior, capm, m, n, cl)
     
     ## start with the easy scalars
     l <- list(lpost=tl[["lpost"]], s2=tl[["s2"]], mu=tl[["mu"]],
-              m=tl[["m"]], lambda2=tl[["lambda2"]])
+              m=tl[["m"]], lambda2=tl[["lambda2"]], pi=tl[["pi"]])
 
     ## now the vectors
     bi <- grep("beta.[0-9]+", names(table))
@@ -176,7 +177,9 @@ table2blasso <- function(table, thin, mprior, capm, m, n, cl)
     l$T <- nrow(l$beta)
     l$thin <- "dynamic"
     l$RJ <- !is.null(l$m)
-    l$mprior <- mprior
+    if(l$RJ) l$mprior <- mprior
+    else { l$mprior <- l$m <- l$pi <- NULL }
+      
     if(capm) l$M <- max(m, n) 
     else l$M <- m
     

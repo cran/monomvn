@@ -1,3 +1,10 @@
+1.6-1 (11 Dec 2008)
+-----
+
+valgrind found some errors and leaks in last version,
+now fixed
+
+
 1.6 (2 Dec 2008)
 ---
 

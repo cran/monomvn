@@ -73,6 +73,8 @@ class Bmonomvn
   double *beta;              /* regression coefficients */
   double *tau2i;             /* latent vector of (inverse-) diagonal 
                                 component of beta prior */
+  double pi;                 /* prior parameter p in Bin(m|M,p) for model order m
+                                or indicates Unif[0,...,Mmax] when p=0 */
 
   /* posterior probability */
   double lpost_bl;           /* regression (each i) log posterior probability */
@@ -116,7 +118,7 @@ class Bmonomvn
   /* Initialization */
   void InitBlassos(const unsigned int method, int *facts, const unsigned int RJm, 
 		   const bool capm, double *mu_start, double ** S_start, 
-		   int *ncomp_start, double *lambda_start, const double mprior,
+		   int *ncomp_start, double *lambda_start, double *mprior,
 		   const double r, const double delta, const bool rao_s2, 
 		   const bool economy, const bool trace);
 

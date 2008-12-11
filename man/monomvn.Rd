@@ -199,7 +199,7 @@ monomvn(y, pre = TRUE, method = c("plsr", "pcr", "lasso", "lar",
 \references{
   Robert B. Gramacy, Joo Hee Lee, and Ricardo Silva (2007).
   \emph{On estimating covariances between many assets with histories 
-  of highly variable length}. Preprint available on arXiv:0710.5837:\cr
+  of highly variable length}. \cr Preprint available on arXiv:0710.5837:
   \url{http://arxiv.org/abs/0710.5837}
 
   Roderick J.A. Little and Donald B. Rubin (2002).

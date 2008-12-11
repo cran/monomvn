@@ -30,7 +30,7 @@
 ## model
 
 'plot.blasso' <-
-  function(x, which=c("coef", "s2", "lambda2", "tau2i", "m"), burnin=0, ...)
+  function(x, which=c("coef", "s2", "lambda2", "tau2i", "m", "pi"), burnin=0, ...)
 {
   ## check the burnin argument
   if(length(burnin) != 1 || burnin<0 || burnin >= x$T)
@@ -61,11 +61,15 @@
     par(mfrow=c(2,1))
     hist(x$m[burnin:x$T], ...)
     plot(burnin:x$T, x$m[burnin:x$T], type="l", main="m chain", ...)
-  }
-  else if(which == "tau2i"){
+  } else if(which == "tau2i"){
     if(is.null(x$tau2i)) stop("LASSO regression was not used")
     boxplot(data.frame(x$tau2i[burnin:x$T,]),
             main="Boxplot of tau2i", ylab="tau2i", ...)
+  } else if(which == "pi"){
+    if(is.null(x$pi)) stop("the prior held pi fixed")
+    par(mfrow=c(2,1))
+    hist(x$pi[burnin:x$T], ...)
+    plot(burnin:x$T, x$pi[burnin:x$T], type="l", main="pi chain", ...)
   }
 }
 
@@ -105,6 +109,10 @@ function(object, burnin=0, ...)
     ## only do if RJ
     rl$bn0 <- apply(object$beta[burnin:object$T,], 2,
                    function(x){ sum(x != 0) })/(object$T-burnin+1)
+
+    ## only do if pi not fixed
+    if(!is.null(object$pi))
+      rl$pi = summary(object$pi[burnin:object$T])
     
     ## print it or return it
     rl
@@ -159,6 +167,13 @@ function(object, burnin=0, ...)
     print(x$bn0)
     cat("\n")
   }
+
+  ## print pi
+  if(!is.null(x$pi)) {
+    cat("pi:\n")
+    print(x$bn0)
+    cat("\n")
+  }
 }
 
 
@@ -191,10 +206,13 @@ function(x, ...)
       cat("subsets of columns in the design matrix, using a\n")
 
       ## add in info about the prior
-      if(x$mprior == 0)
+      if(x$mprior[1] == 0)
         cat("uniform prior on m in {0,...,", x$M, "}\n", sep="")
-      else
+      else if(length(x$mprior) == 1)
         cat("Bin(m|n=", x$M, ",p=", x$mprior, ") prior\n", sep="")
+      else cat("Bin(m|n=", x$M, ",p) prior with p~Beta(",
+                 x$mprior[1], ",", x$mprior[2], ")\n", sep="")
+        
     }
 
     ## suggestion
