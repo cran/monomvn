@@ -14,7 +14,7 @@
 \usage{
 \method{print}{blasso}(x, ...)
 \method{summary}{blasso}(object, burnin = 0, ...)
-\method{plot}{blasso}(x, which=c("coef", "s2", "lambda2", "tau2i", "m"),
+\method{plot}{blasso}(x, which=c("coef", "s2", "lambda2", "tau2i", "m", "pi"),
      burnin = 0, ... )
 \method{print}{summary.blasso}(x, ...)
 }
@@ -76,6 +76,9 @@
   \item{bn0}{ the estimated posterior probability that the individual
 	components of the regression coefficients \code{beta} is 
  	nonzero  }
+  \item{pi}{ the estimated Binomial proportion in the prior for
+    the model order when 2-vector input is provided for
+    \code{mprior}}
 }
 
 \author{ Robert B. Gramacy \email{bobby@statslab.cam.ac.uk} }

@@ -25,9 +25,9 @@ Maintainer:
 Robert B. Gramacy \email{bobby@statslab.cam.ac.uk}
 }
 \references{
-Robert B. Gramacy and Joo Hee Lee (2007).
+Robert B. Gramacy, Joo Hee Lee and Ricardo Silva (2008).
 \emph{On estimating covariances between many assets with histories 
-of highly variable length}. Preprint available on arXiv:0710.5837:\cr
+of highly variable length}. \cr Preprint available on arXiv:0710.5837:
 \url{http://arxiv.org/abs/0710.5837}
 
 \url{http://www.statslab.cam.ac.uk/~bobby/monomvn.html}

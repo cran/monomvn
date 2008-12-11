@@ -14,9 +14,10 @@
 \arguments{
   \item{x}{ a \code{"monomvn"}-class object that must be named \code{x}
     for generic plotting }
-  \item{which}{ determines which parameter whose standard deviation
-    to be visualized, the mean (\code{"mu"} for \code{sqrt($mu.var)});
-    the covariance (\code{"S"} for \code{sqrt($S.var)}), which results in
+  \item{which}{ determines the parameter whose standard deviation
+    to be visualized: the mean vector (\code{"mu"} for \code{sqrt($mu.var)});
+    the covariance \code{matrix} (\code{"S"} for \code{sqrt($S.var)}),
+    which results in
     an \code{\link{image}} plot; or the distribution of solutions
     \code{$W} to a Quadratic Program that may be obtained by
     supplying \code{QP = TRUE} as input to \code{\link{bmonomvn}} }
@@ -45,7 +46,7 @@
   In the case of \code{which = "mu"}
   this means that y-values are presented in the order \code{x$o}, where
   the x-axis is either \code{1:length(x$o)} in the case of
-  \code{xaxis = "index"} or \code{x$na[x$o]} in the case of \code{xaxis
+  \code{xaxis = "index"}, or \code{x$na[x$o]} in the case of \code{xaxis
     = "numna"}.  When \code{which = "S"} is given the resulting
   \code{\link{image}} plot is likewise ordered by \code{x$o} where the
   x- and y-axis are as above, except that in the case

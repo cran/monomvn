@@ -113,12 +113,15 @@ function(y, pre=TRUE, p=0.9, B=100, T=200, thin=1, economy=FALSE,
     }
 
     ## check mprior
-    if(length(mprior) != 1 || mprior < 0 || mprior > 1) {
-      stop("mprior should be a scalar 0 <= mprior < 1");
-    } else if(mprior != 0 && RJ == FALSE) {
-      warning(paste("setting mprior=", mprior, " ignored since RJ=FALSE",
-                    sep=""))
-    }
+    if(any(mprior < 0)) stop("must have all(0 <= mprior)");
+    if(length(mprior) == 1) {
+      if(mprior != 0 && RJ == FALSE)
+        warning(paste("setting mprior=", mprior,
+                      " ignored since RJ=FALSE", sep=""))
+      if(mprior > 1) stop("must have scalar 0 <= mprior < 1")
+      mprior <- c(mprior, 0)
+    } else if(length(mprior) != 2)
+      stop("mprior should be a scalar or 2-vector in [0,1]")
 
     ## check r and delta (rd), or default
     if(is.null(rd)) {
@@ -291,6 +294,7 @@ function(y, pre=TRUE, p=0.9, B=100, T=200, thin=1, economy=FALSE,
     r$capm <- as.logical(r$capm)
     r$economy <- as.logical(r$economy)
     r$RJi <- NULL; r$RJ <- RJ
+    if(r$mprior[2] == 0) r$mprior <- r$mprior[-2]
 
     ## off-by-one
     r$which.map <- r$which.map + 1

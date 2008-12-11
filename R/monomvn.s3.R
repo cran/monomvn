@@ -200,10 +200,12 @@ function(x, ...)
         else cat("every big-p-small-n regression, with a\n")
         
         ## add in info about the prior
-        if(x$mprior == 0)
+        if(x$mprior[1] == 0)
           cat("uniform prior on m in {1,...,M[i]}\n", sep="")
-        else
+        else if(length(x$mprior) == 1)
           cat("Bin(m|n=M[i]", ",p=", x$mprior, ") prior\n", sep="")
+        else cat("Bin(m|n=M[i],p) prior with p~Beta(",
+                 x$mprior[1], ",", x$mprior[2], ")\n", sep="")
       }
       cat("\n")
 

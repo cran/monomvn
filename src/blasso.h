@@ -100,6 +100,8 @@ class Blasso
   double s2;                /* the noise variance */
   double *tau2i;            /* inverse of diagonal of beta normal prior cov matrix */
   double *beta;             /* sampled regression coefficients, conditional on breg */
+  double pi;                /* prior parameter p in Bin(m|M,p) for model order m
+                               or indicates Unif[0,...,Mmax] when p=0 */
 
   /* regressions utility structure(s) */
   BayesReg *breg;           /* matrices and vectors of regression quantities */
@@ -108,7 +110,8 @@ class Blasso
   double a;                 /* IG alpha (scale) prior parameter for s2 */
   double b;                 /* IG beta (inverse-scale) prior parameter for s2 */
   bool rao_s2;              /* integrate out beta when drawing s2 (when TRUE) */
-  double mprior;            /* Bin(m|M,mprior) or Unif[0,M] if mprior=0 prior for m */
+  double mprior[2];         /* when mprior[1]==0 then pi=mprior[0], otherwise
+                               this contains g & h of the beta prior for pi */
   double r;                 /* Gamma alpha (shape) prior parameter for lambda */
   double delta;             /* Gamma beta (scale) prior parameter for lambda */
 
@@ -127,9 +130,10 @@ class Blasso
 
   /* parameter manipulation  */
   void GetParams(double *beta, int *m, double *s2, double *tau2i, 
-		 double *lambda2) const;
+		 double *lambda2, double *pi) const;
   void InitIndicators(const unsigned int M, const unsigned int Mmax, 
 		      double *beta, int *facts, const unsigned int nf);
+  void InitPB(double *beta, int *facts, const unsigned int nf);
   void InitParams(const REG_MODEL reg_model, double *beta, double s2, double lambda2);
   void InitParams(double * beta, const double lambda2, const double s2, 
 		  double *tau2i);
@@ -161,6 +165,7 @@ class Blasso
   void DrawTau2i(void);
   bool Compute(const bool reinit);
   void DrawLambda2(void);
+  void DrawPi(void);
 
   /* likelihood and posterior */
   double logPosterior();
@@ -170,14 +175,14 @@ class Blasso
   /* constructors and destructors */
   Blasso(const unsigned int m, const unsigned int n, double **X, double *Y,
 	 const bool RJ, const unsigned int Mmax, double *beta, 
-	 const double lambda2, const double s2, double *tau2i, const double mprior, 
+	 const double lambda2, const double s2, double *tau2i, double *mprior, 
 	 const double r, const double delta, const double a, const double b, 
 	 const bool rao_s2, const bool normalize, const unsigned int verb);
   Blasso(const unsigned int m, const unsigned int n, double **Xorig,
 	 Rmiss *R, double *Xnorm, const double Xnorm_scale, double *Xmean, 
 	 const unsigned int ldx, double *Y, const bool RJ, unsigned int Mmax, 
 	 double *beta_start, const double s2, const double lambda2_start, 
-	 const double mprior, const double r, const double delta, 
+	 double *mprior, const double r, const double delta, 
 	 const REG_MODEL reg_model, int *facts, const unsigned int nf, bool rao_s2, 
 	 const unsigned int verb);
   ~Blasso();
@@ -189,13 +194,14 @@ class Blasso
   /* access functions */
   REG_MODEL RegModel(void);
   bool UsesRJ(void);
+  bool FixedPi(void);
 
   /* MCMC sampling */
   void Rounds(const unsigned int T, const unsigned int thin, 
 	      double *lambda2, double *mu, double **beta, int *m,
-	      double *s2, double **tau2i, double *lpost);
+	      double *s2, double **tau2i, double *pi, double *lpost);
   void Draw(const unsigned int thin, double *lambda2, double *mu, double *beta, 
-	    int *m, double *s2, double *tau2i, double *lpost);
+	    int *m, double *s2, double *tau2i, double *pi, double *lpost);
   void DataAugment(void);
 
     
@@ -226,7 +232,7 @@ double mvnpdf_log(double *x, double *mu, double **cov,
 		  const unsigned int n);
 double log_determinant_chol(double **M, const unsigned int n);
 double lprior_model(const unsigned int m, const unsigned int Mmax, 
-		    const double mprior);
+		    double pi);
 
 /* for modular reversible jump */
 double mh_accep_ratio(unsigned int n, double *resid, double *x, double bnew, 
@@ -238,7 +244,7 @@ double log_posterior(const unsigned int n, const unsigned int m,
 		     double *tau2i, const double lambda2, 
 		     const double a, const double b, const double r,
 		     const double delta, const unsigned int Mmax, 
-		     const double mprior);
+		     const double pi, double *mprior);
 
 /* regression utility structure */
 BayesReg* new_BayesReg(const unsigned int m, const unsigned int n, 

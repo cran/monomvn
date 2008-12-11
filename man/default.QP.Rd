@@ -39,13 +39,10 @@ default.QP(m, dmu = FALSE, mu.constr = NULL)
   can be used as a skeleton to for adaptation to more general 
   Quadratic Programs by adjusting the \code{list} that is returned,
   as described in the \dQuote{value} section below.
-  In the \dQuote{examples} section we set up a mean-variance and
-  fixed-mean minimum variance Quadratic Program instead, via
-  the \code{dmu} and \code{mu.constr} arguments.
-
+  
   Non-default settings of the arguments \code{dmu} and \code{mu.constr}
   augment the default Quadratic Program, described above, in two standard ways.
-  Specifying \code{dvec = TRUE} causes the program to change
+  Specifying \code{dvec = TRUE} causes the program objective to change
   to \deqn{\min_w - w^\top \mu + \frac{1}{2} w^\top \Sigma w,}{min_w
     - t(w) * mu + 0.5 * t(w) * S * w,}
   with the same constraints as above.  Setting \code{mu.constr = 1},
@@ -57,16 +54,16 @@ default.QP(m, dmu = FALSE, mu.constr = NULL)
   alternating sign on the linear part, so that each sample of
   \eqn{\mu^\top w}{t(mu)*w} must lie in the interval [1,2].
   So whereas \code{dmu = TRUE} allows the \code{mu} samples to
-  enter the objective in s standard way, \code{mu.constr}
+  enter the objective in a standard way, \code{mu.constr}
   (\code{!= NULL}) allows it to enter the constraints.
 
   The accompanying function \code{\link{monomvn.solve.QP}} can
   act as an interface between the constructed (default) \code{QP}
-  object and estimates of the covariance matrix \eqn{\Sigma}{S} and
-  mean vector \eqn{\mu}{mu} that is identical to the one used on
+  object, and estimates of the covariance matrix \eqn{\Sigma}{S} and
+  mean vector \eqn{\mu}{mu}, that is identical to the one used on
   the posterior-sample version implemented in \code{\link{bmonomvn}}.
   The example below, and those in the documentation for
-  \code{\link{bmonomvn}} illustrate how this feature may be used
+  \code{\link{bmonomvn}}, illustrate how this feature may be used
   to extract mean and MLE solutions to the constructed
   Quadratic Program
 }
@@ -77,7 +74,7 @@ default.QP(m, dmu = FALSE, mu.constr = NULL)
   package.  See \code{\link[quadprog]{solve.QP}} for more information
   of the general specification of these arguments.  In what follows
   we simply document the defaults provided by \code{default.QP}.
-  Note that the \code{Dmat} argument is not specified as
+  Note that the \code{Dmat} argument is not, specified as
   \code{\link{bmonomvn}} will use samples from \code{S} (from the
   posterior) instead
 
@@ -89,9 +86,9 @@ default.QP(m, dmu = FALSE, mu.constr = NULL)
   \item{dmu }{ a copy of the \code{dmu} input argument }
   \item{Amat }{ a \code{matrix} describing a linear transformation
     which, together with \code{b0}  and \code{meq}, describe the
-    constraints that the components of the sampled solution(s),
+    constraint that the components of the sampled solution(s),
     \code{w}, must be positive and sum to one }
-  \item{b0 }{ a vector describing the in/equalities described by
+  \item{b0 }{ a vector containing the (RHS of) in/equalities described by
     the these constraints }
   \item{meq}{ an integer scalar indicating that the first \code{meq}
     constraints described by \code{Amat} and \code{b0} are equality
@@ -110,7 +107,10 @@ default.QP(m, dmu = FALSE, mu.constr = NULL)
 
   \item{o}{ an integer vector of length \code{m} indicating the ordering
     of the rows of \code{$Amat}, and thus the rows of solutions
-    \code{$W} that was used in the monotone factorization of the likelihood }
+    \code{$W} that was used in the monotone factorization of the
+    likelihood.  This field appears only after \code{\link{bmonomvn}}
+    returns a \code{QP} object checked by the internal function
+  \code{check.QP}}
 }
 %\references{ ~put references to the literature/web site here ~ }
 

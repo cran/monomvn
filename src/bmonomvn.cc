@@ -178,7 +178,7 @@ void Bmonomvn::InitBlassos(const unsigned int method, int* facts,
 			   const unsigned int RJm, const bool capm, 
 			   double *mu_start, double **S_start,
 			   int *ncomp_start, double *lambda_start, 
-			   const double mprior, const double r, 
+			   double *mprior, const double r, 
 			   const double delta,  const bool rao_s2, 
 			   const bool economy, const bool trace)
 {
@@ -306,6 +306,9 @@ void Bmonomvn::InitBlassoTrace(unsigned int i)
 	fprintf(trace_lasso[i], "tau2i.%d ", j);
   }
 
+  /* maybe add the pi parameter */
+  if(!(blasso[i]->FixedPi())) fprintf(trace_lasso[i], "pi ");
+
   /* finish off the header */
   fprintf(trace_lasso[i], "\n");
 }
@@ -337,6 +340,9 @@ void Bmonomvn::PrintTrace(unsigned int i)
       for(unsigned int j=0; j<i; j++)
 	fprintf(trace_lasso[i], "%.20f ", tau2i[j]);
   }
+
+  /* maybe add the pi param to the file */
+  if(!(blasso[i]->FixedPi())) fprintf(trace_lasso[i], "%.20f ", pi);
 
   /* finish printing the line */
   fprintf(trace_lasso[i], "\n");
@@ -423,7 +429,7 @@ double Bmonomvn::Draw(const unsigned int thin, const bool economy,
     if(economy) blasso[i]->Init();
     
     /* obtain a draw from the i-th Bayesian lasso parameters */
-    blasso[i]->Draw(thin, &lambda2, &mu_s, beta, &m, &s2, tau2i, &lpost_bl);
+    blasso[i]->Draw(thin, &lambda2, &mu_s, beta, &m, &s2, tau2i, &pi, &lpost_bl);
 
     /* perform data augmentation */
     DataAugment(i, mu_s, beta, s2);
@@ -736,7 +742,7 @@ void bmonomvn_R(
 
   /* initialize the Bayesian lasso regressios with the bmonomvn module */
   bmonomvn->InitBlassos(*method, facts, *RJ, (bool) (*capm), mu_start, S_start, 
-			ncomp_start, lambda_start, *mprior, rd[0], rd[1],
+			ncomp_start, lambda_start, mprior, rd[0], rd[1],
 			(bool) (*rao_s2), (bool) *economy, (bool) (*trace));
 
   /* do burn-in rounds */

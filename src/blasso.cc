@@ -49,7 +49,7 @@ Blasso::Blasso(const unsigned int M, const unsigned int N, double **Xorig,
 	       double *Xmean, const unsigned int ldx, double *Y, 
 	       const bool RJ, const unsigned int Mmax, double *beta_start, 
 	       const double s2_start, const double lambda2_start, 
-	       const double mprior, const double r, const double delta, 
+	       double *mprior, const double r, const double delta, 
 	       const REG_MODEL reg_model, int *facts, const unsigned int nf, 
 	       const bool rao_s2,  const unsigned int verb)
 {
@@ -64,6 +64,7 @@ Blasso::Blasso(const unsigned int M, const unsigned int N, double **Xorig,
   this->lpost = -1e300*1e300;
 
   /* initialize the active set of columns of X */
+  pb = NULL; pin = pout = NULL;
   InitIndicators(M, Mmax, beta_start, facts, nf);
 
   /* copy the Rao-Blackwell option for s2 */
@@ -76,7 +77,9 @@ Blasso::Blasso(const unsigned int M, const unsigned int N, double **Xorig,
   this->verb = verb;
 
   /* initialize the mprior value */
-  this->mprior = mprior;
+  dupv(this->mprior, mprior, 2);
+  if(mprior[1] == 0) pi = mprior[1];
+  else pi = 0;
 
   /* initialize the parameters */
   this->r = r;
@@ -106,18 +109,19 @@ Blasso::Blasso(const unsigned int M, const unsigned int N, double **Xorig,
 Blasso::Blasso(const unsigned int M, const unsigned int n, double **X, 
 	       double *Y, const bool RJ, const unsigned int Mmax, 
 	       double *beta, const double lambda2, const double s2, 
-	       double *tau2i, const double mprior, const double r, 
+	       double *tau2i, double *mprior, const double r, 
 	       const double delta, const double a, const double b, 
 	       const bool rao_s2, const bool normalize, 
 	       const unsigned int verb)
 {
   /* copy RJ setting */
   this->RJ = RJ;
-  this->reg_model = OLS;  /* start as anything but FACTOR and update in InitParams */
+  this->reg_model = OLS;  /* start as != FACTOR and update in InitParams */
   this->tau2i = this->beta = this->rn = this->BtDi = NULL;
   this->lpost = -1e300*1e300;
 
   /* initialize the active set of columns of X */
+  pb = NULL; pin = pout = NULL;
   InitIndicators(M, Mmax, beta, NULL, 0);
 
   /* copy the Rao-Blackwell option for s2 */
@@ -130,7 +134,9 @@ Blasso::Blasso(const unsigned int M, const unsigned int n, double **X,
   this->verb = verb;
 
   /* initialize the mprior value */
-  this->mprior = mprior;
+  dupv(this->mprior, mprior, 2);
+  if(mprior[1] == 0) pi = mprior[0];
+  else pi = 0;
 
   /* initialize the parameters */
   this->r = r;
@@ -197,6 +203,52 @@ void Blasso::InitIndicators(const unsigned int M, const unsigned int Mmax,
   if(!RJ) assert(Mmax == M);
   if(reg_model == FACTOR && M >= 1) assert(facts);
 
+  /* allocate and initialize the pb vector */
+  InitPB(beta, facts, nf);
+
+  /* allocate the column indicators and fill them */
+  /* start with the in-indicators */
+  pin = new_ivector(m);
+  unsigned int j=0;
+  for(unsigned int i=0; i<M; i++) if(pb[i]) pin[j++] = i;
+  assert(j == m);
+
+  /* handing the out-indicators may depend on the factors available */
+  if(reg_model == FACTOR) {
+
+    /* allocate pout vector and sanity check */
+    assert(nf >= m);
+    pout = new_ivector(nf-m);
+    
+    /* loop over each factor in the available columns */
+    unsigned int k=0;
+    for(unsigned int i=0; i<nf; i++)
+      if(facts[i] < (int) M && pb[facts[i]] == false) pout[k++] = facts[i];
+    assert(k == this->nf-m);
+
+  } else { /* simply allocate pout and fill with all false pb */
+    pout = new_ivector(M-m);
+    unsigned int k = 0;
+    for(unsigned int i=0; i<M; i++) if(!pb[i]) pout[k++] = i;
+    assert(k == M-m);
+  }
+}
+
+
+/*
+ * InitPB:
+ *
+ * auxilliary function used by InitIndicators to calculate the
+ * (default) initial setting of the boolean indicator vector
+ * pb, describing which columns of Xorig are to be used in the
+ * initial model
+ */
+
+void Blasso::InitPB(double *beta, int *facts, const unsigned int nf)
+{
+  /* sanity check */
+  assert(pb == NULL);
+
   /* find out which betas are non-zero, thus setting m */
   pb = (bool*) malloc(sizeof(bool) * M);
 
@@ -250,28 +302,6 @@ void Blasso::InitIndicators(const unsigned int M, const unsigned int Mmax,
       for(unsigned int i=0; i<m; i++) pb[i] = true;
       for(unsigned int i=m; i<M; i++) pb[i] = false;
     }
-  }
-
-  /* allocate the column indicators and fill them */
-  /* start with the in-indicators */
-  pin = new_ivector(m);
-  j=0;
-  for(unsigned int i=0; i<M; i++) if(pb[i]) pin[j++] = i;
-  assert(j == m);
-
-  /* handing the out-indicators may depend on the factors available */
-  if(reg_model == FACTOR) {
-    assert(nf >= m);
-    pout = new_ivector(nf-m);
-    unsigned int k=0;
-    for(unsigned int i=0; i<nf; i++)
-      if(pb[facts[i]] == false) pout[k++] = facts[i];
-    assert(k == this->nf-m);
-  } else { /* simply fill with all false pb */
-    pout = new_ivector(M-m);
-    unsigned int k = 0;
-    for(unsigned int i=0; i<M; i++) if(!pb[i]) pout[k++] = i;
-    assert(k == M-m);
   }
 }
 
@@ -778,7 +808,7 @@ void delete_BayesReg(BayesReg* breg)
  */
 
 void Blasso::GetParams(double *beta, int *m, double *s2, double *tau2i, 
-		       double *lambda2) const
+		       double *lambda2, double *pi) const
 {
   *m = this->m;
   zerov(beta, M);
@@ -790,6 +820,7 @@ void Blasso::GetParams(double *beta, int *m, double *s2, double *tau2i,
       copy_p_vector(tau2i, pin, this->tau2i, this->m);
   }
   if(lambda2) *lambda2 = this->lambda2;
+  if(pi) *pi = this->pi;
 }
 
 
@@ -821,7 +852,7 @@ void Blasso::PrintParams(FILE *outfile) const
 
 void Blasso::Rounds(const unsigned int T, const unsigned int thin, 
 		    double *lambda2, double *mu, double **beta, int *m,
-		    double *s2, double **tau2i, double *lpost)
+		    double *s2, double **tau2i, double *pi, double *lpost)
 {
   /* sanity check */
   assert(breg);
@@ -847,8 +878,12 @@ void Blasso::Rounds(const unsigned int T, const unsigned int thin,
       lambda2_samp = &(lambda2[t]); 
     } 
 
+    /* if pi not fixed */
+    double *pi_samp = NULL;
+    if(mprior[1] != 0) pi_samp = &(pi[t]);
+
     /* copy the sampled parameters */
-    GetParams(beta[t], &(m[t]), &(s2[t]), tau2i_samp, lambda2_samp);
+    GetParams(beta[t], &(m[t]), &(s2[t]), tau2i_samp, lambda2_samp, pi_samp);
     
     /* get the log posterior */
     lpost[t] = this->lpost;
@@ -905,6 +940,9 @@ void Blasso::Draw(const unsigned int thin)
 
   for(unsigned int t=0; t<thin; t++) {
 
+    /* draw from the model prior parameter */
+    if(RJ) DrawPi();
+
     /* draw latent variables, and update Bmu and Vb, etc. */
     if(reg_model == LASSO) DrawTau2i();
     else assert(tau2i == NULL);
@@ -955,7 +993,7 @@ void Blasso::Draw(const unsigned int thin)
 
 void Blasso::Draw(const unsigned int thin, double *lambda2, double *mu, 
 		  double *beta, int *m, double *s2, double *tau2i, 
-		  double *lpost)
+		  double *pi, double *lpost)
 {
   /* sanity check */
   assert(breg && Xbeta_v);
@@ -967,7 +1005,7 @@ void Blasso::Draw(const unsigned int thin, double *lambda2, double *mu,
   Draw(Thin(thin));
 
   /* copy the sampled parameters */
-  GetParams(beta, m, s2, tau2i, lambda2);
+  GetParams(beta, m, s2, tau2i, lambda2, pi);
 
   /* (un)-norm the beta samples, like Efron and Hastie */
   if(normalize && this->m > 0) {
@@ -1068,7 +1106,7 @@ void Blasso::RJup(double qratio)
   lalpha +=  lpq_ratio;
 
   /* add in the (log) prior model probabilities */
-  lalpha += lprior_model(m+1, Mmax, mprior) - lprior_model(m, Mmax, mprior);
+  lalpha += lprior_model(m+1, Mmax, pi) - lprior_model(m, Mmax, pi);
 
   /* MH accept or reject */
   if(unif_rand() < exp(lalpha)*qratio) { /* accept */
@@ -1231,7 +1269,7 @@ void Blasso::RJdown(double qratio)
   lalpha += lqp_ratio;
 
   /* add in the (log) prior model probabilities */
-  lalpha += lprior_model(m-1, Mmax, mprior) - lprior_model(m, Mmax, mprior);
+  lalpha += lprior_model(m-1, Mmax, pi) - lprior_model(m, Mmax, pi);
 
   /* MH accept or reject */
   if(unif_rand() < exp(lalpha)*qratio) { /* accept */
@@ -1741,6 +1779,28 @@ void Blasso::DrawLambda2(void)
 
 
 /*
+ * DrawPi:
+ *
+ * draw from the posterior distribution of the pi parameter
+ * which governs the Binomial prior on the model order;
+ * there may be nothing to do if this prior is fixed (not 
+ * hierarchical) and/or uniform
+ */
+
+void Blasso::DrawPi(void)
+{
+  /* do nothing if pi is fixed */
+  if(mprior[1] == 0) return;
+
+  /* sanity check */
+  assert(mprior[0] != 0);
+
+  /* set the new pi */
+  pi = rbeta(mprior[0] + (double)m, mprior[1] + (double)(Mmax-m));
+}
+
+
+/*
  * logPosterior:
  *
  * calculate the log posterior of the Bayesian lasso
@@ -1751,7 +1811,7 @@ void Blasso::DrawLambda2(void)
 double Blasso::logPosterior(void)
 {
   return log_posterior(n, m, resid, beta, s2, tau2i, lambda2,
-		       a, b, r, delta, Mmax, mprior);
+		       a, b, r, delta, Mmax, pi, mprior);
 }
 
 
@@ -1769,7 +1829,7 @@ double log_posterior(const unsigned int n, const unsigned int m,
 		     double *tau2i, const double lambda2, 
 		     const double a, const double b, const double r,
 		     const double delta, const unsigned int Mmax, 
-		     const double mprior)
+		     double pi, double *mprior)
 {
   /* for summing in the (log) posterior */
   double lpost = 0.0;
@@ -1821,7 +1881,11 @@ double log_posterior(const unsigned int n, const unsigned int m,
   // myprintf(stdout, "lpost +lambda2 (%g) = %g\n", lambda2, lpost);
 
   /* add in the the model probability */
-  lpost += lprior_model(m, Mmax, mprior);
+  lpost += lprior_model(m, Mmax, pi);
+
+  /* add in the model order probability */
+  if(mprior[1] != 0 && pi != 0) 
+    lpost += dbeta(pi, mprior[0] + (double)m, mprior[1] + (double)(Mmax-m), 1);
 
   /* return the log posterior */
   return lpost;
@@ -1837,6 +1901,19 @@ double log_posterior(const unsigned int n, const unsigned int m,
 REG_MODEL Blasso::RegModel(void)
 {
   return reg_model;
+}
+
+
+/*
+ * FixedPi:
+ *
+ * return tru if pi is held fixed 
+ */
+
+bool Blasso::FixedPi(void)
+{
+  if(!RJ || mprior[1] == 0) return true;
+  else return false;
 }
 
 
@@ -1954,16 +2031,16 @@ unsigned int Blasso::Thin(unsigned int thin)
  * lprior_model:
  *
  * calculate the log prior probability of a regression model
- * with m covariates which is either Binomial(m[Mmax,mprior])
+ * with m covariates which is either Binomial(m|Mmax,pi)
  * or is uniform over 0,...,Mmax
  */
 
 double lprior_model(const unsigned int m, const unsigned int Mmax, 
-		    const double mprior)
+		    double pi)
 {
-  assert(mprior >= 0 && mprior <= 1);
-  if(mprior == 0.0) return 0.0;
-  else return dbinom((double) m, (double) Mmax, (double) mprior, 1);
+  assert(pi >= 0 && pi <= 1);
+  if(pi == 0.0) return 0.0;
+  else return dbinom((double) m, (double) Mmax, pi, 1);
 }
 
 
@@ -2140,9 +2217,9 @@ Blasso *blasso = NULL;
 void blasso_R(int *T, int *thin, int *M, int *n, double *X_in, 
 	      double *Y, double *lambda2, double *mu, int *RJ, 
 	      int *Mmax, double *beta, int *m, double *s2, 
-	      double *tau2i, double *lpost, double *mprior, double *r, 
-	      double *delta, double *a, double *b, int *rao_s2, 
-	      int *normalize, int *verb)
+	      double *tau2i, double *pi, double *lpost,
+	      double *mprior, double *r, double *delta, double *a, 
+	      double *b, int *rao_s2, int *normalize, int *verb)
 {
   int i;
 
@@ -2178,7 +2255,7 @@ void blasso_R(int *T, int *thin, int *M, int *n, double *X_in,
 
   /* create a new Bayesian lasso regression */
   blasso =  new Blasso(*M, *n, X, Y, (bool) *RJ, *Mmax, beta_mat[0], 
-		       lambda2_start, s2[0], tau2i, *mprior, *r, *delta, 
+		       lambda2_start, s2[0], tau2i, mprior, *r, *delta, 
 		       *a, *b, (bool) *rao_s2, (bool) *normalize, *verb);
 
   /* part of the constructor which could fail has been moved outside */
@@ -2186,7 +2263,7 @@ void blasso_R(int *T, int *thin, int *M, int *n, double *X_in,
 
   /* Gibbs draws for the parameters */
   blasso->Rounds((*T)-1, *thin, lambda2_samps, &(mu[1]), &(beta_mat[1]), 
-		 &(m[1]), &(s2[1]), tau2i_mat, &(lpost[1]));
+		 &(m[1]), &(s2[1]), tau2i_mat, &(pi[1]), &(lpost[1]));
 
   delete blasso;
   blasso = NULL;

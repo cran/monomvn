@@ -51,9 +51,11 @@ blasso(X, y, T = 1000, thin = NULL, RJ = TRUE, M = NULL,
     of the lasso; only meaningful when \code{lambda2 > 0} }
   \item{mprior}{ prior on the number of non-zero regression coefficients
     (and therefore covariates) \code{m} in the model. The default
-    (\code{mprior = 0}) encode the uniform prior on \code{0 <= m <= M}.
+    (\code{mprior = 0}) encodes the uniform prior on \code{0 <= m <= M}.
     A scalar value \code{0 < mprior < 1} implies a Binomial prior
-    \code{Bin(m|n=M,p=mprior)}}
+    \code{Bin(m|n=M,p=mprior)}. A 2-vector \code{mprior=c(g,h)}
+    of positive values \code{g} and \code{h} represents
+    gives \code{Bin(m|n=M,p)} prior where \code{p~Beta(g,h)} }
   \item{rd}{ \code{=c(r, delta)}, the alpha (shape) parameter and
     \eqn{\beta}{beta} (rate) parameter to the gamma distribution prior
     \code{G(r,delta)} for the \eqn{\lambda^2}{lambda2} parameter under
@@ -109,7 +111,7 @@ blasso(X, y, T = 1000, thin = NULL, RJ = TRUE, M = NULL,
   we believe yields better mixing in the Markov chain.  RJ
   proposals to increase/decrease the number of non-zero entries
   does proceed component-wise, but the acceptance rates are high due
-  due to marginalized between-model moves (Troughton \& Godsill, 1997)
+  due to marginalized between-model moves (Troughton \& Godsill, 1997).
 
   Bayesian ridge regression is implemented as a special case via the
   \code{bridge} function.  This essentially calls \code{blasso}
@@ -137,7 +139,10 @@ blasso(X, y, T = 1000, thin = NULL, RJ = TRUE, M = NULL,
     parameter}
   \item{tau2i}{ a \code{T*ncol(X)} \code{matrix} of \code{T} samples from
     the (latent) inverse diagonal of the prior covariance matrix for
-    \code{beta}}
+    \code{beta}, obtained for Lasso regressions }
+  \item{pi}{ a vector of \code{T} samples of the Binomial proportion
+    \code{p} that was given a Beta prior, as described above for the
+    2-vector version of the \code{mprior} input}
 }
 \note{
   Whenever \code{ncol(X) >= nrow(X)} it must be that either \code{RJ = TRUE}

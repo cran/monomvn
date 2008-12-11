@@ -82,7 +82,9 @@ bmonomvn(y, pre = TRUE, p = 0.9, B = 100, T = 200, thin = 1,
     (and therefore covariates) \code{m} in the model. The default
     (\code{mprior = 0}) encodes the uniform prior on \code{0 < m < M}.
     A scalar value \code{0 <= mprior <= 1} implies a Binomial prior
-    \code{Bin(m|n=M,p=mprior)}}
+    \code{Bin(m|n=M,p=mprior)}.  A 2-vector \code{mprior=c(g,h)}
+    of positive values \code{g} and \code{h} represents
+    gives \code{Bin(m|n=M,p)} prior where \code{p~Beta(g,h)}}
   \item{rd}{ \code{=c(r,delta)}; a 2-vector of prior parameters for
     \eqn{\lambda^2}{lambda^2}
     which depends on the regression method.  When \code{method =
@@ -97,8 +99,8 @@ bmonomvn(y, pre = TRUE, p = 0.9, B = 100, T = 200, thin = 1,
     the details section of \code{\link{blasso}} for more information }
   \item{QP }{ if non-\code{NULL} this argument should either be
     \code{TRUE}, a positive integer, or contain a \code{list}
-    specifying a Quadratic Program to solve as a function of the s
-    amples of \code{mu = dvec} and
+    specifying a Quadratic Program to solve as a function of the
+    samples of \code{mu = dvec} and
     \code{Sigma = Dmat} in the notation of \code{\link[quadprog]{solve.QP}};
     see \code{\link{default.QP}} for a default specification that
     is used when \code{QP = TRUE} or a positive integer is is given;
@@ -212,7 +214,7 @@ bmonomvn(y, pre = TRUE, p = 0.9, B = 100, T = 200, thin = 1,
     see the \code{R} output below }
   \item{R}{ gives a \code{matrix} version of the missingness pattern
     used: \code{0}-entries mean observed; \code{1}-entries indicate
-    missinng values conforming to a monotone pattern; \code{2}-entries
+    missing values conforming to a monotone pattern; \code{2}-entries
     indicate missing values that require data augmentation to complete
     a monotone missingness pattern }
   \item{B}{ from inputs: number of Burn-In MCMC sampling rounds,
@@ -239,7 +241,7 @@ bmonomvn(y, pre = TRUE, p = 0.9, B = 100, T = 200, thin = 1,
 \references{
   Robert B. Gramacy, Joo Hee Lee, and Ricardo Silva (2008).
   \emph{On estimating covariances between many assets with histories 
-  of highly variable length}. Preprint available on arXiv:0710.5837:\cr
+  of highly variable length}. \cr Preprint available on arXiv:0710.5837:
   \url{http://arxiv.org/abs/0710.5837}
 
   Roderick J.A. Little and Donald B. Rubin (2002).
@@ -345,7 +347,7 @@ add.pe.QP(obl.daf, oml.daf)
 ## a Bayes/MLE comparison using least squares sparingly
 ##
 
-## fir bayesian and classical lasso
+## fit Bayesian and classical lasso
 obls <- bmonomvn(xmiss, p=0.25)
 Ellik.norm(obls$mu, obls$S, xmuS$mu, xmuS$S)
 omls <- monomvn(xmiss, p=0.25, method="lasso")
