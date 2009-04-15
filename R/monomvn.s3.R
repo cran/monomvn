@@ -36,16 +36,34 @@ function(object, Si=FALSE, ...)
     
     ## summary information about the zeros of
     ## the S matrix
-
-    ## pairwise marginally uncorrelated
-    rl$marg <-  sum(object$S == 0)/prod(dim(object$S))
-    rl$S0 <- apply(object$S, 2, function(x) { sum(x == 0) })
+    if(!is.null(object$B)) { ## Bayesian version
       
-    ## conditionally marginally uncorrelated
-    if(Si) {
-      Si <- solve(object$S)
-      rl$cond <- sum(Si == 0)/prod(dim(Si))
-      rl$Si0 <- apply(Si, 2, function(x) { sum(x == 0) })
+      ## pairwise marginally uncorrelated
+      Stri <- 1-object$S.nz[upper.tri(object$S.nz)]
+      rl$marg <-  mean(Stri)
+      rl$S0 <- nrow(object$S) * apply(1-object$S.nz, 2, mean)
+      
+      ## conditionally marginally uncorrelated
+      if(Si) {
+        Sitri <- 1-object$Si.nz[upper.tri(object$Si.nz)]
+        rl$cond <- mean(Sitri)
+        rl$Si0 <- nrow(object$S) * apply(1-object$Si.nz, 2, mean)
+      }
+      
+    } else { ## MLE/CV version
+
+      ## pairwise marginally uncorrelated
+      Stri <- object$S[upper.tri(object$S)]
+      rl$marg <-  mean(Stri == 0)
+      rl$S0 <- apply(object$S, 2, function(x) { sum(x == 0) })
+      
+      ## conditionally marginally uncorrelated
+      if(Si) {
+        Si <- solve(object$S)
+        Sitri <- Si[upper.tri(Si)]
+        rl$cond <- mean(Sitri == 0)
+        rl$Si0 <- apply(Si, 2, function(x) { sum(x == 0) })
+      }
     }
 
     ## print it or return it
@@ -66,15 +84,20 @@ function(object, Si=FALSE, ...)
 
   ## count the extra number of things printed
   p <- 0
+
+  ## extra print for the Bayesian case
+  if(!is.null(x$obj$B)) cat("On average in the posterior:\n")
   
   ## print the marginally uncorrelated percentage
   if(!is.null(x$marg)) {
     cat(signif(100*x$marg, 3), "% of S is zero", sep="")
     cat(" (pairwise marginally uncorrelated [MUc])\n", sep="")
-    m <- sum(x$S0 == length(x$S0) - 1)
-    cat("\t", m, " cols (of ",  length(x$S0), " [",
-        signif(100*m/length(x$S0), 3),
-        "%]) are MI & CI of all others\n", sep="")
+    if(is.null(x$obj$B)) { ## only in the non-Bayesian case
+      m <- sum(x$S0 == length(x$S0) - 1)
+      cat("\t", m, " cols (of ",  length(x$S0), " [",
+          signif(100*m/length(x$S0), 3),
+          "%]) are MI & CI of all others\n", sep="")
+    }
     p <- p + 1
   }
 
@@ -186,7 +209,7 @@ function(x, ...)
       else cat("Standard Park & Casella s2 full-conditional draws were used\n")
 
       ## say something about DA if any
-      if(!is.null(x$R)) {
+      if(!is.null(x[['R']])) {
          cat("\nData Augmentation was used for",
              sum(x$R == 2), "entries of y;\n")
          cat("see the $R field for the missingness pattern\n")
@@ -206,6 +229,13 @@ function(x, ...)
           cat("Bin(m|n=M[i]", ",p=", x$mprior, ") prior\n", sep="")
         else cat("Bin(m|n=M[i],p) prior with p~Beta(",
                  x$mprior[1], ",", x$mprior[2], ")\n", sep="")
+      }
+
+      ## say something about the errors used
+      if(!is.null(x$theta)) {
+        cat("\nStudent-t errors were used with theta=", abs(x$theta), "\n", sep="")
+        if(x$theta < 0)
+          cat("using a pooled nu for all columns, see $nu\n")
       }
       cat("\n")
 
@@ -231,8 +261,8 @@ function(x, ...)
 ## (only works for bmonomvn at this point)
 
 `plot.monomvn` <-
-function(x, which=c("mu", "S", "QP"), xaxis=c("numna","index"), main=NULL,
-         uselog=FALSE, ...)
+function(x, which=c("mu", "S", "Snz", "Sinz", "QP"),
+         xaxis=c("numna","index"), main=NULL, uselog=FALSE, ...)
 {
   ## check that we have bmonomnv (Bayesian) output
   if(is.null(x$B)) stop("plots only supported for bmonomvn output")
@@ -271,7 +301,8 @@ function(x, which=c("mu", "S", "QP"), xaxis=c("numna","index"), main=NULL,
     plot(labs, y, xlab=xlab, ylab=paste("sd(", which, ")", sep=""))
     title(main)
 
-  } else if(which == "S") { ## plot info about S
+  } else if(which == "S" || which == "Snz" || which == "Sinz") {
+    ## plot info about S
 
     ## generate unique lables by divding up the unit interval
     ## because image() requires it
@@ -287,16 +318,25 @@ function(x, which=c("mu", "S", "QP"), xaxis=c("numna","index"), main=NULL,
     }
 
     ## construct the response
+    if(which == "S") S <- x$S.var
+    else if(which == "Snz") S <- x$S.nz
+    else S <- x$Si.nz
+
+    ## use log?
     if(uselog) {
-      y <- log(sqrt(x$S.var[x$o,x$o]))
+      y <- log(sqrt(S[x$o,x$o]))
       uselog <- "log"
     } else {
-      y <- sqrt(x$S.var[x$o,x$o])
+      y <- sqrt(S[x$o,x$o])
       uselog <- NULL
     }
     
     ## create main title, image, and plot
-    if(is.null(main)) main <- paste(uselog, "sd(S) by", xlab)
+    if(is.null(main)) {
+      if(which == "S") main <- paste(uselog, "sd(S) by", xlab)
+      else if(which == "Snz") main <- paste(uselog, "p(S) != 0 by", xlab)
+      else main <- paste(uselog, "p(inv(S)) != 0 by", xlab)
+    }
     image(labs, labs, y, xlab=xlab, ylab=xlab)
     title(main)
 
@@ -324,7 +364,7 @@ function(x, which=c("mu", "S", "QP"), xaxis=c("numna","index"), main=NULL,
     boxplot(W, ylab="w", names=names, xlab=xlab, main=main, ...)
 
     ## add the MAP point
-    points(as.numeric(W[x$which.map,]), col=2, pch=21)
+    points(as.numeric(W[x$which.map,]), col=2, pch=21, cex=1.5)
 
     ## consider adding a legend, or making logical legend argument
     ## to this function

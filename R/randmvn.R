@@ -32,7 +32,7 @@
 
 'randmvn' <-
 function(N, d, method=c("normwish", "parsimonious"),
-         mup=list(mu=0, s2=1), s2p=list(a=0.5, b=1))
+         mup=list(mu=0, s2=1), s2p=list(a=0.5, b=1), pnz=0.1)
   {
     ## check N
     if(length(N) != 1 || N < 0)
@@ -86,7 +86,7 @@ function(N, d, method=c("normwish", "parsimonious"),
         alpha <-  s2p$a+i-1
         s2 <- 1.0/rgamma(1, shape=alpha, scale=1/s2p$b)
         beta <- rnorm(i-1, sd=sqrt(s2))
-        nz <- sample(1:(i-1), 1)
+        nz <- rbinom(1, i-2, 1-pnz)+1 ## sample(1:(i-1), 1)
         beta[sample(1:(i-1), nz)] <- 0
         mu[i] <- icept + t(beta) %*% mu[1:(i-1)]
         S[i,1:(i-1)] <- t(beta) %*% S[1:(i-1),1:(i-1)]

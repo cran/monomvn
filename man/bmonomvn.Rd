@@ -16,9 +16,9 @@
 \usage{
 bmonomvn(y, pre = TRUE, p = 0.9, B = 100, T = 200, thin = 1,
          economy = FALSE, method = c("lasso", "ridge", "lsr", "factor"),
-         RJ = c("bpsn", "p", "none"), capm = method!="lasso",
-         start = NULL, mprior = 0, rd = NULL, rao.s2 = TRUE,
-         QP = NULL, verb = 1,trace = FALSE)
+         RJ = c("p", "bpsn", "none"), capm = TRUE, start = NULL,
+         mprior = 0, rd = NULL, theta = 0, rao.s2 = TRUE, QP = NULL,
+         verb = 1, trace = FALSE)
 }
 
 \arguments{
@@ -61,15 +61,14 @@ bmonomvn(y, pre = TRUE, p = 0.9, B = 100, T = 200, thin = 1,
     and least-squares. The \code{"factor"} method treats the first
     \code{p} columns of \code{y} as known factors}
   \item{RJ }{ indicates the Reversible Jump strategy to be employed.
-    The default argument of \code{"bpsn"} only uses RJ for
-    regressions with \code{p >= n}.  The \code{"p"} method uses
-    RJ whenever a parsimonious regression is used, and \code{"none"}
-    never uses RJ}
+    The default argument of \code{"p"} method uses RJ whenever a
+    parsimonious regression is used;  \code{"bpsn"} only uses
+    RJ for regressions with \code{p >= n}, and \code{"none"} never
+    uses RJ}
   \item{capm}{ when \code{TRUE} this argument indicates that the
-    number of components of
-    \eqn{\beta}{beta} should not exceed \eqn{n}{n}, the number of
-    response variables in a particular regression.  This argument
-    is ignored when using \code{method = "lasso"} }
+    number of components of \eqn{\beta}{beta} should not exceed
+    \eqn{n}{n}, the number of response variables in a particular
+    regression}
   \item{start}{ a list depicting starting values for the parameters
     that are use to initialize the Markov chain.  Usually this will be
     a \code{"monomvn"}-class object depicting maximum likelihood
@@ -94,6 +93,17 @@ bmonomvn(y, pre = TRUE, p = 0.9, B = 100, T = 200, thin = 1,
     when \code{method = "ridge"} the components are the
     \eqn{\alpha}{alpha} (shape) and \eqn{\beta}{beta} (scale) parameters
     to an inverse-gamma distribution \code{IG(r/2,delta/2)} }
+  \item{theta}{ the rate parameter (\code{> 0}) to the exponential prior
+    on the degrees of freedom paramter \code{nu} for each regression
+    model implementing Student-t errors (for each column of
+    \code{Y} marginally) by a scale-mixture prior.  See
+    \code{\link{blasso}} for more details.
+   The default setting of \code{theta = 0} turns off this prior,
+   defaulting to a normal errors prior.  A negative setting
+   triggers a pooling of the degrees of freedom parameter
+   across all columns of \code{Y}.  I.e., \code{Y} is modeled as
+   multivariate-t.  In this case \code{abs{theta}} is used as the
+   prior parameterization }
   \item{rao.s2 }{indicates whether to  Rao-Blackwellized samples for
     \eqn{\sigma^2}{s^2} should be used (default \code{TRUE}); see
     the details section of \code{\link{blasso}} for more information }
@@ -170,6 +180,8 @@ bmonomvn(y, pre = TRUE, p = 0.9, B = 100, T = 200, thin = 1,
     corresponding to the columns of \code{y} }
   \item{mu.var }{estimated variance of the mean vector with columns
     corresponding to the columns of \code{y} }
+  \item{mu.cov }{estimated covariance matrix of the mean vector
+    with columns corresponding to the columns of \code{y} }
   \item{S.var }{estimated variance of the individual components of the
     covariance matrix with columns and rows corresponding to the columns
     of \code{y}}
@@ -178,9 +190,16 @@ bmonomvn(y, pre = TRUE, p = 0.9, B = 100, T = 200, thin = 1,
   \item{S.map }{estimated MAP of the individual
     components of the covariance matrix with columns and rows
     corresponding to the columns of \code{y}}
+  \item{S.nz }{ posterior probability that the individual entries of
+    the covariance matrix are non--zero }
+  \item{Si.nz }{ posterior probability that the individual entries of
+    the inverse of the covariance matrix are non--zero }
+  \item{nu }{ when \code{theta < 0} this field provides a trace of
+    the pooled \code{nu} parameter to the multivariate-t distribution}
   \item{lpost.map}{ log posterior probability of the MAP estimate}
   \item{which.map}{ gives the time index of the sample corresponding to
     the MAP estimate}
+  \item{llik}{ a trace of the log likelihood of the data }
   \item{na }{ when \code{pre = TRUE} this is a vector containing number of
     \code{NA} entries in each column of \code{y}}
   \item{o }{ when \code{pre = TRUE} this is a vector containing the
@@ -248,9 +267,10 @@ bmonomvn(y, pre = TRUE, p = 0.9, B = 100, T = 200, thin = 1,
   \emph{Statistical Analysis with Missing Data}, Second Edition.
   Wilely.
 
-  Park, T., Casella, G. (2008).
-  \emph{The Bayesian Lasso}, (unpublished)\cr
-  \url{http://www.stat.ufl.edu/~casella/Papers/bayeslasso.pdf}
+  Park, T., Casella, G. (2008). \emph{The Bayesian Lasso.}\cr
+  Journal of the American Statistical Association, Volume 103,
+  Number 482, June 2008 , pp. 681-686(6)\cr
+  \url{http://www.stat.ufl.edu/~casella/Papers/Lasso.pdf}
 
 \url{http://www.statslab.cam.ac.uk/~bobby/monomvn.html}
 }
@@ -287,7 +307,8 @@ out$mu
 out$S
 
 ##
-## A bigger example, comparing the various methods
+## A bigger example, comparing the various
+## parsimonious methods
 ##
 
 ## generate N=100 samples from a 10-d random MVN
@@ -309,6 +330,7 @@ plot(obl, "S")
 Ellik.norm(obl$mu, obl$S, xmuS$mu, xmuS$S)
 oml <- monomvn(xmiss, method="lasso")
 Ellik.norm(oml$mu, oml$S, xmuS$mu, xmuS$S)
+
 
 ##
 ## a min-variance portfolio allocation example

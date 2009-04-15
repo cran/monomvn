@@ -1,4 +1,4 @@
-/******************************************************************************** 
+/**************************************************************************** 
  *
  * Estimation for Multivariate Normal Data with Monotone Missingness
  * Copyright (C) 2007, University of Cambridge
@@ -15,11 +15,12 @@
  * 
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  
+ * 02110-1301  USA
  *
  * Questions? Contact Robert B. Gramacy (bobby@statslab.cam.ac.uk)
  *
- ********************************************************************************/
+ ****************************************************************************/
 
 
 extern "C"
@@ -30,6 +31,7 @@ extern "C"
 #include "Rmath.h"
 #include "R.h"
 #include "assert.h"
+#include "nu.h"
 }
 #include "blasso.h"
 
@@ -50,8 +52,9 @@ Blasso::Blasso(const unsigned int M, const unsigned int N, double **Xorig,
 	       const bool RJ, const unsigned int Mmax, double *beta_start, 
 	       const double s2_start, const double lambda2_start, 
 	       double *mprior, const double r, const double delta, 
-	       const REG_MODEL reg_model, int *facts, const unsigned int nf, 
-	       const bool rao_s2,  const unsigned int verb)
+	       const double theta, const REG_MODEL reg_model, int *facts, 
+	       const unsigned int nf, const bool rao_s2, 
+	       const unsigned int verb)
 {
   /* sanity checks */
   if(Mmax >= N) assert(RJ || reg_model == LASSO || reg_model == RIDGE ||
@@ -60,8 +63,15 @@ Blasso::Blasso(const unsigned int M, const unsigned int N, double **Xorig,
   /* copy RJ setting */
   this->RJ = RJ;
   this->reg_model = reg_model;
-  this->tau2i = this->beta = this->rn = this->BtDi = NULL;
+  this->omega2 = this->tau2i = this->beta = this->rn = this->BtDi = NULL;
   this->lpost = -1e300*1e300;
+
+  /* initialize the parameters */
+  this->r = r;
+  this->delta = delta;
+  this->theta = theta;
+  this->nu = 1.0/theta;
+  this->icept = (this->theta != 0);
 
   /* initialize the active set of columns of X */
   pb = NULL; pin = pout = NULL;
@@ -71,23 +81,30 @@ Blasso::Blasso(const unsigned int M, const unsigned int N, double **Xorig,
   this->rao_s2 = rao_s2;
 
   /* initialize the input data */ 
-  InitXY(N, Xorig, R, Xnorm, Xnorm_scale, Xmean, ldx, Y, true);
+  InitX(N, Xorig, R, Xnorm, Xnorm_scale, Xmean, ldx, true);
 
   /* copy verbosity argument */
   this->verb = verb;
 
   /* initialize the mprior value */
   dupv(this->mprior, mprior, 2);
-  if(mprior[1] == 0) pi = mprior[1];
-  else pi = 0;
-
-  /* initialize the parameters */
-  this->r = r;
-  this->delta = delta;
+  if(mprior[1] == 0) pi = mprior[0]; /* fixed pi */
+  else pi = mprior[0]/(mprior[0] + mprior[1]); /* use mean of a beta distn */
 
   /* this function will be modified to depend on whether OLS 
      must become lasso */
   InitParams(reg_model, beta_start, s2_start, lambda2_start);
+
+  /* Y initization must come after InitParams */
+  InitY(N, Y);
+
+  /* need to help with a stronger s2-prior beta parameter when p>n;
+     must happen after Init Y  */
+  if((reg_model != OLS && !RJ && M >= n) || theta != 0) {
+      a = 3.0/2.0;
+      double YtY = linalg_ddot(n, Y, 1, Y, 1);
+      b = Igamma_inv(a, 0.95*gammafn(a), 0, 0)*YtY;
+  }
 
   /* only used by one ::Draw function */
   Xbeta_v = new_vector(N);
@@ -109,16 +126,22 @@ Blasso::Blasso(const unsigned int M, const unsigned int N, double **Xorig,
 Blasso::Blasso(const unsigned int M, const unsigned int n, double **X, 
 	       double *Y, const bool RJ, const unsigned int Mmax, 
 	       double *beta, const double lambda2, const double s2, 
-	       double *tau2i, double *mprior, const double r, 
-	       const double delta, const double a, const double b, 
-	       const bool rao_s2, const bool normalize, 
-	       const unsigned int verb)
+	       double *tau2i, double *omega2, const double nu, 
+	       double *mprior, const double r,  const double delta, 
+	       const double a, const double b, const double theta, 
+	       const bool rao_s2, const bool normalize, const unsigned int verb)
 {
   /* copy RJ setting */
   this->RJ = RJ;
   this->reg_model = OLS;  /* start as != FACTOR and update in InitParams */
-  this->tau2i = this->beta = this->rn = this->BtDi = NULL;
+  this->omega2 = this->tau2i = this->beta = this->rn = this->BtDi = NULL;
   this->lpost = -1e300*1e300;
+
+  /* initialize the parameters */
+  this->r = r;
+  this->delta = delta;
+  this->theta = theta;
+  this->icept = (this->theta != 0.0);
 
   /* initialize the active set of columns of X */
   pb = NULL; pin = pout = NULL;
@@ -128,7 +151,7 @@ Blasso::Blasso(const unsigned int M, const unsigned int n, double **X,
   this->rao_s2 = rao_s2;
 
   /* initialize the input data */ 
-  InitXY(n, X, Y, normalize);
+  InitX(n, X, normalize);
 
   /* copy verbosity argument */
   this->verb = verb;
@@ -136,15 +159,14 @@ Blasso::Blasso(const unsigned int M, const unsigned int n, double **X,
   /* initialize the mprior value */
   dupv(this->mprior, mprior, 2);
   if(mprior[1] == 0) pi = mprior[0];
-  else pi = 0;
-
-  /* initialize the parameters */
-  this->r = r;
-  this->delta = delta;
+  else pi = mprior[0]/(mprior[0] + mprior[1]); /* use mean of a beta distn */
 
   /* this function will be modified to depend on whether OLS 
      must become lasso */
-  InitParams(beta, lambda2, s2, tau2i); 
+  InitParams(beta, lambda2, s2, tau2i, omega2, nu); 
+
+  /* Y initization must come after InitParams */
+  InitY(N, Y);
 
   /* set the s2 Inv-Gamma prior */
   this->a = a;
@@ -203,11 +225,11 @@ void Blasso::InitIndicators(const unsigned int M, const unsigned int Mmax,
   if(!RJ) assert(Mmax == M);
   if(reg_model == FACTOR && M >= 1) assert(facts);
 
-  /* allocate and initialize the pb vector */
+  /* allocate and initialize the pb vector; this sets m */
   InitPB(beta, facts, nf);
 
   /* allocate the column indicators and fill them */
-  /* start with the in-indicators */
+  /* start with the in-indicators; m set in InitPB */
   pin = new_ivector(m);
   unsigned int j=0;
   for(unsigned int i=0; i<M; i++) if(pb[i]) pin[j++] = i;
@@ -307,13 +329,13 @@ void Blasso::InitPB(double *beta, int *facts, const unsigned int nf)
 
 
 /* 
- * InitXY:
+ * InitX:
  *
  * initialize the input data (X and Y) by allocating new
  * memory and calculating normalized stuff
  */
 
-void Blasso::InitXY(const unsigned int N, double **Xorig, double *Y, 
+void Blasso::InitX(const unsigned int N, double **Xorig,
 		    const bool normalize)
 {
   this->ldx = M;
@@ -344,28 +366,30 @@ void Blasso::InitXY(const unsigned int N, double **Xorig, double *Y,
   } else Xnorm = NULL;
 
   /* extract the active columns of X */
-  Xp = new_p_submatrix(pin, X, n, m);
+  Xp = new_p_submatrix(pin, X, n, m, icept);
+  if(icept) for(unsigned int i=0; i<n; i++) Xp[i][0] = 1.0;
   delete_matrix(X);
+  /* DiXp is set in ::InitY() after ::InitParams() */
 
   /* set R and n2 equal to default NULL values */
   R = NULL;
 
-  /* now handle everything that has to do with Y and Xp */
-  InitY
-(N, Y);
+  /* wait 'till after params have been set to initialize Y and
+     DiXp, which depends on omega */
+  DiXp = NULL;
 }
 
 
 /* 
- * InitXY:
+ * InitX:
  *
  * initialize the input data (X and Y) from pointers allocated
  * outside this module (likely in Bmonomvn::)
  */
 
-void Blasso::InitXY(const unsigned int N, double **Xorig, Rmiss *R, 
-		    double *Xnorm, const double Xnorm_scale, double *Xmean, 
-		    const unsigned int ldx, double *Y, const bool normalize)
+void Blasso::InitX(const unsigned int N, double **Xorig, Rmiss *R, 
+		   double *Xnorm, const double Xnorm_scale, 
+		   double *Xmean, const unsigned int ldx, const bool normalize)
 {
   this->copies = false;
 
@@ -385,7 +409,8 @@ void Blasso::InitXY(const unsigned int N, double **Xorig, Rmiss *R,
   this->ldx = ldx;
 
   /* extract the active columns of X; and acrive rows if(Rmiss) */
-  Xp = new_matrix(n, m);
+  Xp = new_matrix(n, m+icept);
+  if(icept) for(unsigned int i=0; i<n; i++) Xp[i][0] = 1.0;
   unsigned int k, ell;
   k = ell = 0;
   unsigned int *R2 = NULL;
@@ -399,15 +424,16 @@ void Blasso::InitXY(const unsigned int N, double **Xorig, Rmiss *R,
     
     /* copying from Xorig to Xp with centering and normalization */
     for(unsigned int j=0; j<m; j++) {
-      Xp[k][j] = Xorig[i][pin[j]] - Xmean[pin[j]];
-      if(normalize) Xp[k][j] /= Xnorm_scale * Xnorm[pin[j]];
+      Xp[k][j+icept] = Xorig[i][pin[j]] - Xmean[pin[j]];
+      if(normalize) Xp[k][j+icept] /= Xnorm_scale * Xnorm[pin[j]];
     }
     k++;
   }
   assert(k == n);
 
-  /* now handle everything that has to do with Y and Xp */
-  InitY(N, Y);
+  /* wait 'till after params have been set to initialize Y and
+     DiXp, which depends on omega */
+  DiXp = NULL;
 }
 
 
@@ -415,7 +441,8 @@ void Blasso::InitXY(const unsigned int N, double **Xorig, Rmiss *R,
  * InitY:
  *
  * handle the rest of the XY initialization that has to do with
- * Y -- must happen after all X initialization is done 
+ * Y -- must happen after all X initialization is done (InitX)
+ * and parameters are initialized (InitParas)
  */
 
 void Blasso::InitY(const unsigned int N, double *Y)
@@ -445,17 +472,60 @@ void Blasso::InitY(const unsigned int N, double *Y)
   }
   assert(k == n);
   Ymean /= n;
-  centerv(this->Y, n, Ymean); 
-
-  /* calculate t(X) %*% Y */
-  XtY = new_zero_vector(m);
-  if(XtY) linalg_dgemv(CblasNoTrans,m,n,1.0,Xp,m,this->Y,1,0.0,XtY,1);
-
-  /* calculate YtY */
-  YtY = linalg_ddot(n, this->Y, 1, this->Y, 1);
+  
+  /* do not center Y if there is an intercept in the model */
+  if(!icept) centerv(this->Y, n, Ymean); 
+  else beta[0] = Ymean;
 
   /* initialize the residual vector */
   resid = new_dup_vector(this->Y, n);
+  if(m+icept > 0) linalg_dgemv(CblasTrans,m+icept,n,-1.0,Xp,m+icept,beta,1,1.0,resid,1);
+
+  /* possibly create the DiXp matrix, initialized to Xp 
+     -- filled in UpdateXY below */
+  if(theta != 0) {
+    assert(omega2 != NULL);
+    DiXp = new_zero_matrix(n, m+icept);
+  } else DiXp = NULL;
+
+  /* for calculating t(X) %*% Y -- filled in UpdateXY */
+  XtY = new_zero_vector(m+icept);
+
+  /* actually calculate the quantities allocated immediately above */
+  UpdateXY();
+}
+
+
+/* 
+ * UpdateXY:
+ *
+ * update functions of Xp and Y which may depend on omega2,
+ * or are simply being initialized by InitY
+ */
+
+void Blasso::UpdateXY(void)
+{
+  /* update DiXpt if omega2 != NULL */
+  if(this->DiXp) {
+    assert(omega2);
+    for(unsigned int i=0; i<n; i++) 
+      for(unsigned int j=0; j<m+icept; j++) 
+	this->DiXp[i][j] = Xp[i][j]/omega2[i];
+  }
+  
+  /* Use DiXp below if omega2 != NULL */
+  double **DiXp = this->DiXp;
+  if(DiXp == NULL) DiXp = Xp;
+  else assert(omega2 != NULL);
+
+  /* calculate t(X) %*% Y */
+  if(XtY) linalg_dgemv(CblasNoTrans,m+icept,n,1.0,DiXp,m+icept,this->Y,1,0.0,XtY,1);
+
+  /* calculate YtY possibly using imega */
+  if(omega2 != NULL) {
+    YtY = 0.0;
+    for(unsigned int i=0; i<n; i++) YtY += Y[i]*Y[i]/omega2[i];
+  } else YtY = linalg_ddot(n, this->Y, 1, this->Y, 1);
 }
 
 
@@ -473,14 +543,14 @@ void Blasso::InitRegress(void)
 
   /* allocate a new regression utility structure */
   assert(breg == NULL);
-  breg = new_BayesReg(m, n, Xp);
+  breg = new_BayesReg(m+icept, n, Xp, DiXp);
 
   /* allocate the other miscellaneous vectors needed for
      doing the regressions */
   assert(BtDi == NULL && rn == NULL);
-  if(!rao_s2) BtDi = new_vector(m);
+  if(!rao_s2) BtDi = new_vector(m+icept);
   else BtDi = NULL;
-  rn = new_vector(M);
+  rn = new_vector(M+icept);
 }
 
 
@@ -491,7 +561,7 @@ void Blasso::InitRegress(void)
  */
 
 BayesReg* new_BayesReg(const unsigned int m, const unsigned int n, 
-		       double **Xp)
+		       double **Xp, double **DiXp)
 {
   /* allocate the structure */
   BayesReg *breg = (BayesReg*) malloc(sizeof(struct bayesreg));
@@ -502,7 +572,7 @@ BayesReg* new_BayesReg(const unsigned int m, const unsigned int n,
   breg->XtX_diag = new_vector(m);
 
   /* fill A and XtX-diag */
-  init_BayesReg(breg, m, n, Xp);
+  init_BayesReg(breg, m, n, Xp, DiXp);
   
   /* allocate the rest and return */
   alloc_rest_BayesReg(breg);
@@ -519,16 +589,20 @@ BayesReg* new_BayesReg(const unsigned int m, const unsigned int n,
  */
 
 BayesReg* init_BayesReg(BayesReg *breg, const unsigned int m, 
-		       const unsigned int n, double **Xp)
+			const unsigned int n, double **Xp, double **DiXp)
 {
   /* sanity checks */
   assert(breg->m == m);
-  
-  /* fill A with t(X) %*% X -- i.e. XtX */
   if(m != 0) assert(breg->A);
-  if(breg->A) linalg_dgemm(CblasNoTrans,CblasTrans,m,m,n,1.0,
-		       Xp,m,Xp,m,0.0,breg->A,m);
 
+  /* if not using omega2 */
+  if(DiXp == NULL) DiXp = Xp;
+  
+  /* fill A with t(X) %*% Di %*% X -- i.e. XtDxsX */
+  if(breg->A)
+    linalg_dgemm(CblasNoTrans,CblasTrans,m,m,n,1.0,
+		 Xp,m,DiXp,m,0.0,breg->A,m);
+  
   /* save the diagonal of XtX in a separate vector */
   if(m != 0) assert(breg->XtX_diag);
   for(unsigned int i=0; i<m; i++) breg->XtX_diag[i] = breg->A[i][i];
@@ -570,7 +644,8 @@ void alloc_rest_BayesReg(BayesReg* breg)
  */
 
 BayesReg* plus1_BayesReg(const unsigned int m, const unsigned int n,
-			  BayesReg *old, double *xnew, double **Xp)
+			 BayesReg *old, double *xnew, double **Xp, 
+			 double *omega2)
 {
   /* sanity check */
   assert(m == old->m);
@@ -584,12 +659,18 @@ BayesReg* plus1_BayesReg(const unsigned int m, const unsigned int n,
   dup_matrix(breg->A, old->A, m, m);
 
   /* XtX[m][m] = t(x) %*% x */
-  breg->A[m][m] = linalg_ddot(n, xnew, 1, xnew, 1);
+  if(omega2) {
+    breg->A[m][m] = 0.0;
+    for(unsigned int i=0; i<n; i++) 
+      breg->A[m][m] += xnew[i]*xnew[i]/omega2[i];
+  } else breg->A[m][m] = linalg_ddot(n, xnew, 1, xnew, 1);
 
   /* get the new row of XtX_new[col,] = X[,col] %*% X[,1:m] */
   for(unsigned int j=0; j<m; j++) {
     breg->A[m][j] = 0;
-    for(unsigned int i=0; i<n; i++) breg->A[m][j] += Xp[i][j]*xnew[i];
+    unsigned int i;
+    if(omega2) for(i=0; i<n; i++) breg->A[m][j] += Xp[i][j]*xnew[i]/omega2[i];
+    else for(i=0; i<n; i++) breg->A[m][j] += Xp[i][j]*xnew[i];
   }
 
   /* copy the rows to the columns */
@@ -610,14 +691,14 @@ BayesReg* plus1_BayesReg(const unsigned int m, const unsigned int n,
  * InitParams:
  *
  * pick (automatic) starting values for the parameters based on the type
- * of model
+ * of model -- called by ::Bmonomvn
  */
 
 void Blasso::InitParams(REG_MODEL reg_model, double *beta, double s2,
 			double lambda2)
 {
   /* sanity check */
-  assert(this->tau2i == NULL && this->beta == NULL);
+  assert(this->tau2i == NULL && this->beta == NULL && this->omega2 == NULL);
   assert(reg_model == this->reg_model);
 
   /* set the LASSO & RIDGE lambda2 and tau2i initial values */
@@ -632,8 +713,10 @@ void Blasso::InitParams(REG_MODEL reg_model, double *beta, double s2,
     } else this->lambda2 = lambda2;
 
     /* tau2i is only used by LASSO, not RIDGE */
-    if(reg_model == LASSO) tau2i = ones(m, 1.0);
-    else { /* for RIDGE */
+    if(reg_model == LASSO) {
+      tau2i = ones(m+icept, 1.0);
+      if(icept) tau2i[0] = 0.0;
+    } else { /* for RIDGE */
        tau2i = NULL;
        if(m == 0) this->lambda2 = 0.0;
     }
@@ -647,7 +730,7 @@ void Blasso::InitParams(REG_MODEL reg_model, double *beta, double s2,
   }
 
   /* allocate beta */
-  this->beta = new_vector(m);
+  this->beta = new_zero_vector(m+icept);
 
   /* initialize the initial beta vector */
   if(beta) {
@@ -658,23 +741,21 @@ void Blasso::InitParams(REG_MODEL reg_model, double *beta, double s2,
     }
     
     /* copy in the beta vector */
-    copy_sub_vector(this->beta, pin, beta, m);
+    copy_sub_vector((this->beta)+icept, pin, beta, m);
   } else {
     /* initialize beta so that it is non-zero */
-    for(unsigned int i=0; i<m; i++) this->beta[i] = 1.0;
+    for(unsigned int i=0; i<m; i++) this->beta[i+icept] = 1.0;
   }
 
   /* initialize regression coefficients */
   this->s2 = s2;
 
-  /* default setting when not big-p-small n */
+  /* default setting when not big-p-small-n */
   a = b = 0;
 
-  /* need to help with a stronger s2-prior beta parameter when p>n */
-  if(reg_model != OLS && !RJ && M >= n) {
-      a = 3.0/2.0;
-      b = Igamma_inv(a, 0.95*gammafn(a), 0, 0)*YtY;
-  }
+  /* intialize omega2 */
+  if(theta != 0) omega2 = ones(n, theta);
+  nu = 1.0/theta;
 }
 
 
@@ -687,17 +768,23 @@ void Blasso::InitParams(REG_MODEL reg_model, double *beta, double s2,
  */
 
 void Blasso::InitParams(double *beta, const double lambda2, 
-			const double s2, double *tau2i)
+			const double s2, double *tau2i, double *omega2,
+			double nu)
 {
   this->lambda2 = lambda2;
   this->s2 = s2;
 
   /* copy in the tau2i vector */
   assert(this->tau2i == NULL);
-  if(tau2i != NULL) this->tau2i = new_sub_vector(pin, tau2i, m);
+  if(tau2i != NULL) {
+    this->tau2i = new_vector(m+icept);
+    if(icept) this->tau2i[0] = 0;
+    copy_sub_vector((this->tau2i)+icept, pin, tau2i, m);
+  }
 
   /* allocate beta */
-  this->beta = new_vector(m);
+  this->beta = new_vector(m+icept);
+  if(icept) this->beta[0] = Ymean;
 
   /* norm the beta samples, like Efron and Hastie */
   if(normalize && this->m > 0) {
@@ -706,7 +793,7 @@ void Blasso::InitParams(double *beta, const double lambda2,
   }
 
   /* copy in the beta vector */
-  copy_sub_vector(this->beta, pin, beta, m);
+  copy_sub_vector((this->beta)+icept, pin, beta, m);
 
   /* determine the resulting regression model */
   if(lambda2 == 0) {
@@ -714,12 +801,17 @@ void Blasso::InitParams(double *beta, const double lambda2,
     assert(tau2i == NULL);
   } else if(tau2i == NULL) reg_model = RIDGE;
   else {
-    if(m > 0) assert(sumv(this->tau2i, m) != 0);
+    if(m > 0) assert(sumv(this->tau2i, m+icept) != 0);
     reg_model = LASSO;
   }
 
   /* set lambda2 to zero if m == 0  && RIDGE */
   if(M == 0 || (reg_model == RIDGE && m == 0)) this->lambda2 = 0.0;
+
+  /* intialize omega2 */
+  assert(this->omega2 == NULL);
+  if(theta != 0) this->omega2 = new_dup_vector(omega2, n);
+  this->nu = nu;
 }
 
 
@@ -732,6 +824,7 @@ void Blasso::InitParams(double *beta, const double lambda2,
 Blasso::~Blasso(void)
 {
   /* clean up */
+  if(omega2) free(omega2);
   if(tau2i) free(tau2i);
   if(beta) free(beta);
   
@@ -744,6 +837,7 @@ Blasso::~Blasso(void)
 
   /* other InitXY stuff */
   if(Xp) delete_matrix(Xp);
+  if(DiXp) delete_matrix(DiXp);
   if(XtY) free(XtY);
   if(Y) free(Y);
   if(resid) free(resid);
@@ -802,24 +896,40 @@ void delete_BayesReg(BayesReg* breg)
 
  
 /*
- * GetParams 
+ * GetParams:
+ * 
  * get the current values of the parameters to the pointers
- * to memory provided -- assumes beta is an m-vector
+ * to memory provided -- assumes beta & tau2i are m-vectors
  */
 
-void Blasso::GetParams(double *beta, int *m, double *s2, double *tau2i, 
+void Blasso::GetParams(double *mu, double *beta, int *m, double *s2, 
+		       double *tau2i, double *omega2, double *nu, 
 		       double *lambda2, double *pi) const
 {
+  /* copy back the intercept */
+  if(icept) *mu = this->beta[0];
+  else *mu = rnorm(Ymean, sqrt(this->s2/n));
+
+  /* copy back the regression coefficients and non-zero count */
   *m = this->m;
   zerov(beta, M);
-  if(this->m > 0) copy_p_vector(beta, pin, this->beta, this->m);
+  if(this->m > 0) copy_p_vector(beta, pin, (this->beta)+icept, this->m);
+
+  /* copy back the beta error structure and laplace prior */
   *s2 = this->s2;
-  if(tau2i) {
+  if(tau2i && (reg_model == LASSO)) {
     for(unsigned int i=0; i<M; i++) tau2i[i] = -1.0;
     if(this->m > 0 && this->tau2i)
-      copy_p_vector(tau2i, pin, this->tau2i, this->m);
+      copy_p_vector(tau2i, pin, (this->tau2i)+icept, this->m);
   }
   if(lambda2) *lambda2 = this->lambda2;
+
+  /* copy back the omega2 latent variables for the Student-t prior,
+     and the degrees of freedom nu */
+  if(omega2 && this->omega2) dupv(omega2, this->omega2, n);
+  if(nu) *nu = this->nu;
+  
+  /* copy back pi */
   if(pi) *pi = this->pi;
 }
 
@@ -832,12 +942,16 @@ void Blasso::GetParams(double *beta, int *m, double *s2, double *tau2i,
 
 void Blasso::PrintParams(FILE *outfile) const
 {
-  myprintf(outfile, "m=%d, lambda2=%g, s2=%g\n", m, lambda2, s2);
+  myprintf(outfile, "m=%d, lambda2=%g, s2=%g, icept=%d\n", m, lambda2, s2, icept);
   myprintf(outfile, "beta = ");
-  printVector(beta, m, outfile, HUMAN);
+  printVector(beta, m+icept, outfile, HUMAN);
   if(tau2i) {
     myprintf(outfile, "tau2i = ");
-    printVector(tau2i, m, outfile, HUMAN);
+    printVector(tau2i, m+icept, outfile, HUMAN);
+  }
+  if(omega2) {
+    myprintf(outfile, "omega2 = ");
+    printVector(omega2, n, outfile, HUMAN);
   }
 }
 
@@ -851,8 +965,9 @@ void Blasso::PrintParams(FILE *outfile) const
  */
 
 void Blasso::Rounds(const unsigned int T, const unsigned int thin, 
-		    double *lambda2, double *mu, double **beta, int *m,
-		    double *s2, double **tau2i, double *pi, double *lpost)
+		    double *mu, double **beta, int *m, double *s2, 
+		    double **tau2i, double *lambda2, double **omega2, 
+		    double *nu, double *pi, double *lpost, double *llik)
 {
   /* sanity check */
   assert(breg);
@@ -865,11 +980,20 @@ void Blasso::Rounds(const unsigned int T, const unsigned int thin,
   for(unsigned int t=0; t<T; t++) {
     
     /* do thin number of MCMC draws */
-    Draw(thin);
+    Draw(thin, false);
 
     /* if LASSO then get t-th tau2i */
     double *tau2i_samp = NULL;
     if(tau2i) { assert(reg_model == LASSO); tau2i_samp = tau2i[t]; }
+
+    /* if doing Student-t scale mixcures then get t-th omega2 */
+    double *omega2_samp = NULL;
+    double *nu_samp = NULL;
+    if(omega2) { 
+      assert(nu && theta != 0); 
+      omega2_samp = omega2[t]; 
+      nu_samp = &(nu[t]);
+    }
 
     /* if LASSO or ridge */
     double *lambda2_samp = NULL;
@@ -883,16 +1007,18 @@ void Blasso::Rounds(const unsigned int T, const unsigned int thin,
     if(mprior[1] != 0) pi_samp = &(pi[t]);
 
     /* copy the sampled parameters */
-    GetParams(beta[t], &(m[t]), &(s2[t]), tau2i_samp, lambda2_samp, pi_samp);
+    GetParams(&(mu[t]), beta[t], &(m[t]), &(s2[t]), tau2i_samp, 
+	      omega2_samp, nu_samp, lambda2_samp, pi_samp);
     
     /* get the log posterior */
     lpost[t] = this->lpost;
+    llik[t] = this->llik;
 
     /* print progress meter */
     if(verb && t > 0 && ((t+1) % 100 == 0))
       myprintf(stdout, "t=%d, m=%d\n", t+1, this->m);
 
-    /* periodically check R for interrupts and flush console every second */
+    /* check R for interrupts and flush console every second */
     itime = my_r_process_events(itime);
   }
 
@@ -905,23 +1031,24 @@ void Blasso::Rounds(const unsigned int T, const unsigned int thin,
   /* calculate mu samples */
   assert(R == NULL);
 
+  /* adjustment to mu needed since Xp used centered columns of Xorig */
   /* Xbeta = X %*% t(beta), in col-major representation */
   double **Xbeta = new_zero_matrix(T,n);
   linalg_dgemm(CblasTrans,CblasNoTrans,n,T,M,1.0,Xorig,ldx,beta,M,0.0,Xbeta,n);
-
   /* mu = apply(Xbeta, 2, mean), with Xbeta in col-major representation */
-  wmean_of_rows(mu, Xbeta, T, n, NULL);
-
+  double* mu_resid = new_vector(T);
+  wmean_of_rows(mu_resid, Xbeta, T, n, NULL);
+  /* adjustmment performed below */
+  
   /* mu = rnorm(rep(1,Ymean), sqrt(s2/n)) - apply(Xbeta, 2, mean) */
   for(unsigned t=0; t<T; t++) {
-    double sd = sqrt(s2[t]/n);
-    double mu_adj = rnorm(Ymean, sd);
-    mu[t] = mu_adj - mu[t];
-    lpost[t] += dnorm(mu_adj, Ymean, sd, 1);
+    if(!icept) lpost[t] += dnorm(mu[t], Ymean, sqrt(s2[t]/n), 1);
+    mu[t] = mu[t] - mu_resid[t]; /*adjustment performed here */
   }
-
+    
   /* clean up */
   delete_matrix(Xbeta);
+  free(mu_resid);
 }
 
 
@@ -933,7 +1060,7 @@ void Blasso::Rounds(const unsigned int T, const unsigned int thin,
  * causes thin-1 (number of) draws to be burned first
  */
 
-void Blasso::Draw(const unsigned int thin)
+void Blasso::Draw(const unsigned int thin, const bool fixnu)
 {
   /* sanity check */
   assert(thin > 0);
@@ -943,15 +1070,29 @@ void Blasso::Draw(const unsigned int thin)
     /* draw from the model prior parameter */
     if(RJ) DrawPi();
 
-    /* draw latent variables, and update Bmu and Vb, etc. */
+    /* draw the latent Student-t variables */
+    if(omega2) DrawOmega2();
+
+    /* draw latent lasso variables, and update Bmu and Vb, etc. */
     if(reg_model == LASSO) DrawTau2i();
     else assert(tau2i == NULL);
+
+    /* recompute the BayesReg module since omega and/or tau2i have changed */
+    if(omega2 && tau2i && !Compute(true))
+      error("ill-posed regression in DrawTau2i or DrawOmega2");
+    else if(omega2 && !Compute(true))
+      error("ill-posed regression in DrawOmega2");
+    else if(tau2i && !Compute(false))
+      error("ill-posed regression in DrawTau2i");
     
+    /* draw nu based on the omega2s */
+    if(omega2 && !fixnu) DrawNu();
+
     /* only depends on tau2i for LASSO and beta for RIDGE */
     if(reg_model != OLS) DrawLambda2();
     else { /* is OLS */
       assert(lambda2 == 0 && tau2i == NULL);
-      if(m > 0) refresh_Vb(breg, s2);
+      if(m+icept > 0) refresh_Vb(breg, s2);
     }
 
     /* depends on pre-calculated bmu, Vb, etc, which depends
@@ -960,7 +1101,7 @@ void Blasso::Draw(const unsigned int thin)
 
     /* resid = X*beta - Y */
     dupv(resid, Y, n);
-    if(m > 0) linalg_dgemv(CblasTrans,m,n,-1.0,Xp,m,beta,1,1.0,resid,1);
+    if(m+icept > 0) linalg_dgemv(CblasTrans,m+icept,n,-1.0,Xp,m+icept,beta,1,1.0,resid,1);
 
     /* choose the type of s2 GS update */
     if(rao_s2) {
@@ -970,13 +1111,13 @@ void Blasso::Draw(const unsigned int thin)
     /* propose to add or remove a column from the model */
     if(RJ) {
       /* first tally the log posterior value of this sample */
-      lpost = logPosterior();
+      logPosterior();
       RJmove();
     }
   }
 
   /* calculate the log posterior if it hasn't already been done */
-  if(!RJ) lpost = logPosterior();
+  if(!RJ) logPosterior();
 }
 
 
@@ -991,9 +1132,10 @@ void Blasso::Draw(const unsigned int thin)
  * Bmonomvn::Rounds 
  */
 
-void Blasso::Draw(const unsigned int thin, double *lambda2, double *mu, 
-		  double *beta, int *m, double *s2, double *tau2i, 
-		  double *pi, double *lpost)
+void Blasso::Draw(const unsigned int thin, const bool usenu, 
+		  double *mu, double *beta, int *m, double *s2, 
+		  double *tau2i, double *lambda2, double *omega2, 
+		  double *nu, double *pi, double *lpost, double *llik)
 {
   /* sanity check */
   assert(breg && Xbeta_v);
@@ -1002,10 +1144,12 @@ void Blasso::Draw(const unsigned int thin, double *lambda2, double *mu,
   DataAugment();
 
   /* do thin number of MCMC draws */
-  Draw(Thin(thin));
+  if(usenu) this->nu = *nu;
+  Draw(Thin(thin), usenu);
+  if(usenu) assert(this->nu == *nu);
 
   /* copy the sampled parameters */
-  GetParams(beta, m, s2, tau2i, lambda2, pi);
+  GetParams(mu, beta, m, s2, tau2i, omega2, nu, lambda2, pi);
 
   /* (un)-norm the beta samples, like Efron and Hastie */
   if(normalize && this->m > 0) {
@@ -1013,31 +1157,31 @@ void Blasso::Draw(const unsigned int thin, double *lambda2, double *mu,
     scalev(beta, M, 1.0/Xnorm_scale);
   }
 
+  /* adjustment to mu needed since Xp used centered columns of Xorig */
+  double mu_resid = 0;
   if(this->m > 0) {
     /* Xbeta = X %*% beta, in col-major representation */
     linalg_dgemv(CblasTrans,M,N,1.0,Xorig,ldx,beta,1,0.0,Xbeta_v,1);
     
-    /* mu = mean(Xbeta) skipping places where Rt[M] == 2 */
+    /* mu_resid = mean(Xbeta) skipping places where Rt[M] == 2 */
     if(R && R->R2[M]) 
       for(unsigned int i=0; i<R->n2[M]; i++) Xbeta_v[R->R2[M][i]] = 0;
-    *mu = meanv(Xbeta_v, N);
+    mu_resid = meanv(Xbeta_v, N);
 
     /* adjust by the number of places skipped above */
-    if(R && R->R2[M]) *mu *= ((double)N)/(N - R->n2[M]);
-  } else *mu = 0;
-  
-  /* mu = rnorm(Ymean, sqrt(s2/n)) - mean(Xbeta) */
-  double mu_adj = Ymean;
-  double sd = 0;
-  if(thin > 0) { /* no random draws if thin <= 0 */
-    sd = sqrt((*s2)/n);
-    mu_adj = rnorm(Ymean, sd);
+    if(R && R->R2[M]) mu_resid *= ((double)N)/(N - R->n2[M]);
   }
-  *mu = mu_adj - (*mu);
+  /* adjustment performed below */
 
   /* calculate the log posterior */
   *lpost = this->lpost;
-  if(thin > 0) *lpost += dnorm(mu_adj, Ymean, sd, 1);
+  if(thin > 0 && !icept) *lpost += dnorm(*mu, Ymean, sqrt((*s2)/n), 1);
+  
+  /* mu = mu - mean(Xbeta) */
+  *mu = *mu - mu_resid; /* adjustment performed here */
+
+  /* return the log likelihood */
+  *llik = this->llik;
 }
 
 
@@ -1089,15 +1233,18 @@ void Blasso::RJup(double qratio)
   double prop = ProposeTau2i(&lpq_ratio);
 
   /* add a new component to XtY */
-  XtY = (double*) realloc(XtY, sizeof(double)*(m+1));
-  XtY[m] = linalg_ddot(n, xnew, 1, Y, 1);
+  XtY = (double*) realloc(XtY, sizeof(double)*(m+icept+1));
+  if(omega2 != NULL) {
+    XtY[m+icept] = 0.0;
+    for(unsigned int i=0; i<n; i++) XtY[m+icept] += xnew[i]*Y[i]/omega2[i];
+  } else XtY[m+icept] = linalg_ddot(n, xnew, 1, Y, 1);
 
   /* allocate new regression stuff */
   /* diagonal of A is taken care of inside of compute_BayesReg() */
-  BayesReg *breg_new = plus1_BayesReg(m, n, breg, xnew, Xp);
+  BayesReg *breg_new = plus1_BayesReg(m+icept, n, breg, xnew, Xp, omega2);
 
   /* compute the new regression quantities */
-  assert(compute_BayesReg(m+1, XtY, tau2i, lambda2, s2, breg_new));
+  assert(compute_BayesReg(m+icept+1, XtY, tau2i, lambda2, s2, breg_new));
 
   /* calculate the acceptance probability breg -> breg_new */
   double lalpha = rj_betas_lratio(breg, breg_new, s2, prop);
@@ -1115,31 +1262,36 @@ void Blasso::RJup(double qratio)
     delete_BayesReg(breg); breg = breg_new;
     
     /* draw the new beta vector */
-    beta = (double*) realloc(beta, sizeof(double)*(m+1));
-    draw_beta(m+1, beta, breg, s2, rn);
+    beta = (double*) realloc(beta, sizeof(double)*(m+icept+1));
+    draw_beta(m+icept+1, beta, breg, s2, rn);
 
     /* calculate new residual vector */
     dupv(resid, Y, n);
-    if(m > 0) linalg_dgemv(CblasTrans,m,n,-1.0,Xp,m,beta,1,1.0,resid,1);
-    linalg_daxpy(n, 0.0 - beta[m], xnew, 1, resid, 1);
+    if(m+icept > 0) linalg_dgemv(CblasTrans,m+icept,n,-1.0,Xp,m+icept,beta,1,1.0,resid,1);
+    linalg_daxpy(n, 0.0 - beta[m+icept], xnew, 1, resid, 1);
 
     /* other copies */
-    if(BtDi) BtDi = (double*) realloc(BtDi, sizeof(double) * (m+1));
+    if(BtDi) BtDi = (double*) realloc(BtDi, sizeof(double) * (m+icept+1));
 
     /* add another column to the design matrix */
-    Xp = new_bigger_matrix(Xp, n, m, n, m+1);
-    dup_col(Xp, m, xnew, n);
+    Xp = new_bigger_matrix(Xp, n, m+icept, n, m+icept+1);
+    dup_col(Xp, m+icept, xnew, n);
+    if(omega2) {
+      assert(DiXp);
+      DiXp = new_bigger_matrix(DiXp, n, m+icept, n, m+icept+1);
+      for(unsigned int i=0; i<n; i++) DiXp[i][m+icept] = xnew[i]/omega2[i];
+    }
     add_col(iout, col);
 
     /* calculate the new log_posterior */
-    lpost = logPosterior();
+    logPosterior();
 
   } else { /* reject */
     
     /* realloc vectors */
-    if(reg_model == LASSO) tau2i = (double*) realloc(tau2i, sizeof(double)*m);
+    if(reg_model == LASSO) tau2i = (double*) realloc(tau2i, sizeof(double)*(m+icept));
     else if(reg_model == RIDGE && m == 0) lambda2 = 0;
-    XtY = (double*) realloc(XtY, sizeof(double)*m);
+    XtY = (double*) realloc(XtY, sizeof(double)*(m+icept));
     
     /* free new regression utility */
     delete_BayesReg(breg_new);
@@ -1167,9 +1319,9 @@ double Blasso::ProposeTau2i(double *lpq_ratio)
 
   /* switch over model choices */
   if(reg_model == LASSO) { /* propose new m-th component of tau2i */
-    tau2i = (double*) realloc(tau2i, sizeof(double)*(m+1));  /* grow tau2i */
+    tau2i = (double*) realloc(tau2i, sizeof(double)*(m+icept+1));  /* grow tau2i */
     prop = rexp(2.0/lambda2);                /* sample tau2 from the prior */
-    tau2i[m] = 1.0 / prop;        /* assign to the new last entry of tau2i */
+    tau2i[m+icept] = 1.0 / prop;        /* assign to the new last entry of tau2i */
     /* then prior and proposal probabilites cancel */
 
   } else if(reg_model == RIDGE && m == 0) { /* randomly propose a new lambda */   
@@ -1208,9 +1360,9 @@ double Blasso::UnproposeTau2i(double *lqp_ratio, unsigned int iin)
 
   /* switch over model choices */
   if(reg_model == LASSO) {  /* unpropose the iin-th component of tau2i */
-    prop = 1.0/tau2i[iin];          /* remove from the iin-th position */
-    tau2i[iin] = tau2i[m-1];
-    tau2i = (double*) realloc(tau2i, sizeof(double)*(m-1));
+    prop = 1.0/tau2i[iin+icept];          /* remove from the iin-th position */
+    tau2i[iin+icept] = tau2i[m+icept-1];
+    tau2i = (double*) realloc(tau2i, sizeof(double)*(m+icept-1));
     /* then the proposal and prior probabilities cancel */
   } else if(reg_model == RIDGE && m == 1) { 
     prop = lambda2; lambda2 = 0.0;
@@ -1242,24 +1394,29 @@ void Blasso::RJdown(double qratio)
   qratio *= ((double)m)/(M-m+1);
 
   /* make the new design matrix with one fewer column */
-  double **Xp_new = new_dup_matrix(Xp, n, m-1);
-  if(iin != ((int)m)-1)
-    for(unsigned int i=0; i<n; i++) Xp_new[i][iin] = Xp[i][m-1];
+  double **Xp_new, **DiXp_new;
+  Xp_new = new_dup_matrix(Xp, n, m+icept-1);
+  if(DiXp) DiXp_new = new_dup_matrix(DiXp, n, m+icept-1);
+  else DiXp_new = NULL;
+  if(iin != ((int)m)-1) {
+    for(unsigned int i=0; i<n; i++) Xp_new[i][iin+icept] = Xp[i][m+icept-1];
+    if(DiXp_new) for(unsigned int i=0; i<n; i++) DiXp_new[i][iin+icept] = DiXp[i][m+icept-1];
+  }
   
   /* un-propose the iin-th element of tau2i */
   double lqp_ratio;
   double prop = UnproposeTau2i(&lqp_ratio, iin);
   
   /* remove component of XtY */
-  double xty = XtY[iin];
-  XtY[iin] = XtY[m-1];
-  XtY = (double*) realloc(XtY, sizeof(double)*(m-1));
+  double xty = XtY[iin+icept];
+  XtY[iin+icept] = XtY[m+icept-1];
+  XtY = (double*) realloc(XtY, sizeof(double)*(m+icept-1));
 
   /* allocate new regression stuff */
-  BayesReg *breg_new = new_BayesReg(m-1, n, Xp_new);
+  BayesReg *breg_new = new_BayesReg(m+icept-1, n, Xp_new, DiXp_new);
 
   /* compute the new regression quantities */
-  bool success = compute_BayesReg(m-1, XtY, tau2i, lambda2, s2, breg_new);
+  bool success = compute_BayesReg(m+icept-1, XtY, tau2i, lambda2, s2, breg_new);
   assert(success);
 
   /* calculate the acceptance probability breg -> breg_new */
@@ -1278,37 +1435,39 @@ void Blasso::RJdown(double qratio)
     delete_BayesReg(breg); breg = breg_new;
 
     /* draw the new beta vector */
-    beta = (double*) realloc(beta, sizeof(double)*(m-1));
-    draw_beta(m-1, beta, breg, s2, rn);
+    beta = (double*) realloc(beta, sizeof(double)*(m+icept-1));
+    draw_beta(m+icept-1, beta, breg, s2, rn);
     
     /* calculate new residual vector */
     dupv(resid, Y, n);
-    if(m-1 > 0) linalg_dgemv(CblasTrans,m-1,n,-1.0,Xp_new,m-1,
+    if(m+icept-1 > 0) linalg_dgemv(CblasTrans,m+icept-1,n,-1.0,Xp_new,m+icept-1,
 			     beta,1,1.0,resid,1);
 
     /* other */
-    if(BtDi) BtDi = (double*) realloc(BtDi, sizeof(double) * (m-1));
+    if(BtDi) BtDi = (double*) realloc(BtDi, sizeof(double) * (m+icept-1));
 
     /* permanently remove the column from the design matrix */
     delete_matrix(Xp); Xp = Xp_new;
+    delete_matrix(DiXp); DiXp = DiXp_new;
     remove_col(iin, col);
 
     /* calculate the new log_posterior */
-    lpost = logPosterior();
+    logPosterior();
 
   } else { /* reject */
 
     /* realloc vectors */
     if(reg_model == LASSO) { 
-      tau2i = (double*) realloc(tau2i, sizeof(double)*m);
-      tau2i[m-1] = tau2i[iin]; tau2i[iin] = 1.0/prop;
+      tau2i = (double*) realloc(tau2i, sizeof(double)*(m+icept));
+      tau2i[m+icept-1] = tau2i[iin+icept]; tau2i[iin+icept] = 1.0/prop;
     } else if(reg_model == RIDGE && m == 1) lambda2 = prop;
-    XtY = (double*) realloc(XtY, sizeof(double)*m);
-    XtY[m-1] = XtY[iin]; XtY[iin] = xty;
+    XtY = (double*) realloc(XtY, sizeof(double)*(m+icept));
+    XtY[m+icept-1] = XtY[iin+icept]; XtY[iin+icept] = xty;
     
     /* free new regression utility */
     delete_BayesReg(breg_new);
     delete_matrix(Xp_new);
+    if(DiXp_new) delete_matrix(DiXp_new);
   }
 }
 
@@ -1379,8 +1538,9 @@ void Blasso::DataAugment(void)
       else if(R2[j] == -1) continue;  /* skip rows that are skipped in Y */
 
       /* copy from Xorig to Xp after centering and normallization */
-      Xp[R2[j]][i] = Xorig[R->R2[pin[i]][j]][pin[i]] - Xmean[pin[i]];
-      if(normalize) Xp[R2[j]][i] /= Xnorm_scale * Xnorm[pin[i]];
+      Xp[R2[j]][i+icept] = Xorig[R->R2[pin[i]][j]][pin[i]] - Xmean[pin[i]];
+      if(normalize) Xp[R2[j]][i+icept] /= Xnorm_scale * Xnorm[pin[i]];
+      if(this->DiXp) this->DiXp[R2[j]][i+icept] = Xp[R2[j]][i+icept]/omega2[R2[j]];
 
       /* increment the changes counter */
       changes++;
@@ -1392,7 +1552,12 @@ void Blasso::DataAugment(void)
 
   /* need to update the regression stuff if there have been changes */
   if(changes > 0) {
-    if(XtY) linalg_dgemv(CblasNoTrans,m,n,1.0,Xp,m,this->Y,1,0.0,XtY,1);
+    if(XtY) {
+      double **DiXp = this->DiXp;
+      if(DiXp == NULL) DiXp = Xp;
+      linalg_dgemv(CblasNoTrans,m+icept,n,1.0,DiXp,
+		   m+icept,this->Y,1,0.0,XtY,1);
+    }
     if(!Compute(true)) error("ill-posed regression in DataAugment");
   }
   /* MAY BE THAT LIGHTER INIT DOABLE WITHOUT reinit=true ABOVE */
@@ -1437,14 +1602,20 @@ int *adjust_elist(unsigned int *l1, const unsigned int n1, unsigned int *l2,
 bool Blasso::Compute(const bool reinit)
 {
   /* do nothing if no betas */
-  if(m == 0) return true;
+  if(m+icept == 0) return true;
 
   /* possibly re-initialize if something has changed about Xp */
-  if(reinit) init_BayesReg(breg, m, n, Xp);
+  if(reinit) init_BayesReg(breg, m+icept, n, Xp, DiXp);
 
   /* acutally do the linear algebra calculations */
-  bool ret = compute_BayesReg(m, XtY, tau2i, lambda2, s2, breg); 
+  bool ret = compute_BayesReg(m+icept, XtY, tau2i, lambda2, s2, breg); 
 
+#ifdef DEBUG
+  if(YtY - breg->BtAB <= 0) { 
+    myprintf(stdout, "YtY=%.20f, BtAB=%.20f\n", YtY, breg->BtAB);
+    assert(0);
+  }
+#endif
   /* return code for success or failure */
   return ret && (YtY - breg->BtAB > 0);
 }
@@ -1481,7 +1652,11 @@ bool compute_BayesReg(const unsigned int m, double *XtY, double *tau2i,
   /* now A_chol = chol(A) */
   
   /* unsuccessful inverse */
+#ifdef DEBUG
+  if(info != 0) assert(0);
+#else
   if(info != 0) return false;
+#endif
 
   /* compute: ldet_Ai = log(det(Ai)) */
   breg->ldet_Ai = 0.0 - log_determinant_chol(breg->A_chol, m);
@@ -1530,9 +1705,10 @@ void refresh_Vb(BayesReg *breg, const double s2)
 void Blasso::DrawBeta(void)
 {
   /* sanity checks */
-  if(m == 0) return;
+  if(m+icept == 0) return;
 
-  draw_beta(m, beta, breg, s2, rn);
+  /* draw the beta vector */
+  draw_beta(m+icept, beta, breg, s2, rn);
 }
 
 
@@ -1623,11 +1799,11 @@ void Blasso::DrawS2Margin(void)
 {
   /* shape = (n-1)/2 + m/2 */
   double shape = a;
-  if(reg_model != OLS) shape += (n-1)/2.0;//+ m/2.0;
-  else shape += n/2.0 - m/2.0;
+  shape += (n-1.0)/2.0;
+  if(reg_model == OLS) shape -= m/2.0;
   assert(shape > 0.0);
   
-  /* rate = (X*beta - Y)' (X*beta - Y) / 2 + B'DB / 2*/
+  /* rate = (X*beta-hat - Y)' (X*beta-hat - Y) / 2 + B-hat'DB-hat / 2*/
   double scale = b + (YtY - breg->BtAB)/2.0;
   
   /* draw the sample and return it */
@@ -1648,21 +1824,24 @@ void Blasso::DrawS2Margin(void)
 void Blasso::DrawS2(void)
 {
   /* sums2 = (X*beta - Y)' (X*beta - Y); */
-  double sums2 = sum_fv(resid, n, sq);
+  double sums2 = 0.0;
+  if(omega2) for(unsigned int i=0; i<n; i++) 
+	       sums2 += resid[i]*resid[i]/omega2[i];
+  else sums2 = sum_fv(resid, n, sq);
 
   /* BtDB = beta'D beta/tau2 as long as lambda != 0 */
   double BtDiB;
-  if(m > 0 && reg_model == LASSO) {
+  if(m+icept > 0 && reg_model == LASSO) {
     dupv(BtDi, beta, m);
-    if(tau2i) scalev2(BtDi, m, tau2i);
-    else scalev(BtDi, m, 1.0/lambda2);
-    BtDiB = linalg_ddot(m, BtDi, 1, beta, 1);
+    if(tau2i) scalev2(BtDi, m+icept, tau2i);
+    else scalev(BtDi, m+icept, 1.0/lambda2);
+    BtDiB = linalg_ddot(m+icept, BtDi, 1, beta, 1);
   } else BtDiB = 0.0;
     
   /* shape = (n-1)/2 + m/2 */
   double shape = a;
-  if(reg_model != OLS) shape += (n-1)/2.0 + m/2.0;
-  else shape += (n-1)/2.0; // - m/2.0;
+  if(reg_model != OLS) shape += (n-1)/2.0 + (m+icept)/2.0;
+  else shape += (n-1)/2.0;
   
   /* rate = (X*beta - Y)' (X*beta - Y) / 2 + B'DB / 2*/
   double scale = b + sums2/2.0 + BtDiB/2.0;
@@ -1679,7 +1858,7 @@ void Blasso::DrawS2(void)
  * DrawTau2i:
  *
  * Gibbs draw for the inverse tau2 m-vector (latent variables)
- * conditional on the other Bayesian lasso parameters
+ * conditional on beta and sigma2
  */
 
 void Blasso::DrawTau2i(void)
@@ -1695,7 +1874,7 @@ void Blasso::DrawTau2i(void)
   /* part of the mu parameter to the inv-gauss distribution */
   l_numer = log(lambda2) + log(s2);
 
-  for(unsigned int j=0; j<m; j++) {
+  for(unsigned int j=icept; j<m+icept; j++) {
       
     /* the rest of the mu parameter */
     l_mup = 0.5*l_numer - log(fabs(beta[j])); 
@@ -1707,16 +1886,63 @@ void Blasso::DrawTau2i(void)
     if(tau2i[j] <= 0) {
 #ifdef DEBUG
       myprintf(stdout, "j=%d, m=%d, n=%d, l2=%g, s2=%g, beta=%g, tau2i=%g\n", 
-	       j, m, n, lambda2, s2, beta[j], tau2i[j]);
+	       j-icept, m, n, lambda2, s2, beta[j], tau2i[j]);
 #endif
       tau2i[j] = 0;
     }
   }
-  
-  /* Since tau2i has changed, we need to recompute the linear
-     parameters */
-  if(!Compute(false)) error("ill-posed regression in DrawTau2i");
+
+  /* Pool with DrawOmega2 and call Compute outside */
  }
+
+
+/*
+ * DrawOmega2:
+ *
+ * Gibbs draw for the Omega2 n-vector (latent variables) for the
+ * Student-t implementation by scale mixtures, conditional on beta
+ * and sigma2
+ */
+
+void Blasso::DrawOmega2(void)
+{
+  assert(DiXp && omega2 != NULL);
+
+  double shape = 0.5*(nu+1.0);
+  for (unsigned int i=0; i<n; i++)	{ 
+    double scale = 0.5*(nu+sq(resid[i])/s2); 
+    omega2[i] = 1.0/rgamma(shape,1.0/scale);
+    assert(!isinf(omega2[i]));
+  }
+
+  /* update XtY, which will change when omega2 has changed */
+  UpdateXY();
+
+  /* pool with DrawTau2i and call Compute outside */
+}
+
+
+/*
+ * DrawNu:
+ *
+ * draw the degrees of freedom parameter, nu, based on the
+ * current omega2s
+ */
+
+void Blasso::DrawNu(void)
+{
+  /* sanity checks */
+  assert(omega2 && theta > 0);
+
+  /* calculate eta */
+  double eta = theta;
+  for (unsigned int i=0; i<n; i++) 
+    eta += 0.5*(log(omega2[i])+1.0/omega2[i]);
+
+  /* use rejection sampling */
+  nu = draw_nu_reject(n, eta, theta);
+  // nu = draw_nu_mh(nu, n, eta);
+}
 
 
 /*
@@ -1740,14 +1966,14 @@ void Blasso::DrawLambda2(void)
   if(reg_model == LASSO) { /* lasso */
    
     /* sanity check */
-    if(tau2i == NULL) assert(m == 0);
+    if(tau2i == NULL) assert(m+icept == 0);
   
     /* set up gamma distribution parameters */
     double shape = (double) m + r;
     double rate = 0.0;
-    for(unsigned int i=0; i<m; i++) {
-      if(tau2i[i] == 0) {shape--; continue;}  /* for numerical problems */
-      rate += 1.0/tau2i[i];
+    for(unsigned int j=icept; j<m+icept; j++) {
+      if(tau2i[j] == 0) {shape--; continue;}  /* for numerical problems */
+      rate += 1.0/tau2i[j];
     }
     rate = rate/2.0 + delta;
   
@@ -1763,9 +1989,9 @@ void Blasso::DrawLambda2(void)
     assert(tau2i == NULL && reg_model != OLS);
     
     /* set up Inv-Gamma distribution parameters */
-    double BtB = linalg_ddot(m, beta, 1, beta, 1);
-    double shape = (double) (m + r)/2;
-    double scale = (BtB/s2 + delta)/2;
+    double BtB = linalg_ddot(m+icept, beta, 1, beta, 1);
+    double shape = (double) (m+icept + r)/2.0;
+    double scale = (BtB/s2 + delta)/2.0;
 
     /* draw from an Inv-Gamma distribution */
     lambda2 = 1.0/rgamma(shape, 1.0/scale);
@@ -1808,87 +2034,123 @@ void Blasso::DrawPi(void)
  * an addive constant of proportionality (on the log scale)
  */
 
-double Blasso::logPosterior(void)
+void Blasso::logPosterior(void)
 {
-  return log_posterior(n, m, resid, beta, s2, tau2i, lambda2,
-		       a, b, r, delta, Mmax, pi, mprior);
+  double *tau2i = this->tau2i;
+  
+  /* calculate the log likelihood */
+  lpost = llik = log_likelihood(n, resid, s2, omega2);
+  
+  /* calculate the log prior */
+  lpost += log_prior(n, m+icept, beta, s2, tau2i, lambda2, omega2, 
+		     nu, a, b, r, delta, theta, Mmax, pi, mprior);
+
+  /* the code below is not in log_prior because of m and icept */
+
+  /* add in the model prior */
+  lpost += lprior_model(m, Mmax, pi);
+  assert(!isinf(lpost));
+  
+  /* add in the model order probability */
+  if(mprior[1] != 0 && pi != 0) 
+    lpost += dbeta(pi, mprior[0] + (double)m, mprior[1] + (double)(Mmax-m), 1);
+  assert(!isinf(lpost));
 }
 
 
+/*
+ * log_likelihood
+ *
+ * calculate the log likelihood of the Bayesian lasso
+ * model with the current parameter settings 
+ *
+ * passes the log likelihood back via llik, if not NULL
+ */
+
+double log_likelihood(const unsigned int n, double *resid, const double s2, 
+		      double *omega2)
+{
+  /* for summing in the (log) posterior */
+  double llik = 0.0;
+
+  /* calculate the likelihood prod[N(resid | 0, s2)] in log space */
+  double sd = sqrt(s2);	
+  unsigned int i;
+  if(!omega2) for(i=0; i<n; i++) llik += dnorm(resid[i], 0.0, sd, 1);
+  else for(i=0; i<n; i++) llik += dnorm(resid[i], 0.0, sd*sqrt(omega2[i]), 1);
+  assert(!isinf(llik));
+ 
+   /* return the log likelihood */
+  return llik;
+}
+
 
 /*
- * log_posterior
+ * log_prior
  *
- * calculate the log posterior of the Bayesian lasso
+ * calculate the log prior of the Bayesian lasso
  * model with the current parameter settings -- up to
  * an addive constant of proportionality (on the log scale)
  */
 
-double log_posterior(const unsigned int n, const unsigned int m, 
-		     double *resid, double *beta, const double s2, 
-		     double *tau2i, const double lambda2, 
-		     const double a, const double b, const double r,
-		     const double delta, const unsigned int Mmax, 
-		     double pi, double *mprior)
+double log_prior(const unsigned int n, const unsigned int m, double *beta, 
+		 const double s2, double *tau2i, const double lambda2, 
+		 double *omega2, const double nu, const double a, const double b, 
+		 const double r, const double delta, const double theta, 
+		 const unsigned int Mmax, double pi, double *mprior)
 {
   /* for summing in the (log) posterior */
-  double lpost = 0.0;
-
-  /* calculate the likelihood prod[N(resid | 0, s2)] */
+  double lprior = 0.0;
   double sd = sqrt(s2);
-  for(unsigned int i=0; i<n; i++) 
-    lpost += dnorm(resid[i], 0.0, sd, 1);
 
-  // myprintf(stdout, "lpost +resid = %g\n", lpost);
- 
   /* add in the prior for beta */
   if(tau2i) { /* under the lasso */
     for(unsigned int i=0; i<m; i++) 
       if(tau2i[i] > 0)
-	lpost += dnorm(beta[i], 0.0, sd*sqrt(1.0/tau2i[i]), 1);
+	lprior += dnorm(beta[i], 0.0, sd*sqrt(1.0/tau2i[i]), 1);
   } else if(lambda2 > 0) { /* under ridge regression */
     double lambda = sqrt(lambda2);
-    for(unsigned int i=0; i<m; i++) 
-      lpost += dnorm(beta[i], 0.0, sd*lambda, 1);
+    for(unsigned int i=0; i<m; i++)
+      lprior += dnorm(beta[i], 0.0, sd*lambda, 1);
   } /* nothing to do under flat/Jeffrey's OLS prior */
+  assert(!isinf(lprior));
 
-  // myprintf(stdout, "lpost +beta = %g\n", lpost);
-   
   /* add in the prior for s2 */
   if(a != 0 && b != 0) 
-    lpost += dgamma(1.0/s2, a, 1.0/b, 1);
-  else lpost += 0.0 - log(s2);  /* Jeffrey's */
-
-  // myprintf(stdout, "lpost +s2 = %g\n", lpost);
+    lprior += dgamma(1.0/s2, 0.5*a, 2.0/b, 1);
+  else lprior += 0.0 - log(s2);  /* Jeffrey's */
 
   /* add in the prior for tau2 */
   if(tau2i && lambda2 != 0)
     for(unsigned int i=0; i<m; i++)
-      lpost += dexp(1.0/tau2i[i], 2.0/lambda2, 1);
-
-  // myprintf(stdout, "lpost +tau2i = %g\n", lpost);
-
+      if(tau2i[i] > 0)
+	lprior += dexp(1.0/tau2i[i], 2.0/lambda2, 1);
+  assert(!isinf(lprior));
+  
   /* add in the lambda prior */
   if(tau2i) { /* lasso */
     if(lambda2 != 0 && r != 0 && delta != 0) 
-      lpost += dgamma(lambda2, r, 1.0/delta, 1); /* is Gamma */
+      lprior += dgamma(lambda2, r, 1.0/delta, 1); /* is Gamma */
   } else if(lambda2 != 0) { /* ridge */
     if(r != 0 && delta != 0) 
-      lpost += dgamma(1.0/lambda2, r, 1.0/delta, 1); /* is Inv-gamma */
-    else lpost += 0.0 - log(lambda2); /* Jeffrey's */
+      lprior += dgamma(1.0/lambda2, r, 1.0/delta, 1); /* is Inv-gamma */
+    else lprior += 0.0 - log(lambda2); /* Jeffrey's */
+  }
+  assert(!isinf(lprior));
+
+  /* add in the Student-t prior */
+  if(omega2) { /* add in the components of omega2 */
+    for(unsigned int i=0; i<n; i++) {
+      lprior += dgamma(1.0/omega2[i], 0.5*nu, 2.0/nu, 1);
+    }
+
+    /* add in the prior for nu */
+    assert(theta > 0);
+    lprior += dexp(nu, theta, 1);
   }
 
-  // myprintf(stdout, "lpost +lambda2 (%g) = %g\n", lambda2, lpost);
-
-  /* add in the the model probability */
-  lpost += lprior_model(m, Mmax, pi);
-
-  /* add in the model order probability */
-  if(mprior[1] != 0 && pi != 0) 
-    lpost += dbeta(pi, mprior[0] + (double)m, mprior[1] + (double)(Mmax-m), 1);
-
-  /* return the log posterior */
-  return lpost;
+  /* return the log prior */
+  return lprior;
 }
 
 
@@ -1907,13 +2169,29 @@ REG_MODEL Blasso::RegModel(void)
 /*
  * FixedPi:
  *
- * return tru if pi is held fixed 
+ * return true if pi is held fixed 
  */
 
 bool Blasso::FixedPi(void)
 {
   if(!RJ || mprior[1] == 0) return true;
   else return false;
+}
+
+
+/*
+ * TErrors:
+ *
+ * return true if scale mixtures are being used to
+ * implement Student-t errors in this regression
+ */
+
+bool Blasso::TErrors(void)
+{
+  if(omega2) {
+    assert(theta > 0);
+    return true;
+  } else return false;
 }
 
 
@@ -1936,6 +2214,12 @@ void Blasso::add_col(unsigned int i, unsigned int col)
   pout[i] = pout[M-m-1];
   pout =(int*) realloc(pout, sizeof(int)*(M-m-1));
   m++;
+
+  /*myprintf(stdout, "add_col:\n");
+  myprintf(stdout, "\tin: ");
+  printIVector(pin, m, stdout);
+  myprintf(stdout, "\tout: ");
+  printIVector(pout, M-m, stdout);*/
 }
 
 
@@ -1958,6 +2242,12 @@ void Blasso::remove_col(unsigned int i, unsigned int col)
   pout =(int*) realloc(pout, sizeof(int)*(M-m+1));
   pout[M-m] = col;
   m--;
+
+  /* myprintf(stdout, "remove_col:\n");
+  myprintf(stdout, "\tin: ");
+  printIVector(pin, m, stdout);
+  myprintf(stdout, "\tout: ");
+  printIVector(pout, M-m, stdout); */
 }
 
 
@@ -2039,8 +2329,12 @@ double lprior_model(const unsigned int m, const unsigned int Mmax,
 		    double pi)
 {
   assert(pi >= 0 && pi <= 1);
-  if(pi == 0.0) return 0.0;
-  else return dbinom((double) m, (double) Mmax, pi, 1);
+  if(Mmax == 0 || pi == 0.0 || pi == 1.0) return 0.0;
+  
+  /* myprintf(stdout, "m=%d, Mmax=%d, pi=%g, lp=%g\n", 
+     m, Mmax, pi, dbinom((double) m, (double) Mmax, pi, 1));  */
+
+  return dbinom((double) m, (double) Mmax, pi, 1);
 }
 
 
@@ -2071,8 +2365,7 @@ void mvnrnd(double *x, double *mu, double **cov, double *rn,
  * 
  * logarithm of the density of x (n-vector) distributed 
  * multivariate normal with mean mu (n-vector) and covariance 
- * matrix cov (n x n) covariance matrix is destroyed 
- * (written over)
+ * matrix decomposed cov_chol (n x n) 
  */
 
 double mvnpdf_log(double *x, double *mu, double **cov_chol, 
@@ -2212,38 +2505,39 @@ extern "C"
 double **X = NULL;
 double **beta_mat;
 double  **tau2i_mat;
+double  **omega2_mat;
 Blasso *blasso = NULL;
+int blasso_seed_set;
 
 void blasso_R(int *T, int *thin, int *M, int *n, double *X_in, 
 	      double *Y, double *lambda2, double *mu, int *RJ, 
 	      int *Mmax, double *beta, int *m, double *s2, 
-	      double *tau2i, double *pi, double *lpost,
-	      double *mprior, double *r, double *delta, double *a, 
-	      double *b, int *rao_s2, int *normalize, int *verb)
+	      double *tau2i, double *omega2, double *nu, double *pi, 
+	      double *lpost, double *llik, double *mprior, double *r, 
+	      double *delta, double *a, double *b, double *theta, 
+	      int *rao_s2, int *normalize, int *verb)
 {
-  int i;
-
+  /* sanity check */
   assert(*T > 1);
 
   /* copy the vector input X into matrix form */
-  X = (double **)  malloc(sizeof(double*) * (*n));
-  X[0] = X_in;
-  for(i=1; i<(*n); i++) X[i] = X[i-1] + (*M);
+  X = new_matrix_bones(X_in, *n, *M);
 
   /* get the random number generator state from R */
-  GetRNGstate();
+  GetRNGstate(); blasso_seed_set = 1;
 
   /* initialize a matrix for beta samples */
-  beta_mat = (double **) malloc(sizeof(double*) * (*T));
-  beta_mat[0] = beta;
-  for(i=1; i<(*T); i++) beta_mat[i] = beta_mat[i-1] + (*M);
+  beta_mat = new_matrix_bones(beta, *T, *M);
 
   /* initialize a matrix for tau2i samples */
   if(tau2i != NULL) { /* for lasso */
-    tau2i_mat = (double **)  malloc(sizeof(double*) * (*T));
-    tau2i_mat[0] = &(tau2i[*M]);
-    for(i=1; i<(*T)-1; i++) tau2i_mat[i] = tau2i_mat[i-1] + (*M);
-  } else tau2i_mat = NULL; /* for ridge */
+    tau2i_mat = new_matrix_bones(&(tau2i[*M]), (*T)-1, *M);
+  } else tau2i_mat = NULL; /* for ridge or OLS */
+
+  /* initialize a matrix for omega2 samples */
+  if(omega2 != NULL) { /* for lasso */
+    omega2_mat = new_matrix_bones(&(omega2[*n]), (*T)-1, *n);
+  } else omega2_mat = NULL; /* not using scale mixture Student-t */
 
   /* starting and sampling lambda2 if not null */
   double lambda2_start = 0.0;
@@ -2253,28 +2547,35 @@ void blasso_R(int *T, int *thin, int *M, int *n, double *X_in,
     lambda2_samps = &(lambda2[1]);
   }
 
+  /* extract nu starting value if relevant */
+  double nu_start = 0.0;
+  if(nu) nu_start = *nu;
+
   /* create a new Bayesian lasso regression */
   blasso =  new Blasso(*M, *n, X, Y, (bool) *RJ, *Mmax, beta_mat[0], 
-		       lambda2_start, s2[0], tau2i, mprior, *r, *delta, 
-		       *a, *b, (bool) *rao_s2, (bool) *normalize, *verb);
+		       lambda2_start, s2[0], tau2i, omega2, nu_start, 
+		       mprior, *r, *delta, *a, *b, *theta, 
+		       (bool) *rao_s2, (bool) *normalize, *verb);
 
   /* part of the constructor which could fail has been moved outside */
   blasso->Init();
 
   /* Gibbs draws for the parameters */
-  blasso->Rounds((*T)-1, *thin, lambda2_samps, &(mu[1]), &(beta_mat[1]), 
-		 &(m[1]), &(s2[1]), tau2i_mat, &(pi[1]), &(lpost[1]));
+  blasso->Rounds((*T)-1, *thin, &(mu[1]), &(beta_mat[1]), &(m[1]), 
+		 &(s2[1]), tau2i_mat, lambda2_samps, omega2_mat, 
+		 &(nu[1]), &(pi[1]), &(lpost[1]), &(llik[1]));
 
   delete blasso;
   blasso = NULL;
 
   /* give the random number generator state back to R */
-  PutRNGstate();
+  PutRNGstate(); blasso_seed_set = 0;
 
   /* clean up */
   free(X); X = NULL;
   free(beta_mat); beta_mat = NULL;
-  free(tau2i_mat); tau2i_mat = NULL;
+  if(tau2i_mat) { free(tau2i_mat); tau2i_mat = NULL; }
+  if(omega2_mat) { free(omega2_mat); omega2_mat = NULL; }
 }
 
 
@@ -2296,6 +2597,15 @@ void blasso_cleanup(void)
     delete blasso; 
     blasso = NULL; 
   }
+
+  /* free the matrix representations of the inputs */
+  if(X) { free(X); X = NULL; }
+  if(beta_mat) { free(beta_mat); beta_mat = NULL; }
+  if(tau2i_mat) { free(tau2i_mat); tau2i_mat = NULL; }
+  if(omega2_mat) { free(omega2_mat); omega2_mat = NULL; }
+
+  /* deal with the seed */
+  if(blasso_seed_set) { PutRNGstate(); blasso_seed_set = 0; }
 }
 
 

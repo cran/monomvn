@@ -63,7 +63,7 @@ class Blasso
   unsigned int M;           /* number of columns in Xorig */
   unsigned int N;           /* number of rows in Xorig */
   unsigned int n;           /* number of rows in Xp (== N if(Rmiss==NULL))*/
-  unsigned int nf;          /* number of columns to treat as factors */
+  unsigned int nf;          /* number of (initial) columns to treat as factors */
 
   /* the original design matrix and transformations */
   double **Xorig;           /* the (original) design matrix */
@@ -78,6 +78,7 @@ class Blasso
 			       this module */
 
   /* reversible-jump controlled columns of X in Xp */
+  bool icept;               /* indicates whether the intercept is handled explicitly */
   unsigned int m;           /* number of columns/rows of current XtX (breg->A) */
   bool RJ;                  /* indicated whether to do RJ moves or not */
   bool *pb;                 /* booleans indicating the m colns of X that are in use */
@@ -86,10 +87,11 @@ class Blasso
   unsigned int Mmax;        /* maximum number of allowable columns in Xp */
   double **Xp;              /* (normd/centered) design matrix -- only cols in use */
                             /* in R syntax Xp = X[,pin] */
+  double **DiXp;            /* inv(D_omega) %*% Xp for use with scale-mix Student-t */
 
   /* stuff to do with the response vector Y */
   double *Y;                /* the (centered) response vector */
-  Rmiss *R;                   /* the missing data (DA) indicator vector */
+  Rmiss *R;                 /* the missing data (DA) indicator vector */
   double Ymean;             /* the mean of the response vector used for centering */
   double *XtY;              /* in R syntax: t(X) %*% Y */
   double YtY;               /* in R syntax: t(Y) %*% Y, or SSy */
@@ -102,6 +104,8 @@ class Blasso
   double *beta;             /* sampled regression coefficients, conditional on breg */
   double pi;                /* prior parameter p in Bin(m|M,p) for model order m
                                or indicates Unif[0,...,Mmax] when p=0 */
+  double *omega2;           /* diagonal of the covariance matrix D of Y~N(Xb,s2*D) */
+  double nu;                /* degrees of freedom parameter in Student-t model */
 
   /* regressions utility structure(s) */
   BayesReg *breg;           /* matrices and vectors of regression quantities */
@@ -114,9 +118,11 @@ class Blasso
                                this contains g & h of the beta prior for pi */
   double r;                 /* Gamma alpha (shape) prior parameter for lambda */
   double delta;             /* Gamma beta (scale) prior parameter for lambda */
+  double theta;             /* Exp rate parameter to omegas for St errors */
 
   /* posterior probability evaluation */
-  double lpost;             /* log posterior of parameters *not including mu) */
+  double lpost;             /* log posterior of parameters (not including mu) */
+  double llik;              /* log likelihood component of the log posterior */
 
   /* other useful vectors */
   double *rn;               /* vector for N(0,1) draws used to sample beta */
@@ -129,23 +135,24 @@ class Blasso
  protected:
 
   /* parameter manipulation  */
-  void GetParams(double *beta, int *m, double *s2, double *tau2i, 
-		 double *lambda2, double *pi) const;
+  void GetParams(double *mu, double *beta, int *m, double *s2, double *tau2i, 
+		 double *omega2, double *nu, double *lambda2, double *pi) const;
   void InitIndicators(const unsigned int M, const unsigned int Mmax, 
 		      double *beta, int *facts, const unsigned int nf);
   void InitPB(double *beta, int *facts, const unsigned int nf);
   void InitParams(const REG_MODEL reg_model, double *beta, double s2, double lambda2);
   void InitParams(double * beta, const double lambda2, const double s2, 
-		  double *tau2i);
+		  double *tau2i, double *omega2, const double nu);
   void InitRegress(void);
-  void InitXY(const unsigned int n, double **X, double *Y, const bool normalize);
-  void InitXY(const unsigned int n, double **Xorig, Rmiss *R, 
+  void InitX(const unsigned int n, double **X, const bool normalize);
+  void InitX(const unsigned int n, double **Xorig, Rmiss *R, 
 	      double *Xnorm, const double Xnorm_scale,double *Xmean, 
-	      const unsigned int ldx, double *Y, const bool normalize);
+	      const unsigned int ldx, const bool normalize);
   void InitY(const unsigned int n, double *Y);
+  void UpdateXY(void);
 
   /* MCMC rounds */
-  void Draw(const unsigned int thin);
+  void Draw(const unsigned int thin, const bool fixnu);
 
   /* RJ moves */
   void RJmove(void);
@@ -163,26 +170,29 @@ class Blasso
   void DrawS2(void);
   void DrawS2Margin(void);
   void DrawTau2i(void);
+  void DrawOmega2(void);
+  void DrawNu(void);
   bool Compute(const bool reinit);
   void DrawLambda2(void);
   void DrawPi(void);
 
   /* likelihood and posterior */
-  double logPosterior();
+  void logPosterior();
 
  public:
 
   /* constructors and destructors */
   Blasso(const unsigned int m, const unsigned int n, double **X, double *Y,
 	 const bool RJ, const unsigned int Mmax, double *beta, 
-	 const double lambda2, const double s2, double *tau2i, double *mprior, 
-	 const double r, const double delta, const double a, const double b, 
-	 const bool rao_s2, const bool normalize, const unsigned int verb);
+	 const double lambda2, const double s2, double *tau2i, double *omega2, 
+	 const double nu, double *mprior, const double r, const double delta, 
+	 const double a, const double b, const double theta, const bool rao_s2, 
+	 const bool normalize, const unsigned int verb);
   Blasso(const unsigned int m, const unsigned int n, double **Xorig,
 	 Rmiss *R, double *Xnorm, const double Xnorm_scale, double *Xmean, 
 	 const unsigned int ldx, double *Y, const bool RJ, unsigned int Mmax, 
 	 double *beta_start, const double s2, const double lambda2_start, 
-	 double *mprior, const double r, const double delta, 
+	 double *mprior, const double r, const double delta, const double theta,
 	 const REG_MODEL reg_model, int *facts, const unsigned int nf, bool rao_s2, 
 	 const unsigned int verb);
   ~Blasso();
@@ -195,13 +205,15 @@ class Blasso
   REG_MODEL RegModel(void);
   bool UsesRJ(void);
   bool FixedPi(void);
+  bool TErrors(void);
 
   /* MCMC sampling */
-  void Rounds(const unsigned int T, const unsigned int thin, 
-	      double *lambda2, double *mu, double **beta, int *m,
-	      double *s2, double **tau2i, double *pi, double *lpost);
-  void Draw(const unsigned int thin, double *lambda2, double *mu, double *beta, 
-	    int *m, double *s2, double *tau2i, double *pi, double *lpost);
+  void Rounds(const unsigned int T, const unsigned int thin, double *mu, 
+	      double **beta, int *m, double *s2, double **tau2i, double *lambda2, 
+	      double **omega2, double *nu, double *pi, double *lpost, double *llik);
+  void Draw(const unsigned int thin, const bool usenu, double *mu, double *beta, 
+	    int *m, double *s2, double *tau2i, double *lambda2, double *omega2, 
+	    double *nu, double *pi, double *lpost, double *llik);
   void DataAugment(void);
 
     
@@ -239,16 +251,16 @@ double mh_accep_ratio(unsigned int n, double *resid, double *x, double bnew,
 		      double t2i, double mub, double vb, double s2);
 void draw_beta(const unsigned int m, double *beta, BayesReg* breg, 
 	       const double s2, double *rn);
-double log_posterior(const unsigned int n, const unsigned int m, 
-		     double *resid, double *beta, const double s2, 
-		     double *tau2i, const double lambda2, 
-		     const double a, const double b, const double r,
-		     const double delta, const unsigned int Mmax, 
-		     const double pi, double *mprior);
+double log_likelihood(const unsigned int n, double *resid, const double s2, 
+		      double *omega2);
+double log_prior(const unsigned int n, const unsigned int m, double *beta, 
+		 const double s2, double *tau2i, const double lambda2, 
+		 double *omega2, const double nu, const double a, const double b, 
+		 const double r, const double delta, const double theta, 
+		 const unsigned int Mmax, const double pi, double *mprior);
 
 /* regression utility structure */
-BayesReg* new_BayesReg(const unsigned int m, const unsigned int n, 
-		       double **Xp);
+BayesReg* new_BayesReg(const unsigned int m, const unsigned int n, double **Xp, double **DiXp);
 void delete_BayesReg(BayesReg* breg);
 bool compute_BayesReg(const unsigned int m, double *XtY, double *tau2i, 
 		      const double lambda2, const double s2, BayesReg *breg);
@@ -260,7 +272,7 @@ void alloc_rest_BayesReg(BayesReg* breg);
 BayesReg* plus1_BayesReg(const unsigned int m, const unsigned int n,
 			 BayesReg *old, double *xnew, double **Xp);
 BayesReg* init_BayesReg(BayesReg *breg, const unsigned int m, 
-			const unsigned int n, double **Xp);
+			const unsigned int n, double **Xp, double **DiXp);
 
 int *adjust_elist(unsigned int *l1, const unsigned int n1, unsigned int *l2,
 		  const unsigned int n2);

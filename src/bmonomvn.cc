@@ -1,4 +1,4 @@
-/******************************************************************************** 
+/**************************************************************************** 
  *
  * Estimation for Multivariate Normal Data with Monotone Missingness
  * Copyright (C) 2007, University of Cambridge
@@ -15,11 +15,12 @@
  * 
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  
+ * 02110-1301  USA
  *
  * Questions? Contact Robert B. Gramacy (bobby@statslab.cam.ac.uk)
  *
- ********************************************************************************/
+ ****************************************************************************/
 
 
 extern "C"
@@ -27,6 +28,7 @@ extern "C"
 #include "rhelp.h"
 #include "matrix.h"
 #include "linalg.h"
+#include "nu.h"
 #include "Rmath.h"
 #include "R.h"
 #include <assert.h>
@@ -45,8 +47,8 @@ extern "C"
  */
 
 Bmonomvn::Bmonomvn(const unsigned int M, const unsigned int N, double **Y, 
-		   int *n, Rmiss *R, const double p, const unsigned int verb, 
-		   const bool trace)
+		   int *n, Rmiss *R, const double p, const double theta, 
+		   const unsigned int verb, const bool trace)
 {
   /* copy inputs */
   this->M = M;
@@ -81,7 +83,7 @@ Bmonomvn::Bmonomvn(const unsigned int M, const unsigned int N, double **Y,
   S = new_zero_matrix(M, M);
 
   /* initialize the summary vectors to NULL */
-  mom1 = mom2 = NULL;
+  mom1 = mom2 = map = nzS = nzSi = mu_mom = NULL;
   lambda2_sum = m_sum = NULL;
 
   /* initialize the QP samples to NULL */
@@ -90,21 +92,35 @@ Bmonomvn::Bmonomvn(const unsigned int M, const unsigned int N, double **Y,
   /* allocate blasso array */
   blasso = (Blasso**) malloc(sizeof(Blasso*) * M);
 
-  /* utility vectors for addy */
+  /* utility vectors for addy (and traces) */
   beta = new_zero_vector(M);
-  tau2i = new_zero_vector(M);
   s21 = new_zero_vector(M);
   yvec = new_vector(N);
   s2 = 1.0;
 
-  /* initialize posterior probabilities */
+  /* utility doubles for traces etc */
+  pi = lambda2 = 0.0;
+  this->theta = theta;
+  onenu = false;
+  if(theta != 0) {
+    if(theta < 0) { onenu = true; this->theta = 0.0-theta; }
+    nu = 1.0/this->theta;
+  } else { nu = 0.0; onenu = false; }
+
+  /* utility vectors for traces */
+  tau2i = new_zero_vector(M);
+  if(theta != 0) omega2 = new_zero_vector(N);
+  else omega2 = NULL;
+
+  /* initialize posterior probabilities and likelihoods */
   lpost_bl = lpost_map = -1e300*1e300;
   which_map = -1;
+  llik_bl = 0;
 
   /* initialize trace files to NULL */
   trace_DA = trace_mu = trace_S = NULL;
   trace_lasso = NULL;
-   
+
   /* open the trace files */
   if(trace) {
     trace_mu = fopen("mu.trace", "w");
@@ -147,6 +163,7 @@ Bmonomvn::~Bmonomvn(void)
   /* clean up utility storage */
   if(beta) free(beta);
   if(tau2i) free(tau2i);
+  if(omega2) free(omega2);
   if(s21) free(s21);
   if(yvec) free(yvec); 
 
@@ -179,7 +196,7 @@ void Bmonomvn::InitBlassos(const unsigned int method, int* facts,
 			   double *mu_start, double **S_start,
 			   int *ncomp_start, double *lambda_start, 
 			   double *mprior, const double r, 
-			   const double delta,  const bool rao_s2, 
+			   const double delta, const bool rao_s2, 
 			   const bool economy, const bool trace)
 {
   /* initialize each of M regressions */
@@ -241,7 +258,7 @@ void Bmonomvn::InitBlassos(const unsigned int method, int* facts,
     if(R) Xnorm_scale = sqrt(((double)(n[i] - R->n2[i]))/N);
     blasso[i] = new Blasso(i, n[i], Y, R, Xnorm, Xnorm_scale, Xmean, M, 
 			   yvec, RJ, mmax, beta_start, s2, lambda2, mprior, 
-			   r, delta, rm, facts, nf, rao_s2, verb-1);
+			   r, delta, theta, rm, facts, nf, rao_s2, verb-1);
     if(!economy) blasso[i]->Init();
   }
 
@@ -292,7 +309,7 @@ void Bmonomvn::InitBlassoTrace(unsigned int i)
   assert(trace_lasso[i]);
 
   /* add the R-type header */
-  fprintf(trace_lasso[i], "lpost s2 mu ");
+  fprintf(trace_lasso[i], "llik lpost s2 mu ");
   if(blasso[i]->UsesRJ()) fprintf(trace_lasso[i], "m ");
   for(unsigned int j=0; j<i; j++)
     fprintf(trace_lasso[i], "beta.%d ", j);
@@ -304,6 +321,15 @@ void Bmonomvn::InitBlassoTrace(unsigned int i)
     if(rm == LASSO)
       for(unsigned int j=0; j<i; j++)
 	fprintf(trace_lasso[i], "tau2i.%d ", j);
+  }
+
+  /* maybe add omega and nu to the file */
+  if(blasso[i]->TErrors()) {
+    fprintf(trace_lasso[i], "nu ");
+    int ni = n[i];
+    if(R) ni -= R->n2[i];
+     for(int j=0; j<ni; j++)
+	fprintf(trace_lasso[i], "omega2.%d ", j);
   }
 
   /* maybe add the pi parameter */
@@ -325,7 +351,8 @@ void Bmonomvn::PrintTrace(unsigned int i)
   assert(trace_lasso && trace_lasso[i]);
   
   /* add the mean and variance to the line */
-  fprintf(trace_lasso[i], "%20f %.20f %.20f ", lpost_bl, s2, mu_s);
+  fprintf(trace_lasso[i], "%.20f %.20f %.20f %.20f ", 
+	  llik_bl, lpost_bl, s2, mu_s);
   if(blasso[i]->UsesRJ()) fprintf(trace_lasso[i], "%d ", m);
 
   /* add the regression coeffs to the file */
@@ -339,6 +366,15 @@ void Bmonomvn::PrintTrace(unsigned int i)
     if(rm == LASSO)
       for(unsigned int j=0; j<i; j++)
 	fprintf(trace_lasso[i], "%.20f ", tau2i[j]);
+  }
+
+  /* maybe add omega and nu to the file */
+  if(blasso[i]->TErrors()) {
+    fprintf(trace_lasso[i], "%.20f ", nu);
+    int ni = n[i];
+    if(R) ni -= R->n2[i];
+     for(int j=0; j<ni; j++)
+	fprintf(trace_lasso[i], "%.20f ", omega2[j]);
   }
 
   /* maybe add the pi param to the file */
@@ -358,10 +394,13 @@ void Bmonomvn::PrintTrace(unsigned int i)
  */
 
 void Bmonomvn::Rounds(const unsigned int T, const unsigned int thin, 
-		      const bool economy, const bool burnin)
+		      const bool economy, const bool burnin, double *nu,
+		      double *llik)
 {
   /* sanity check */
-  if(!burnin) assert(mom1 && mom2 && m_sum && lambda2_sum);
+  if(!burnin) assert(mom1 && mom2 && nzS && nzSi && llik &&
+		     map && mu_mom && m_sum && lambda2_sum);
+  if(!burnin && onenu) assert(nu != NULL);
 
   /* for helping with periodic interrupts */
   time_t itime = time(NULL);
@@ -373,7 +412,8 @@ void Bmonomvn::Rounds(const unsigned int T, const unsigned int thin,
       myprintf(stdout, "t=%d\n", t+1);
 
     /* take one draw after thinning */
-    double lpost = Draw(thin, economy, burnin);
+    double llik_temp;
+    double lpost = Draw(thin, economy, burnin, &llik_temp);
 
     /* record samples unless burning in */
     if(! burnin) {
@@ -386,8 +426,17 @@ void Bmonomvn::Rounds(const unsigned int T, const unsigned int thin,
       /* add vectors and matrices for later mean & var calculations */
       MVN_add(mom1, mu, S, M);
       MVN_add2(mom2, mu, S, M);
+      MVN_add(mu_mom, mu, M);
+      MVN_add_nzS(nzS, nzSi, S, M);
+
+      /* save log likelihood */
+      llik[t] = llik_temp;
+
+      /* save a nu sample if using pooled nu */
+      if(onenu) nu[t] = this->nu;
 
       /* check for new best MAP */
+      // myprintf(stdout, "lpost = %g, lpost_map = %g\n", lpost, lpost_map);
       if(lpost > lpost_map) {
 	lpost_map = lpost;
 	MVN_copy(map, mu, S, M);
@@ -414,13 +463,19 @@ void Bmonomvn::Rounds(const unsigned int T, const unsigned int thin,
  */
 
 double Bmonomvn::Draw(const unsigned int thin, const bool economy, 
-		    const bool burnin)
+		    const bool burnin, double *llik)
 {
   /* sanity checks */
   if(!burnin) assert(lambda2_sum && m_sum);
 
   /* for accumulating log posterior probability */
   double lpost = 0.0;
+  *llik = 0.0;
+
+  /* for accumulating eta if pooling nu*/
+  double eta = theta;
+  int neta = 0;
+  // if(onenu) myprintf(stderr, "global nu = %g\n", nu);
 
   /* for each column of Y */
   for(unsigned int i=0; i<M; i++) {
@@ -429,7 +484,19 @@ double Bmonomvn::Draw(const unsigned int thin, const bool economy,
     if(economy) blasso[i]->Init();
     
     /* obtain a draw from the i-th Bayesian lasso parameters */
-    blasso[i]->Draw(thin, &lambda2, &mu_s, beta, &m, &s2, tau2i, &pi, &lpost_bl);
+    blasso[i]->Draw(thin, onenu, &mu_s, beta, &m, &s2, tau2i, 
+		    &lambda2, omega2, &nu, &pi, &lpost_bl, &llik_bl);
+
+    /* accumulate eta for a global nu draw */
+    if(onenu) {
+      assert(theta != 0);
+      int ni = n[i];
+      if(R) ni -= R->n2[i];
+      for (int k=0; k<ni; k++) 
+	eta += 0.5*(log(omega2[k])+1.0/omega2[k]);
+      neta += ni;
+      // myprintf(stderr, "i=%d, nu=%g, eta=%g\n", i, nu, eta);
+    }
 
     /* perform data augmentation */
     DataAugment(i, mu_s, beta, s2);
@@ -442,6 +509,7 @@ double Bmonomvn::Draw(const unsigned int thin, const bool economy,
 
     /* tally log posterior probability */
     lpost += lpost_bl;
+    *llik += llik_bl;
 
     /* possibly add a line to the trace file */
     if(trace_lasso) PrintTrace(i);
@@ -449,7 +517,12 @@ double Bmonomvn::Draw(const unsigned int thin, const bool economy,
     /* add to lambda and m sums in the i-th position */
     lambda2_sum[i] += lambda2;
     m_sum[i] += m;
-      
+     
+    /* 
+     * addy (the next component of mu and col of S) begins here
+     * [perhaps make a separate function]
+     */
+ 
     /* update next component of the mean vector */
     mu[i] = mu_s;
     if(i > 0) mu[i] += linalg_ddot(i, beta, 1, this->mu, 1);
@@ -469,6 +542,11 @@ double Bmonomvn::Draw(const unsigned int thin, const bool economy,
       S[i][i] = s2 + linalg_ddot(i, s21, 1, beta, 1);
     }
   }
+
+  /* update the single, pooled eta, nu */
+  if(onenu) nu = draw_nu_reject(neta, eta, theta);  
+
+  // if(!burnin) myprintf(stdout, ", lpost = %g\n", lpost);
 
   /* return the log posterior probability of the draw */
   return lpost;
@@ -504,7 +582,8 @@ void Bmonomvn::DataAugment(unsigned int col, const double mu,
     assert((int) i < n[col]);
     double muy = mu;
     muy += linalg_ddot(col, beta, 1, Y[R2[i]], 1);
-    Y[R2[i]][col] = rnorm(muy, ss2);
+    if(theta != 0) Y[R2[i]][col] = ss2*rt(nu) + muy;
+    else Y[R2[i]][col] = rnorm(muy, ss2);
   }
 }
 
@@ -560,7 +639,8 @@ int Bmonomvn::Verb(void)
  */
 
 void Bmonomvn::SetSums(MVNsum *mom1, MVNsum *mom2, double *lambda2_sum, 
-		       double *m_sum, MVNsum *map)
+		       double *m_sum, MVNsum *map, MVNsum *mu_mom, 
+		       MVNsum *nzS, MVNsum *nzSi)
 {
   /* should also write zeros in the matrices and vectors if they are
      really meant to be sums */
@@ -569,6 +649,9 @@ void Bmonomvn::SetSums(MVNsum *mom1, MVNsum *mom2, double *lambda2_sum,
   this->lambda2_sum = lambda2_sum;
   this->m_sum = m_sum;
   this->map = map;
+  this->mu_mom = mu_mom;
+  this->nzS = nzS;
+  this->nzSi = nzSi;
 }
 
 
@@ -586,7 +669,7 @@ void Bmonomvn::SetQPsamp(QPsamp *qps)
 
 
 /*
- * Lpost:
+ * LpostMAP:
  *
  * return the log posterior probability of the maximum
  * a' posteriori (MAP) estimate of mu and S -- also
@@ -673,17 +756,21 @@ void get_regress(const unsigned int m, double *mu, double *s21, double **s11,
 extern "C"
 {
 
-/* for re-arranged poitners to global variables with memory in R */
+/* for re-arranged pointers to global variables with memory in R */
 void free_R_globals(void);
 
 double **Y = NULL;
 Rmiss *R = NULL;
 Bmonomvn *bmonomvn = NULL;
+int bmonomvn_seed_set;
 
 /* starting structures and matrices */
 MVNsum *MVNmean = NULL;
 MVNsum *MVNvar = NULL;
 MVNsum *MVNmap = NULL;
+MVNsum *MVNmu_mom = NULL;
+MVNsum *MVNnzS = NULL;
+MVNsum *MVNnzSi = NULL;
 QPsamp *qps = NULL;
 double **S_start = NULL;
 
@@ -701,18 +788,22 @@ void bmonomvn_R(
 		int *n, int *R_in, double *p, int *method, int *facts,
 		int *RJ, int *capm, double *mu_start, double *S_start_in, 
 		int *ncomp_start, double *lambda_start, double *mprior, 
-		double *rd, int *rao_s2, int *economy, int *verb, 
-		int *trace, 
+		double *rd, double *theta, int *rao_s2, int *economy, 
+		int *verb, int *trace, 
 
 		/* Quadratic Programming inputs */
 		int *qpnf, double *dvec, int *dmu, double *Amat, 
 		double *b0, int *mu_constr, int *q, int *meq,
 
-		/* estimation outputs */
-		double *mu_mean, double *mu_var, double *S_mean, 
-		double *S_var, double* mu_map, double *S_map,
-		double *lpost_map, int *which_map, int *methods, 
-		int *thin_out, double *lambda2_mean, double *m_mean,
+		/* estimation outputs: means and covars */
+		double *mu_mean, double *mu_var, double *mu_cov, 
+		double *S_mean, double *S_var, double* mu_map, 
+		double *S_map, double *S_nz, double *Si_nz,
+
+		/* estimation outputs: other */
+		double *lpost_map, int *which_map, double *llik, 
+		int *methods, int *thin_out, double *nu, 
+		double *lambda2_mean, double *m_mean,
 
 		/* Quadratic Programming outputs */
 		double *w)
@@ -729,38 +820,47 @@ void bmonomvn_R(
   MVNmean = new_MVNsum_R(*M, mu_mean, S_mean);
   MVNvar = new_MVNsum_R(*M, mu_var, S_var);
   MVNmap = new_MVNsum_R(*M, mu_map, S_map);
+  MVNmu_mom = new_MVNsum_R(*M, NULL, mu_cov);
+  MVNnzS = new_MVNsum_R(*M, NULL, S_nz);
+  MVNnzSi = new_MVNsum_R(*M, NULL, Si_nz);
 
   /* load Quadratic Programming inputs into the QP structure */
   qps = new_QPsamp_R(qpnf[0], *T, (qpnf+1), dvec, 
 		     (bool) *dmu, Amat, b0, mu_constr, *q, *meq, w);
 
   /* get the random number generator state from R */
-  GetRNGstate();
+  GetRNGstate(); bmonomvn_seed_set = 1;
 
   /* create a new Bmonomvn object */
-  bmonomvn = new Bmonomvn(*M, *N, Y, n, R, *p, *verb, (bool) (*trace));
+  bmonomvn = new Bmonomvn(*M, *N, Y, n, R, *p, *theta, *verb, (bool) (*trace));
 
   /* initialize the Bayesian lasso regressios with the bmonomvn module */
-  bmonomvn->InitBlassos(*method, facts, *RJ, (bool) (*capm), mu_start, S_start, 
-			ncomp_start, lambda_start, mprior, rd[0], rd[1],
-			(bool) (*rao_s2), (bool) *economy, (bool) (*trace));
+  bmonomvn->InitBlassos(*method, facts, *RJ, (bool) (*capm), mu_start, 
+			S_start, ncomp_start, lambda_start, mprior, rd[0], 
+			rd[1], (bool) (*rao_s2), (bool) *economy, 
+			(bool) (*trace));
 
   /* do burn-in rounds */
   if(*verb) myprintf(stdout, "%d burnin rounds\n", *B);
-  bmonomvn->Rounds(*B, *thin, (bool) *economy, true);
+  bmonomvn->Rounds(*B, *thin, (bool) *economy, true, NULL, NULL);
   
   /* set up the mu and S sums for calculating means and variances */
-  bmonomvn->SetSums(MVNmean, MVNvar, lambda2_mean, m_mean, MVNmap);
+  bmonomvn->SetSums(MVNmean, MVNvar, lambda2_mean, m_mean, MVNmap,
+		    MVNmu_mom, MVNnzS, MVNnzSi);
   /* set the QPsamp */
   bmonomvn->SetQPsamp(qps);
 
   /* and now sampling rounds */
   if(*verb) myprintf(stdout, "%d sampling rounds\n", *T);
-  bmonomvn->Rounds(*T, *thin, (bool) *economy, false);
+  bmonomvn->Rounds(*T, *thin, (bool) *economy, false, nu, llik);
 
-  /* copy back the mean and variance of mu and S */
+  /* copy back the mean and variance(s) of mu and S */
   MVN_mean(MVNmean, *T);
   MVN_var(MVNvar, MVNmean, *T);
+  MVN_mean(MVNmu_mom, *T);
+  MVN_mom2cov(MVNmu_mom, MVNmean);
+  MVN_mean(MVNnzS, *T);
+  MVN_mean(MVNnzSi, *T);
 
   /* get/check the MAP */
   assert(MVNmap->T == 1);
@@ -779,7 +879,7 @@ void bmonomvn_R(
   bmonomvn = NULL;
 
   /* give the random number generator state back to R */
-  PutRNGstate();
+  PutRNGstate(); bmonomvn_seed_set = 0;
 
   /* clean up */
   free_R_globals();
@@ -800,6 +900,9 @@ void free_R_globals(void) {
   if(MVNmean) { delete_MVNsum_R(MVNmean); MVNmean = NULL; }
   if(MVNvar) { delete_MVNsum_R(MVNvar); MVNvar = NULL; }
   if(MVNmap) { delete_MVNsum_R(MVNmap); MVNmap = NULL; }
+  if(MVNmu_mom) { delete_MVNsum_R(MVNmu_mom); MVNmu_mom = NULL; }
+  if(MVNnzS) { delete_MVNsum_R(MVNnzS); MVNnzS = NULL; }
+  if(MVNnzSi) { delete_MVNsum_R(MVNnzSi); MVNnzSi = NULL; }
   if(qps) { delete_QPsamp_R(qps); qps = NULL; }
  }
 
@@ -822,6 +925,9 @@ void bmonomvn_cleanup(void)
     delete bmonomvn; 
     bmonomvn = NULL; 
   }
+
+  /* free RNG state */
+  if(bmonomvn_seed_set) { PutRNGstate(); bmonomvn_seed_set = 0; }
 
   /* clean up matrix pointers */
   free_R_globals();

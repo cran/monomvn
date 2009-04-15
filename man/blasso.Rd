@@ -10,12 +10,12 @@
 }
 \usage{
 bridge(X, y, T = 1000, thin = NULL, RJ = TRUE, M = NULL,
-       beta = NULL, lambda2 = 1, s2 = 1, mprior = 0,
-       rd = NULL, ab = NULL, rao.s2 = TRUE,
-       normalize = TRUE, verb = 1)
+       beta = NULL, lambda2 = 1, s2 = var(y-mean(y)), mprior = 0,
+       rd = NULL, ab = NULL, theta=0, rao.s2 = TRUE, normalize = TRUE,
+       verb = 1)
 blasso(X, y, T = 1000, thin = NULL, RJ = TRUE, M = NULL,
-       beta = NULL, lambda2 = 1, s2 = 1, ridge = FALSE,
-       mprior = 0, rd = NULL, ab = NULL, rao.s2 = TRUE,
+       beta = NULL, lambda2 = 1, s2 = var(y-mean(y)), ridge = FALSE,
+       mprior = 0, rd = NULL, ab = NULL, theta=0, rao.s2 = TRUE,
        normalize = TRUE, verb = 1)
 }
 
@@ -34,8 +34,8 @@ blasso(X, y, T = 1000, thin = NULL, RJ = TRUE, M = NULL,
     specified by the \code{beta} input, described below, and the maximal
     number of covariates in the model is specified by \code{M} }
   \item{M}{ the maximal number of allowed covariates (columns of
-    \code{X}) in the model.  If input \code{lambda2 > 0} then
-    \code{M <= ncol(X)} is allowed.  Otherwise
+    \code{X}) in the model.  If input \code{lambda2 > 0} then any
+    \code{M <= ncol(X)} is allowed.  Otherwise it must be that
     \code{M <= min(ncol(X), length(y)-1)}, which is default value
     when a \code{NULL} argument is given }
   \item{beta}{ initial setting of the regression coefficients.  Any
@@ -66,12 +66,17 @@ blasso(X, y, T = 1000, thin = NULL, RJ = TRUE, M = NULL,
     parameter under the ridge regression model. A default of \code{NULL}
    generates appropriate non-informative values depending on the
    nature of the regression.  See the details below for information
-   on the special settings of this paper for ridge regression }
+   on the special settings for ridge regression }
  \item{ab}{ \code{=c(a, b)}, the \eqn{\alpha}{alpha} (shape)
    parameter and the \eqn{\beta}{beta} (scale) parameter for the
    inverse-gamma distribution prior \code{IG(a,b)} for the variance parameter
    \code{s2}.  A default of \code{NULL} generates appropriate
    non-informative values depending on the nature of the regression }
+ \item{theta}{ the rate parameter (\code{> 0}) to the exponential prior
+   on the degrees of freedom paramter \code{nu} under a model with
+   Student-t errors implemented by a scale-mixture prior.
+   The default setting of \code{theta = 0} turns off this prior,
+   defaulting to a normal errors prior }
   \item{rao.s2 }{indicates whether Rao-Blackwellized samples for
     \eqn{\sigma^2}{s^2} should be used (default \code{TRUE}); see
     below for more details }
@@ -121,6 +126,10 @@ blasso(X, y, T = 1000, thin = NULL, RJ = TRUE, M = NULL,
   \eqn{\lambda^2}{lambda^2} unless \code{ncol(X) >= length(y)} in
   which case the proper specification of \code{rd = c(5,10)} is used
   instead
+
+  When \code{theta > 0} then the Student-t errors via scale mixtures
+  (and thereby extra latent variables \code{omega2}) of Geweke (1993)
+  is applied as an extension to the Bayesian lasso/ridge model.
 }
 \value{
   \code{blasso} returns an object of class \code{"blasso"}, which is a
@@ -140,9 +149,20 @@ blasso(X, y, T = 1000, thin = NULL, RJ = TRUE, M = NULL,
   \item{tau2i}{ a \code{T*ncol(X)} \code{matrix} of \code{T} samples from
     the (latent) inverse diagonal of the prior covariance matrix for
     \code{beta}, obtained for Lasso regressions }
+  \item{omega2}{ a \code{T*nrow(X)} \code{matrix} of \code{T} samples
+    from the (latent) diagonal of the covariance matrix of the response
+    providing a scale-mixture implementation of Student-t errors with
+    degrees of freedom \code{nu} when active (input \code{theta > 0}) }
+  \item{nu}{ a vector of \code{T} samples of the degrees of freedom
+    parameter to the Student-t errors mode when active
+    (input \code{theta > 0}) }
   \item{pi}{ a vector of \code{T} samples of the Binomial proportion
     \code{p} that was given a Beta prior, as described above for the
     2-vector version of the \code{mprior} input}
+  \item{lpost}{ the log posterior probability of each (saved) sample of the
+    joint parameters }
+  \item{llik}{ the log likelihood of each (saved) sample of the joint
+    parameter }
 }
 \note{
   Whenever \code{ncol(X) >= nrow(X)} it must be that either \code{RJ = TRUE}
@@ -174,6 +194,10 @@ blasso(X, y, T = 1000, thin = NULL, RJ = TRUE, M = NULL,
     employing full conditionals to achieve efficient model space moves.}
   Technical Report CUED/F-INFENG/TR.304, Cambridge University
   Engineering Department.
+  
+  Geweke, J. (1993) \emph{Bayesian treatment of the independent
+    Student-t linear model.} Journal of Applied Econometrics, Vol. 8,
+    S19-S40
   
   \url{http://www.statslab.cam.ac.uk/~bobby/monomvn.html}
 }
@@ -225,8 +249,16 @@ s$s2
 plot(reg.blas, burnin=200, which="lambda2")
 s$lambda2
 
+## fit with Student-t errors
+regt.blas <- blasso(x, y, theta=0.1)
+
+## plotting some information about nu, and quantiles
+plot(regt.blas, "nu", burnin=200)
+quantile(regt.blas$nu[-(1:200)], c(0.05, 0.95))
+
 ## clean up
 detach(diabetes)
+
 
 ##
 ## a big-p small-n example
@@ -245,7 +277,7 @@ plot(obl, burnin=10, which="m")
 oml <- regress(X, Y, method="lasso")
 
 ## compare via RMSE, most often blasso will win
-beta <- xmuS$S[m,-m] %*% solve(xmuS$S[-m,-m])
+beta <- xmuS$S[m,-m] \%*\% solve(xmuS$S[-m,-m])
 sqrt(mean((apply(obl$beta, 2, mean) - beta)^2))
 sqrt(mean((oml$b[-1] - beta)^2))
 

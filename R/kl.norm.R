@@ -130,6 +130,12 @@ Ellik.norm <- function(mu1, S1, mu2, S2, quiet=FALSE)
   }
 
 
+## rmse.muS:
+##
+## calculate the Root Mean Squared Error between
+## two MVN paramterizations (in terms of means
+## and covariance matrices)
+
 rmse.muS <- function(mu1, S1, mu2, S2)
   {
     resid.mu <- (mu1 - mu2)^2

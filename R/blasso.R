@@ -30,13 +30,13 @@
 
 'bridge' <-
 function(X, y, T=1000, thin=NULL, RJ=TRUE, M=NULL, beta=NULL,
-         lambda2=1, s2=1, mprior=0, rd=NULL, ab=NULL,
-         rao.s2=TRUE, normalize=TRUE, verb=1)
+         lambda2=1, s2=var(y-mean(y)), mprior=0, rd=NULL,
+         ab=NULL, theta=0, rao.s2=TRUE, normalize=TRUE, verb=1)
   {
     blasso(X=X, y=y, T=T, thin=thin, RJ=RJ, M=M, beta=beta,
            lambda2=lambda2, s2=s2, ridge=TRUE, mprior=mprior,
-           rd=rd, ab=ab, rao.s2=rao.s2, normalize=normalize,
-           verb=verb)
+           rd=rd, ab=ab, theta=theta, rao.s2=rao.s2,
+           normalize=normalize, verb=verb)
   }
 
 
@@ -48,8 +48,8 @@ function(X, y, T=1000, thin=NULL, RJ=TRUE, M=NULL, beta=NULL,
 
 'blasso' <-
 function(X, y, T=1000, thin=NULL, RJ=TRUE, M=NULL, beta=NULL,
-         lambda2=1, s2=1, ridge=FALSE, mprior=0, rd=NULL,
-         ab=NULL, rao.s2=TRUE, normalize=TRUE, verb=1)
+         lambda2=1, s2=var(y-mean(y)), ridge=FALSE, mprior=0, rd=NULL,
+         ab=NULL, theta=0, rao.s2=TRUE, normalize=TRUE, verb=1)
   {
     ## (quitely) double-check that blasso is clean before-hand
     blasso.cleanup()
@@ -147,7 +147,7 @@ function(X, y, T=1000, thin=NULL, RJ=TRUE, M=NULL, beta=NULL,
       tau2i <- as.double(rep(tau2i, T))
     }
 
-    ## check mprior
+    ## check mprior and allocate pi appropriately
     if(any(mprior < 0)) stop("must have all(0 <= mprior)");
     if(length(mprior) == 1) {
       if(mprior != 0 && RJ == FALSE)
@@ -157,7 +157,9 @@ function(X, y, T=1000, thin=NULL, RJ=TRUE, M=NULL, beta=NULL,
       mprior <- c(mprior, 0)
     } else if(length(mprior) != 2)
       stop("mprior should be a scalar or 2-vector in [0,1]")
-
+    if(mprior[2] != 0) pi = as.double(rep(mprior[1]/(mprior[1]+mprior[2]), T))
+    else pi = double(0)
+    
     ## check r and delta (rd)
     if(is.null(rd)) {
       if(ridge) { ## if using ridge regression IG prior
@@ -171,12 +173,12 @@ function(X, y, T=1000, thin=NULL, RJ=TRUE, M=NULL, beta=NULL,
       stop("rd must be a positive 2-vector")
 
     ## check ab or default
-    if(is.null(ab)) {
-      ab <- c(0,0)
-      if(!RJ && lambda2 > 0 && m >= n) {
+    if(is.null(ab) || all(ab == -1)) {
+      if(all(ab != -1)) ab <- c(0,0)
+      if(all(ab == -1) || (!RJ && lambda2 > 0 && m >= n)) {
         ab[1] <- 3/2
         ab[2] <- Igamma.inv(ab[1], 0.95*gamma(ab[1]), lower=FALSE)*sum(y^2)
-      } 
+      }
     }
 
     ## double check ab
@@ -184,6 +186,14 @@ function(X, y, T=1000, thin=NULL, RJ=TRUE, M=NULL, beta=NULL,
       stop("ab must be a non-negative 2-vector")
     if(!ridge && !RJ && m >= n && any(ab <= 0))
       stop("must have ab > c(0,0) when !ridge, !RJ, and ncol(X) >= length(y)")
+
+    ## check theta and possibly allocate omega2
+    if(length(theta) != 1 || theta < 0)
+      stop("theta must be a non-negative scalar")
+    if(theta > 0) {
+      omega2 <- as.double(rep(rep(1,n), T))
+      nu <- as.double(rep(1.0/theta, T))
+    } else nu <- omega2 <- double(0)
 
     ## check rao.s2
     if(length(rao.s2) != 1 || !is.logical(rao.s2))
@@ -213,13 +223,17 @@ function(X, y, T=1000, thin=NULL, RJ=TRUE, M=NULL, beta=NULL,
             m = as.integer(rep(sum(beta!=0), T)),
             s2 = as.double(rep(s2, T)),
             tau2i = tau2i,
-            pi = double(T*mprior[2]),
+            omega2 = omega2,
+            nu = nu,
+            pi = pi,
             lpost = double(T),
+            llik = double(T),
             mprior = as.double(mprior),
             r = as.double(rd[1]),
             delta = as.double(rd[2]),
             a = as.double(ab[1]),
             b = as.double(ab[2]),
+            theta = as.double(theta),
             rao.s2 = as.integer(rao.s2),
             normalize = as.integer(normalize),
             verb = as.integer(verb),
@@ -229,22 +243,28 @@ function(X, y, T=1000, thin=NULL, RJ=TRUE, M=NULL, beta=NULL,
     r$X <- X
     r$y <- y
 
-    ## turn the beta and tau2i vectors of samples into matrices
+    ## turn the beta vector of samples into a matrix
     r$beta <- matrix(r$beta, nrow=T, ncol=m, byrow=TRUE,
                      dimnames=list(NULL,paste("b.", 1:m, sep="")))
 
+    ## turn the tau2i vector of samples into a matrix
     if(r$lambda[1] != 0 && length(r$tau2i) > 0) {
       r$tau2i <- matrix(r$tau2i, nrow=T, ncol=m, byrow=TRUE,
                         dimnames=list(NULL,paste("tau2i.", 1:m, sep="")))
-
       ## put NAs where tau2i has -1
       r$tau2i[r$tau2i == -1] <- NA
     } else if(length(r$tau2i) > 0) {
       r$lambda <- r$tau2i <- NULL 
     } else r$tau2i <- NULL
-    
-    ## first lpost not available
-    r$lpost[1] <- NA
+
+    ## turn the omega2 vector of samples into a matrix
+    if(r$theta > 0) 
+      r$omega2 <- matrix(r$omega2, nrow=T, ncol=n, byrow=TRUE,
+                     dimnames=list(NULL,paste("omega2.", 1:n, sep="")))
+    else { r$theta <- NULL; r$omega2 <- NULL; r$nu <- NULL }
+        
+    ## first llik and lpost not available
+    r$llik[1] <- r$lpost[1] <- NA
 
     ## make logicals again
     r$normalize = as.logical(r$normalize)

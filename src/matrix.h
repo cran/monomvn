@@ -93,9 +93,10 @@ void wcovx_of_columns(double **cov, double **M1, double **M2, double *mean1, dou
 
 void add_matrix(double a, double **M1, double b, double **M2, unsigned int n1, 
 		unsigned int n2);
-double **new_p_submatrix(int *p, double **v, unsigned int nrows, unsigned int ncols);
-void sub_p_matrix(double **V, int *p, double **v, 
-		  unsigned int nrows, unsigned int lenp);
+double **new_p_submatrix(int *p, double **v, unsigned int nrows, unsigned int ncols,
+			 unsigned int col_offset);
+void sub_p_matrix(double **V, int *p, double **v, unsigned int nrows, 
+		  unsigned int lenp, unsigned int col_offset);
 void copy_p_matrix(double **V, int *p1, int *p2, double **v, unsigned int n1, 
 		   unsigned int n2);
 void add_p_matrix(double a, double **V, int *p1, int *p2, double b, double **v, 
