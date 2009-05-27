@@ -63,8 +63,8 @@ function(y, pre=TRUE, p=0.9, B=100, T=200, thin=1, economy=FALSE,
       stop("if B>0 when T must be a scalar integer >= 1")
 
     ## check thin
-    if(length(thin) != 1 || thin < 1)
-      stop("thin must be a scalar integer >= 1")
+    if(length(thin) != 1 || thin <= 0)
+      stop("thin must be a scalar > 0")
 
     ## check rao.s2
     if(length(rao.s2) != 1 || !is.logical(rao.s2))
@@ -174,7 +174,7 @@ function(y, pre=TRUE, p=0.9, B=100, T=200, thin=1, economy=FALSE,
             ## begin estimation inputs
             B = as.integer(B),
             T = as.integer(T),
-            thin = as.integer(thin),
+            thin = as.double(thin),
             M = as.integer(M),
             N = as.integer(N),
             Y = as.double(t(Y)),
@@ -220,6 +220,7 @@ function(y, pre=TRUE, p=0.9, B=100, T=200, thin=1, economy=FALSE,
             lpost.map = double(1),
             which.map = integer(1),
             llik = double(T),
+            llik.norm = double(T * (theta != 0)),
             methods = integer(M),
             thin.act = integer(M),
             nu = double(T*(theta < 0)),
@@ -293,7 +294,7 @@ function(y, pre=TRUE, p=0.9, B=100, T=200, thin=1, economy=FALSE,
     ## read the trace in the output files, and then delete them
     if(trace)
       r$trace <- bmonomvn.read.traces(r$N, r$n, r$M, nao, oo, nam,
-                                      capm, mprior, R, cl, thin, r$verb)
+                                      capm, mprior, R, cl, r$thin, r$verb)
     else r$trace <- NULL
     
     ## final line
@@ -303,7 +304,7 @@ function(y, pre=TRUE, p=0.9, B=100, T=200, thin=1, economy=FALSE,
     r$n <- r$N <- r$M <- r$mi <- r$verb <- NULL
     r$smu <- r$sS <- r$sncomp <- r$slambda <- NULL
     r$thin.act <- NULL
-    if(r$theta == 0) r$theta <- NULL
+    if(r$theta == 0) { r$theta <- r$llik.norm <- NULL }
     else if(r$theta > 0) r$nu <- NULL
 
     ## change back to logicals or original inputs

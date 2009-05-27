@@ -28,7 +28,7 @@
 #include <fstream>
 #include "ustructs.h"
 
-typedef enum REG_MODEL {LASSO=901,OLS=902,RIDGE=903,FACTOR=904} REG_MODEL;
+typedef enum REG_MODEL {LASSO=901,OLS=902,RIDGE=903,FACTOR=904,HORSESHOE=905} REG_MODEL;
 typedef enum MAT_STATE {NOINIT=1001,COV=1002,CHOLCOV=1003} MAT_STATE;
 
  /* regression utility structure */
@@ -123,6 +123,7 @@ class Blasso
   /* posterior probability evaluation */
   double lpost;             /* log posterior of parameters (not including mu) */
   double llik;              /* log likelihood component of the log posterior */
+  double llik_norm;         /* as above, but stricly for the Normal model for BF */
 
   /* other useful vectors */
   double *rn;               /* vector for N(0,1) draws used to sample beta */
@@ -142,7 +143,7 @@ class Blasso
   void InitPB(double *beta, int *facts, const unsigned int nf);
   void InitParams(const REG_MODEL reg_model, double *beta, double s2, double lambda2);
   void InitParams(double * beta, const double lambda2, const double s2, 
-		  double *tau2i, double *omega2, const double nu);
+		  double *tau2i, const bool hs, double *omega2, const double nu);
   void InitRegress(void);
   void InitX(const unsigned int n, double **X, const bool normalize);
   void InitX(const unsigned int n, double **Xorig, Rmiss *R, 
@@ -171,6 +172,7 @@ class Blasso
   void DrawS2Margin(void);
   void DrawTau2i(void);
   void DrawOmega2(void);
+  void RJerrors(void);
   void DrawNu(void);
   bool Compute(const bool reinit);
   void DrawLambda2(void);
@@ -184,10 +186,10 @@ class Blasso
   /* constructors and destructors */
   Blasso(const unsigned int m, const unsigned int n, double **X, double *Y,
 	 const bool RJ, const unsigned int Mmax, double *beta, 
-	 const double lambda2, const double s2, double *tau2i, double *omega2, 
-	 const double nu, double *mprior, const double r, const double delta, 
-	 const double a, const double b, const double theta, const bool rao_s2, 
-	 const bool normalize, const unsigned int verb);
+	 const double lambda2, const double s2, double *tau2i, const bool hs,
+	 double *omega2, const double nu, double *mprior, const double r, 
+	 const double delta, const double a, const double b, const double theta, 
+	 const bool rao_s2, const bool normalize, const unsigned int verb);
   Blasso(const unsigned int m, const unsigned int n, double **Xorig,
 	 Rmiss *R, double *Xnorm, const double Xnorm_scale, double *Xmean, 
 	 const unsigned int ldx, double *Y, const bool RJ, unsigned int Mmax, 
@@ -210,17 +212,18 @@ class Blasso
   /* MCMC sampling */
   void Rounds(const unsigned int T, const unsigned int thin, double *mu, 
 	      double **beta, int *m, double *s2, double **tau2i, double *lambda2, 
-	      double **omega2, double *nu, double *pi, double *lpost, double *llik);
-  void Draw(const unsigned int thin, const bool usenu, double *mu, double *beta, 
+	      double **omega2, double *nu, double *pi, double *lpost, 
+	      double *llik, double *llik_norm);
+  void Draw(const double thin, const bool usenu, double *mu, double *beta, 
 	    int *m, double *s2, double *tau2i, double *lambda2, double *omega2, 
-	    double *nu, double *pi, double *lpost, double *llik);
+	    double *nu, double *pi, double *lpost, double *llik, double *llik_norm);
   void DataAugment(void);
 
     
   /* printing and summary information */
   void PrintParams(FILE *outfile) const;
   int Method(void);
-  unsigned int Thin(unsigned int thin);
+  unsigned int Thin(const double thin);
   int Verb(void);
 };
 
@@ -251,10 +254,10 @@ double mh_accep_ratio(unsigned int n, double *resid, double *x, double bnew,
 		      double t2i, double mub, double vb, double s2);
 void draw_beta(const unsigned int m, double *beta, BayesReg* breg, 
 	       const double s2, double *rn);
-double log_likelihood(const unsigned int n, double *resid, const double s2, 
-		      double *omega2);
+double log_likelihood(const unsigned int n, double *resid, const double s2,
+		      const double nu);//, double *omega2);
 double log_prior(const unsigned int n, const unsigned int m, double *beta, 
-		 const double s2, double *tau2i, const double lambda2, 
+		 const double s2, double *tau2i, bool hs, const double lambda2, 
 		 double *omega2, const double nu, const double a, const double b, 
 		 const double r, const double delta, const double theta, 
 		 const unsigned int Mmax, const double pi, double *mprior);

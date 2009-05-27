@@ -86,6 +86,7 @@ class Bmonomvn
   double lpost_map;          /* best total log posterior probability */
   int which_map;             /* the time index giving the MAP sample */
   double llik_bl;            /* regression (each i) log likelihood */
+  double llik_norm_bl;       /* as above, strictly under Normal errors for BF */
   
   /* utility vectors for addy, used for all i */
   double *s21;               /* utility vector for calcing S from beta */
@@ -112,10 +113,10 @@ class Bmonomvn
 
  protected:
 
-  double Draw(const unsigned int thin, const bool economize, const bool burnin,
-	      double *llik);
+  double Draw(const double thin, const bool economize, const bool burnin,
+	      double *llik, double *llik_norm);
   void DataAugment(unsigned int col, const double mu, double *beta, 
-		   const double s2);
+		   const double s2, const double nu);
 
  public:
 
@@ -133,17 +134,16 @@ class Bmonomvn
 		   const bool economy, const bool trace);
 
   /* sampling from the posterior distribution */
-  void Rounds(const unsigned int T, const unsigned int thin, const bool economy, 
-	      const bool burnin, double *nu, double *ellik);
+  void Rounds(const unsigned int T, const double thin, const bool economy, 
+	      const bool burnin, double *nu, double *llik, double *llik_norm);
 
   /* printing and tracing */
   double LpostMAP(int *which);
-  double Ellik(unsigned int T);
   void InitBlassoTrace(unsigned int m);
   void InitBlassoTrace(const bool trace);
   void PrintTrace(unsigned int m);
   void Methods(int *methods);
-  void Thin(const unsigned int thin, int *thin_out);
+  void Thin(const double thin, int *thin_out);
   int Verb(void);
 
   /* setting pointers to allocated memory */

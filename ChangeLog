@@ -1,3 +1,18 @@
+1.7-1 (27 May 2009)
+-----
+
+added llik_norm hooks to calculate the Bayes Factor
+between the Student-t and normal models
+
+initial implemention of Horeshoe shrinkage -- bhs 
+function available but undocumented
+
+changed to more agressive (larger) thinning when Student-t
+errors are being used -- now allow real-vaued thinning 
+level in bmonomvn. Mixing in nu is improved but the 
+code is now slower
+	
+
 1.7 (6 April 2009)
 ---
 

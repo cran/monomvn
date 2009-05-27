@@ -47,7 +47,9 @@ bmonomvn(y, pre = TRUE, p = 0.9, B = 100, T = 200, thin = 1,
   \item{thin}{ multiplicative thinning in the MCMC.  Each Bayesian
     (lasso) regression will discard \code{thin*M} MCMC rounds,
     where \code{M} is the number of columns in its design matrix,
-    before a sample is saved as a draw from the posterior distribution }
+    before a sample is saved as a draw from the posterior distribution;
+    Likewise if \code{theta != 0} a further \code{thin*N}, for
+    \code{N} responses will be discarded }
   \item{economy }{ indicates whether memory should be economized at
     the expense of speed.  When \code{TRUE} the individual Bayesian
     (lasso) regressions are cleaned between uses so that only one
@@ -200,6 +202,10 @@ bmonomvn(y, pre = TRUE, p = 0.9, B = 100, T = 200, thin = 1,
   \item{which.map}{ gives the time index of the sample corresponding to
     the MAP estimate}
   \item{llik}{ a trace of the log likelihood of the data }
+  \item{llik.norm}{ a trace of the log likelihood 
+    under the Normal errors model when sampling under the
+    Student-t model; i.e., it is not present unless \code{theta > 0}.
+    Used for calculating Bayes Factors}
   \item{na }{ when \code{pre = TRUE} this is a vector containing number of
     \code{NA} entries in each column of \code{y}}
   \item{o }{ when \code{pre = TRUE} this is a vector containing the
@@ -207,8 +213,8 @@ bmonomvn(y, pre = TRUE, p = 0.9, B = 100, T = 200, thin = 1,
     obtained by \code{o <- \link{order}(na)}}
   \item{method }{method of regression used on each column, or
     \code{"bcomplete"} indicating that no regression was used}
-  \item{thin }{ the number of thinning rounds used for the regression
-    (\code{method}) column}
+  \item{thin }{ the (actual) number of thinning rounds used for the
+    regression (\code{method}) in each column}
   \item{lambda2 }{ records the mean \eqn{\lambda^2}{lambda^2} value
     found in the trace of the Bayesian Lasso regressions.  Zero-values
     result when the column corresponds to a complete

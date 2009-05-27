@@ -24,7 +24,7 @@
 
 ## bridge:
 ##
-## Bayesian Ridge regress.  Simply calls the blasso function with
+## Bayesian Ridge regression.  Simply calls the blasso function with
 ## the ridge argument modified to be TRUE and the rd argment of c(0,0)
 ## for a Jeffrey's prior on the squared ridge penalty lambda2
 
@@ -34,10 +34,35 @@ function(X, y, T=1000, thin=NULL, RJ=TRUE, M=NULL, beta=NULL,
          ab=NULL, theta=0, rao.s2=TRUE, normalize=TRUE, verb=1)
   {
     blasso(X=X, y=y, T=T, thin=thin, RJ=RJ, M=M, beta=beta,
-           lambda2=lambda2, s2=s2, ridge=TRUE, mprior=mprior,
+           lambda2=lambda2, s2=s2, case="hs", mprior=mprior,
            rd=rd, ab=ab, theta=theta, rao.s2=rao.s2,
            normalize=normalize, verb=verb)
+
+    ## need to rename the outputs and re-work the S3 functions
+    ## appropriately
   }
+
+
+## bhs:
+##
+## Bayesian Horseshoe regression.  Simply calls the blasso function with
+## the ridge argument modified to be TRUE and the rd argment of c(0,0)
+## for a Jeffrey's prior on the squared ridge penalty lambda2
+
+'bhs' <-
+function(X, y, T=1000, thin=NULL, RJ=TRUE, M=NULL, beta=NULL,
+         lambda2=1, s2=var(y-mean(y)), mprior=0,
+         ab=NULL, theta=0, rao.s2=TRUE, normalize=TRUE, verb=1)
+  {
+    blasso(X=X, y=y, T=T, thin=thin, RJ=RJ, M=M, beta=beta,
+           lambda2=lambda2, s2=s2, case="hs", mprior=mprior,
+           rd=c(0,0), ab=ab, theta=theta, rao.s2=rao.s2,
+           normalize=normalize, verb=verb)
+
+    ## need to rename the outputs and re-work the S3 function
+    ## appropriately
+  }
+
 
 
 ## blasso:
@@ -48,8 +73,9 @@ function(X, y, T=1000, thin=NULL, RJ=TRUE, M=NULL, beta=NULL,
 
 'blasso' <-
 function(X, y, T=1000, thin=NULL, RJ=TRUE, M=NULL, beta=NULL,
-         lambda2=1, s2=var(y-mean(y)), ridge=FALSE, mprior=0, rd=NULL,
-         ab=NULL, theta=0, rao.s2=TRUE, normalize=TRUE, verb=1)
+         lambda2=1, s2=var(y-mean(y)), case=c("default", "ridge", "hs"),
+         mprior=0, rd=NULL, ab=NULL, theta=0, rao.s2=TRUE,
+         normalize=TRUE, verb=1)
   {
     ## (quitely) double-check that blasso is clean before-hand
     blasso.cleanup()
@@ -58,6 +84,7 @@ function(X, y, T=1000, thin=NULL, RJ=TRUE, M=NULL, beta=NULL,
     on.exit(blasso.cleanup())
 
     ## dimensions of the inputs
+    X <- as.matrix(X)
     m <- ncol(X)
     n <- nrow(X)
 
@@ -82,11 +109,10 @@ function(X, y, T=1000, thin=NULL, RJ=TRUE, M=NULL, beta=NULL,
     if(length(lambda2) != 1 || lambda2 < 0)
       stop("lambda2 must be a non-negative scalar")
 
-    ## check ridge
-    if(length(ridge) != 1 || !is.logical(ridge))
-      stop("ridge should be a logical scalar")
-    if(ridge && lambda2 == 0)
-      stop("specifying ridge=TRUE and lambda2=0 doesn't make any sense")
+    ## check case
+    case <- match.arg(case)
+    if(case == "ridge" && lambda2 == 0)
+      stop("specifying case=\"ridge\" and lambda2=0 doesn't make any sense")
     
     ## check M or default
     if(is.null(M)) {
@@ -128,9 +154,12 @@ function(X, y, T=1000, thin=NULL, RJ=TRUE, M=NULL, beta=NULL,
 
     ## check thin or default
     if(is.null(thin)) {
-      if(RJ || (length(lambda2) > 0 && !ridge)) thin <- M
+      ## thin a bit for the Lasso latent variables
+      if(RJ || (length(lambda2) > 0 && case!="ridge")) thin <- M
       else if(length(lambda2) > 0) thin <- 2
       else thin <- 1
+      ## thin a bit for the Student-t latent variables
+      if(theta > 0) thin <- thin + n
     }
     if(length(thin) != 1 || thin < 1)
       stop("thin must be a scalar integer >= 1")
@@ -140,7 +169,7 @@ function(X, y, T=1000, thin=NULL, RJ=TRUE, M=NULL, beta=NULL,
       stop("s2 must be a positive scalar")
 
     ## check tau2i or default
-    if(ridge || length(lambda2) == 0) tau2i <- double(0)
+    if(case=="ridge" || length(lambda2) == 0) tau2i <- double(0)
     else {
       tau2i <- rep(1, m)
       tau2i[beta == 0] <- -1
@@ -162,7 +191,7 @@ function(X, y, T=1000, thin=NULL, RJ=TRUE, M=NULL, beta=NULL,
     
     ## check r and delta (rd)
     if(is.null(rd)) {
-      if(ridge) { ## if using ridge regression IG prior
+      if(case=="ridge") { ## if using ridge regression IG prior
         rd <- c(0,0)
         ## big-p small-n setting for ridge
         if(m >= n) rd <- c(5, 10) 
@@ -170,7 +199,7 @@ function(X, y, T=1000, thin=NULL, RJ=TRUE, M=NULL, beta=NULL,
     }
     ## double-check rd
     if(length(rd) != 2 || (length(tau2i) > 0 && any(rd <= 0)))
-      stop("rd must be a positive 2-vector")
+      if(case != "hs") stop("rd must be a positive 2-vector")
 
     ## check ab or default
     if(is.null(ab) || all(ab == -1)) {
@@ -184,8 +213,8 @@ function(X, y, T=1000, thin=NULL, RJ=TRUE, M=NULL, beta=NULL,
     ## double check ab
     if(length(ab) != 2 || any(ab < 0))
       stop("ab must be a non-negative 2-vector")
-    if(!ridge && !RJ && m >= n && any(ab <= 0))
-      stop("must have ab > c(0,0) when !ridge, !RJ, and ncol(X) >= length(y)")
+    if(case!="ridge" && !RJ && m >= n && any(ab <= 0))
+      stop("must have ab > c(0,0) when case!=\"ridge\", !RJ, and ncol(X) >= length(y)")
 
     ## check theta and possibly allocate omega2
     if(length(theta) != 1 || theta < 0)
@@ -223,11 +252,13 @@ function(X, y, T=1000, thin=NULL, RJ=TRUE, M=NULL, beta=NULL,
             m = as.integer(rep(sum(beta!=0), T)),
             s2 = as.double(rep(s2, T)),
             tau2i = tau2i,
+            hs = as.integer(case == "hs"),
             omega2 = omega2,
             nu = nu,
             pi = pi,
             lpost = double(T),
             llik = double(T),
+            llik.norm = double(T * (theta != 0)),
             mprior = as.double(mprior),
             r = as.double(rd[1]),
             delta = as.double(rd[2]),
@@ -264,12 +295,16 @@ function(X, y, T=1000, thin=NULL, RJ=TRUE, M=NULL, beta=NULL,
     else { r$theta <- NULL; r$omega2 <- NULL; r$nu <- NULL }
         
     ## first llik and lpost not available
+    if(theta == 0) r$llik.norm <- NULL
+    else r$llik.norm[1] <- NA
     r$llik[1] <- r$lpost[1] <- NA
 
     ## make logicals again
     r$normalize = as.logical(r$normalize)
     r$RJ <- as.logical(r$RJ)
     r$rao.s2 <- as.logical(r$rao.s2)
+    if(case != "ridge") r$hs <- as.logical(r$hs)
+    else r$hs <- NULL
 
     ## transform mprior and pi
     if(r$mprior[2] == 0) {

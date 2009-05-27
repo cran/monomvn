@@ -163,8 +163,10 @@ table2blasso <- function(table, thin, mprior, capm, m, n, cl)
     tl <- as.list(table)
     
     ## start with the easy scalars
-    l <- list(lpost=tl[["lpost"]], llik=tl[["llik"]],s2=tl[["s2"]], mu=tl[["mu"]],
-              m=tl[["m"]], lambda2=tl[["lambda2"]], nu=tl[["nu"]], pi=tl[["pi"]])
+    l <- list(lpost=tl[["lpost"]], llik=tl[["llik"]],
+              llik.norm=tl[["llik.norm"]], s2=tl[["s2"]],
+              mu=tl[["mu"]], m=tl[["m"]], lambda2=tl[["lambda2"]],
+              nu=tl[["nu"]], pi=tl[["pi"]])
     
     ## now the vectors
     bi <- grep("beta.[0-9]+", names(table))
@@ -178,15 +180,19 @@ table2blasso <- function(table, thin, mprior, capm, m, n, cl)
     l$omega2 <- as.matrix(table[,ti])
     ## could be that Student-t is off, and omega2 doesn't exist
     if(length(l$omega2) == 0) l$omega2 <- NULL
+
+    ## null
+    if(is.null(l$llik.norm)) l$llik.norm <- NULL
+    if(m == 0) l$beta <- NULL
     
     ## assign "inputs"
-    l$T <- nrow(l$beta)
+    l$T <- length(l$mu)
     l$thin <- "dynamic"
     l$RJ <- !is.null(l$m)
     if(l$RJ) l$mprior <- mprior
     else { l$mprior <- l$m <- l$pi <- NULL }
       
-    if(capm) l$M <- max(m, n) 
+    if(capm) l$M <- min(m, n) 
     else l$M <- m
     
     ## assign the call and the class
