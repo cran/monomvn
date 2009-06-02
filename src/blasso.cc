@@ -1257,19 +1257,21 @@ void Blasso::RJup(double qratio)
   BayesReg *breg_new = plus1_BayesReg(m+icept, n, breg, xnew, Xp, omega2);
 
   /* compute the new regression quantities */
-  assert(compute_BayesReg(m+icept+1, XtY, tau2i, lambda2, s2, breg_new));
+  bool success = compute_BayesReg(m+icept+1, XtY, tau2i, lambda2, s2, breg_new);
 
   /* calculate the acceptance probability breg -> breg_new */
-  double lalpha = rj_betas_lratio(breg, breg_new, s2, prop);
-
-  /* add in the forwards and prior probabilities */
-  lalpha +=  lpq_ratio;
-
-  /* add in the (log) prior model probabilities */
-  lalpha += lprior_model(m+1, Mmax, pi) - lprior_model(m, Mmax, pi);
+  double lalpha = -1e300*1e300;
+  if(success) {
+    /* log posterior ratio */
+    lalpha = rj_betas_lratio(breg, breg_new, s2, prop);
+    /* forwards and prior probabilities */
+    lalpha +=  lpq_ratio; 
+    /* add in the (log) prior model probabilities */
+    lalpha += lprior_model(m+1, Mmax, pi) - lprior_model(m, Mmax, pi); 
+  }
 
   /* MH accept or reject */
-  if(unif_rand() < exp(lalpha)*qratio) { /* accept */
+  if(success && unif_rand() < exp(lalpha)*qratio) { /* accept */
 
     /* copy the new regression utility */
     delete_BayesReg(breg); breg = breg_new;
@@ -1280,7 +1282,8 @@ void Blasso::RJup(double qratio)
 
     /* calculate new residual vector */
     dupv(resid, Y, n);
-    if(m+icept > 0) linalg_dgemv(CblasTrans,m+icept,n,-1.0,Xp,m+icept,beta,1,1.0,resid,1);
+    if(m+icept > 0) linalg_dgemv(CblasTrans,m+icept,n,-1.0,Xp,m+icept,
+				 beta,1,1.0,resid,1);
     linalg_daxpy(n, 0.0 - beta[m+icept], xnew, 1, resid, 1);
 
     /* other copies */
@@ -1333,6 +1336,7 @@ double Blasso::ProposeTau2i(double *lpq_ratio)
 
   /* switch over model choices */
   if(reg_model == LASSO || reg_model == HORSESHOE) { 
+    
     /* propose new m-th component of tau2i */
     tau2i = (double*) realloc(tau2i, sizeof(double)*(m+icept+1));  /* grow tau2i */
 
@@ -1344,7 +1348,9 @@ double Blasso::ProposeTau2i(double *lpq_ratio)
     tau2i[m+icept] = 1.0 / prop;        
     /* then prior and proposal probabilites cancel */
 
-  } else if(reg_model == RIDGE && m == 0) { /* randomly propose a new lambda */   
+  } else if(reg_model == RIDGE && m == 0) { 
+
+    /* randomly propose a new lambda */   
     assert(lambda2 == 0);                     /* sanity check */
     if(r != 0 && delta != 0){   /* then sample from the prior */
       prop = 1.0/rgamma(r, 1.0/delta);        /* is Inv-gamma */
@@ -1355,6 +1361,7 @@ double Blasso::ProposeTau2i(double *lpq_ratio)
       /* prior to proposal ratio does not cancel */
     }
     lambda2 = prop;
+
   } else if(reg_model == RIDGE) prop = lambda2;
 
   /* return the proposed value */
@@ -1380,15 +1387,19 @@ double Blasso::UnproposeTau2i(double *lqp_ratio, unsigned int iin)
 
   /* switch over model choices */
   if(reg_model == LASSO || reg_model == HORSESHOE) {  
+
     /* unpropose the iin-th component of tau2i */
     prop = 1.0/tau2i[iin+icept];          /* remove from the iin-th position */
     tau2i[iin+icept] = tau2i[m+icept-1];
     tau2i = (double*) realloc(tau2i, sizeof(double)*(m+icept-1));
     /* then the proposal and prior probabilities cancel */
+
   } else if(reg_model == RIDGE && m == 1) { 
+
     prop = lambda2; lambda2 = 0.0;
     if(r == 0 || delta == 0) *lqp_ratio = dexp(prop,1,1) + log(lambda2);
     /* otherwise the proposal ratios cancel */
+
   } else if(reg_model == RIDGE) prop = lambda2;
   
   /* return the un-proposed value */
@@ -1437,16 +1448,13 @@ void Blasso::RJdown(double qratio)
   BayesReg *breg_new = new_BayesReg(m+icept-1, n, Xp_new, DiXp_new);
 
   /* compute the new regression quantities */
-  bool success = compute_BayesReg(m+icept-1, XtY, tau2i, lambda2, s2, breg_new);
-  assert(success);
+  assert(compute_BayesReg(m+icept-1, XtY, tau2i, lambda2, s2, breg_new));
 
   /* calculate the acceptance probability breg -> breg_new */
   double lalpha = rj_betas_lratio(breg, breg_new, s2, prop);
-
-  /* add in the backwards and prior probabilities */
+  /* backwards and prior probabilities */
   lalpha += lqp_ratio;
-
-  /* add in the (log) prior model probabilities */
+  /* (log) prior model probabilities */
   lalpha += lprior_model(m-1, Mmax, pi) - lprior_model(m, Mmax, pi);
 
   /* MH accept or reject */
