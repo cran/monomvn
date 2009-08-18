@@ -34,12 +34,12 @@ function(X, y, T=1000, thin=NULL, RJ=TRUE, M=NULL, beta=NULL,
          ab=NULL, theta=0, rao.s2=TRUE, normalize=TRUE, verb=1)
   {
     blasso(X=X, y=y, T=T, thin=thin, RJ=RJ, M=M, beta=beta,
-           lambda2=lambda2, s2=s2, case="hs", mprior=mprior,
+           lambda2=lambda2, s2=s2, case="ridge", mprior=mprior,
            rd=rd, ab=ab, theta=theta, rao.s2=rao.s2,
            normalize=normalize, verb=verb)
 
     ## need to rename the outputs and re-work the S3 functions
-    ## appropriately
+    ## appropriately (to make ridge-specific)
   }
 
 
@@ -60,7 +60,7 @@ function(X, y, T=1000, thin=NULL, RJ=TRUE, M=NULL, beta=NULL,
            normalize=normalize, verb=verb)
 
     ## need to rename the outputs and re-work the S3 function
-    ## appropriately
+    ## appropriately (to make horseshoe-specific)
   }
 
 

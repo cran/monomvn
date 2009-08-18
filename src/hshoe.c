@@ -32,7 +32,7 @@
  * UpdateLambdaCPS:
  *
  * Carvalho, Polson & Scott (CPS) code that that samples
- * from the horseshoe using the Park & Casell (PC) 
+ * from the horseshoe using the Park & Casella (PC) 
  * parameterization (employed by blasso) to sample from
  * the Lambda parameter, which we call tau2i.
  *
@@ -75,7 +75,7 @@ void UpdateLambdaCPS(int p, double* Beta, double lambda2PC,
  * UpdateTauCPS:
  *
  * Carvalho, Polson & Scott (CPS) code that that samples
- * from the horseshoe using the Park & Casell (PC) 
+ * from the horseshoe using the Park & Casella (PC) 
  * parameterization (employed by blasso) to sample from
  * the Tau parameter, which we call lambda2.
  *
@@ -150,7 +150,7 @@ double LambdaCPS_lprior(int m, double *tau2iPC, double lambda2PC)
 
 
 /*
- * LambdaPCS_prior_draw
+ * LambdaPCS_prior_draw:
  *
  * draw tau2 from the prior as defined by CPS
  * NOTE the draw is for tau2 not tau2i
@@ -160,7 +160,7 @@ double LambdaCPS_prior_draw(double lambda2PC)
 {
   double lambdaCPS, mytau;
   mytau = lambda2PC; mytau = sqrt(1.0/mytau);
-  lambdaCPS = rt(1.0);
+  lambdaCPS = fabs(rt(1.0));
   return /*1.0/*/sqrt(mytau*lambdaCPS);
 }
 
@@ -178,4 +178,67 @@ double TauCPS_lprior(double lambda2PC)
   return log(2.0) + dt(mytau, 1.0, 1);
 }
 
+
+/* 
+ * UpdateLambdaCPS_NEG:
+ *
+ * Carvalho, Polson & Scott (CPS) code that that samples
+ * from the Normal Exponential Gamma prior using the 
+ * Park & Casella (PC) parameterization (employed by blasso) 
+ * to sample from the Lambda parameter, which we call tau2i.
+ *
+ * Thanks to James Scott for this code
+ */
+
+void UpdateLambdaCPS_NEG(int p, double a, double* Beta, 
+			 double lambda2PC, double sigma2, 
+			 double* tau2iPC)
+{
+  int j;
+  double mu, z, u1, u2, lower, upper, rate, lbound, ubound, lambdaCPS;
+  double tauCPS = sqrt(1.0/lambda2PC);
+
+  for(j=0; j<p; j++) {
+
+    lambdaCPS = 1.0/tauCPS;
+    lambdaCPS *= 1.0/sqrt(tau2iPC[j]);
+    mu = sqrt(1.0/sigma2) * (1.0/tauCPS) * Beta[j]; 
+    z = 1.0/(lambdaCPS * lambdaCPS); 
+    
+    upper = pow(z + 1.0, -(a+1.0));
+    u1 = runif(0.0, upper);
+    upper = pow(z, a-0.5);
+    u2 = runif(0.0, upper);
+    
+    /* Now we establish the upper and lower bounds 
+       for the slice region of z */
+    if(a >= 0.5) {
+      lower = pow(u2, 1/(a-0.5));
+      upper = pow(u1, -1.0/(a+1.0)) - 1;
+    } else {
+      lower = 0.0;
+      upper = pow(u1, -1.0/(a+1.0)) - 1;
+      rate = pow(u2, -a+0.5);
+      if(rate < upper) upper = rate;
+    }
+    
+    /* Now we express that slice region in terms of 
+       the exponential cdf */
+    rate = mu*mu/2.0;
+    rate = 1.0/rate;
+    if(lower == 0.0) lbound = 0.0;
+    else lbound = pexp(lower, rate, 1, 0);
+    ubound = pexp(upper, rate, 1, 0);
+    
+    /* Now we draw the uniform random variable and 
+       use inverse CDF to get draw */
+    u1 = runif(lbound,ubound);
+    z = qexp(u1, rate, 1, 0);
+    rate = sqrt(1.0/z);
+    lambdaCPS = rate;
+    /* tau2iPC[j] = pow(1/(lambdaCPS * tauCPS), 2.0); */
+    tau2iPC[j] = 1.0 / lambdaCPS * tauCPS;
+    tau2iPC[j] *= tau2iPC[j];
+  }
+}
 

@@ -26,10 +26,13 @@
 #ifndef __HSHOE_H__
 #define __HSHOE_H__ 
 
-void UpdateLambdaCPS(int p, double* Beta, double lambda2PC, double sigma2, double* tau2iPC);
-void UpdateTauCPS(int p, double *Beta, double *tau2iPC, double sigma2, double *lambda2PC);
+void UpdateLambdaCPS(int p, double* Beta, double lambda2PC, double sigma2, 
+		     double* tau2iPC);
+void UpdateTauCPS(int p, double *Beta, double *tau2iPC, double sigma2, 
+		  double *lambda2PC);
 double LambdaCPS_lprior(int m, double *tau2iPC, double lambda2PC);
 double TauCPS_lprior(double lambda2PC);
 double LambdaCPS_prior_draw(double lambda2PC);
-
+void UpdateLambdaCPS_NEG(int p, double a, double* Beta, double lambda2PC, 
+			 double sigma2, double* tau2iPC);
 #endif
