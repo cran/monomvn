@@ -31,7 +31,7 @@
 
 'bmonomvn' <-
 function(y, pre=TRUE, p=0.9, B=100, T=200, thin=1, economy=FALSE,
-         method=c("lasso", "ridge", "lsr", "factor"),
+         method=c("lasso", "ridge", "lsr", "factor", "hs"),
          RJ=c("p", "bpsn", "none"), capm=TRUE, #capm=method!="lasso",
          start=NULL, mprior= 0, rd=NULL, theta=0, rao.s2=TRUE, QP=NULL,
          verb=1, trace=FALSE)
@@ -84,6 +84,7 @@ function(y, pre=TRUE, p=0.9, B=100, T=200, thin=1, economy=FALSE,
     if(method == "ridge") mi <- 1
     else if(method == "lsr") mi <- 2
     else if(method == "factor") mi <- 3
+    else if(method == "hs") mi <- 4
 
     ## check p argument
     if(method == "factor" && (length(p) != 1 || p < 1)) {
@@ -252,8 +253,8 @@ function(y, pre=TRUE, p=0.9, B=100, T=200, thin=1, economy=FALSE,
     }
     
     ## extract the methods
-    mnames <- c("bcomplete", "brjlasso", "brjridge", "brjlsr",
-                "blasso", "bridge", "blsr")
+    mnames <- c("bcomplete", "brjlasso", "brjhs", "brjridge", "brjlsr", 
+                "blasso", "bhs", "bridge", "blsr")
     r$methods <- mnames[r$methods]
     
     ## put the original ordering back

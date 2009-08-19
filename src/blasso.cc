@@ -59,8 +59,8 @@ Blasso::Blasso(const unsigned int M, const unsigned int N, double **Xorig,
 {
   /* sanity checks */
   if(Mmax >= N) 
-    assert(RJ || reg_model == LASSO || reg_model == LASSO 
-	   || reg_model == RIDGE || (reg_model == FACTOR && nf < N));
+    assert(RJ || reg_model == LASSO || reg_model == HORSESHOE || 
+	   reg_model == RIDGE || (reg_model == FACTOR && nf < N));
 
   /* copy RJ setting */
   this->RJ = RJ;
@@ -703,21 +703,19 @@ void Blasso::InitParams(REG_MODEL reg_model, double *beta, double s2,
   assert(this->tau2i == NULL && this->beta == NULL && this->omega2 == NULL);
   assert(reg_model == this->reg_model);
 
-  assert(reg_model != HORSESHOE); // NOT HANDLED YET 
-
   /* set the LASSO/HORSESHOE & RIDGE lambda2 and tau2i initial values */
   if(reg_model != OLS) {
 
     /* assign starting lambda2 value */
     this->lambda2 = lambda2;
-    if(m > 0 && lambda2 <= 0  && reg_model == LASSO) {
+    if(m > 0 && lambda2 <= 0  && (reg_model == LASSO || reg_model == HORSESHOE)) {
       warning("starting lambda2 (%g) <= 0 is invalid (m=%d, M=%d)", 
 	      lambda2, m, M);
       this->lambda2 = 1.0;
     } else this->lambda2 = lambda2;
 
-    /* tau2i is only used by LASSO, not RIDGE */
-    if(reg_model == LASSO) {
+    /* tau2i is only used by LASSO & HORSESHOE, not RIDGE */
+    if(reg_model == LASSO || reg_model == HORSESHOE) {
       tau2i = ones(m+icept, 1.0);
       if(icept) tau2i[0] = 0.0;
     } else { /* for RIDGE */
@@ -1268,7 +1266,7 @@ void Blasso::RJup(double qratio)
     lalpha +=  lpq_ratio; 
     /* add in the (log) prior model probabilities */
     lalpha += lprior_model(m+1, Mmax, pi) - lprior_model(m, Mmax, pi); 
-  }
+  } else warning("ill-posed regression in RJup");
 
   /* MH accept or reject */
   if(success && unif_rand() < exp(lalpha)*qratio) { /* accept */
@@ -1342,7 +1340,7 @@ double Blasso::ProposeTau2i(double *lpq_ratio)
 
     /* sample tau2 from the prior: under horseshoe or lasso  */
     if(reg_model == HORSESHOE) prop = LambdaCPS_prior_draw(lambda2); 
-    else  prop = rexp(2.0/lambda2);     
+    else prop = rexp(2.0/lambda2);     
 
     /* assign to the new last entry of tau2i */    
     tau2i[m+icept] = 1.0 / prop;        
@@ -2315,15 +2313,17 @@ int Blasso::Method(void)
 
   if(RJ) { /* reversible jump */
     
-    if(reg_model == LASSO || reg_model == HORSESHOE) return 2;  /* rjlasso */
-    else if(reg_model == RIDGE) return 3;  /* rjridge */
-    else return 4;
+    if(reg_model == LASSO) return 2;  /* rjlasso */
+    else if(reg_model == HORSESHOE) return 3;  /* rjhs */
+    else if(reg_model == RIDGE) return 4;  /* rjridge */
+    else return 5;
 
   } else { /* no RJ */
 
-    if(reg_model == LASSO || reg_model == HORSESHOE) return 5; /* lasso */
-    if(reg_model == RIDGE) return 6;
-    else return 7; /* ols */
+    if(reg_model == LASSO) return 6; /* lasso */
+    else if(reg_model == HORSESHOE) return 7; /* hs */
+    else if(reg_model == RIDGE) return 8; /* ridge */
+    else return 9; /* ols */
   }
 }
 

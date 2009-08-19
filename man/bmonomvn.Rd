@@ -15,7 +15,7 @@
 
 \usage{
 bmonomvn(y, pre = TRUE, p = 0.9, B = 100, T = 200, thin = 1,
-         economy = FALSE, method = c("lasso", "ridge", "lsr", "factor"),
+         economy = FALSE, method = c("lasso", "ridge", "lsr", "factor", "hs"),
          RJ = c("p", "bpsn", "none"), capm = TRUE, start = NULL,
          mprior = 0, rd = NULL, theta = 0, rao.s2 = TRUE, QP = NULL,
          verb = 1, trace = FALSE)

@@ -224,6 +224,7 @@ void Bmonomvn::InitBlassos(const unsigned int method, int* facts,
       case 1: rm = RIDGE; break;
       case 2: rm = OLS; break;
       case 3: rm = FACTOR; break;
+      case 4: rm = HORSESHOE; break;
       default: error("regression method %d not supported", method);
       }
       
@@ -318,7 +319,7 @@ void Bmonomvn::InitBlassoTrace(unsigned int i)
   REG_MODEL rm = blasso[i]->RegModel();
   if(rm != OLS) {
     fprintf(trace_lasso[i], "lambda2 ");
-    if(rm == LASSO)
+    if(rm == LASSO || rm == HORSESHOE)
       for(unsigned int j=0; j<i; j++)
 	fprintf(trace_lasso[i], "tau2i.%d ", j);
   }
@@ -364,7 +365,7 @@ void Bmonomvn::PrintTrace(unsigned int i)
   REG_MODEL rm = blasso[i]->RegModel();
   if(rm != OLS) {
     fprintf(trace_lasso[i], "%.20f ", lambda2);
-    if(rm == LASSO)
+    if(rm == LASSO || rm == HORSESHOE)
       for(unsigned int j=0; j<i; j++)
 	fprintf(trace_lasso[i], "%.20f ", tau2i[j]);
   }
