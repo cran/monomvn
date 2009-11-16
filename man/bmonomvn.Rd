@@ -299,8 +299,8 @@ bmonomvn(y, pre = TRUE, p = 0.9, B = 100, T = 200, thin = 1,
 }
 
 \seealso{ \code{\link{blasso}}, \code{\link{monomvn}},
-  \code{\link{default.QP}}, \code{\link[norm]{em.norm}} in the
-  \pkg{norm} package, and \code{\link[mvnmle]{mlest}} in the
+  \code{\link{default.QP}}, \code{em.norm} in the now defunct
+  \code{norm} package, and \code{\link[mvnmle]{mlest}} in the
   \pkg{mvnmle} package, \code{\link{returns}}}
 
 \examples{

@@ -34,4 +34,4 @@ of highly variable length}. \cr Preprint available on arXiv:0710.5837:
 \url{http://www.statslab.cam.ac.uk/~bobby/monomvn.html}
 }
 \keyword{ package }
-\seealso{ \code{\link{monomvn}}, \pkg{norm}, \pkg{mvnmle} }
+\seealso{ \code{\link{monomvn}}, the now defunct \code{norm} package, \pkg{mvnmle} }

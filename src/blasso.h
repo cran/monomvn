@@ -78,7 +78,8 @@ class Blasso
 			       this module */
 
   /* reversible-jump controlled columns of X in Xp */
-  bool icept;               /* indicates whether the intercept is handled explicitly */
+  bool icept;               /* indicates if an intercept is desired in the model */
+  bool EI;                  /* indicates if the intercept (I) is handled explicitly (E) */
   unsigned int m;           /* number of columns/rows of current XtX (breg->A) */
   bool RJ;                  /* indicated whether to do RJ moves or not */
   bool *pb;                 /* booleans indicating the m colns of X that are in use */
@@ -189,7 +190,8 @@ class Blasso
 	 const double lambda2, const double s2, double *tau2i, const bool hs,
 	 double *omega2, const double nu, double *mprior, const double r, 
 	 const double delta, const double a, const double b, const double theta, 
-	 const bool rao_s2, const bool normalize, const unsigned int verb);
+	 const bool rao_s2, const bool icept, const bool normalize, 
+	 const unsigned int verb);
   Blasso(const unsigned int m, const unsigned int n, double **Xorig,
 	 Rmiss *R, double *Xnorm, const double Xnorm_scale, double *Xmean, 
 	 const unsigned int ldx, double *Y, const bool RJ, unsigned int Mmax, 
