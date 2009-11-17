@@ -11,12 +11,12 @@
 \usage{
 bridge(X, y, T = 1000, thin = NULL, RJ = TRUE, M = NULL,
        beta = NULL, lambda2 = 1, s2 = var(y-mean(y)), mprior = 0,
-       rd = NULL, ab = NULL, theta=0, rao.s2 = TRUE, normalize = TRUE,
-       verb = 1)
+       rd = NULL, ab = NULL, theta=0, rao.s2 = TRUE, icept = TRUE,
+       normalize = TRUE, verb = 1)
 blasso(X, y, T = 1000, thin = NULL, RJ = TRUE, M = NULL,
        beta = NULL, lambda2 = 1, s2 = var(y-mean(y)),
-       case = c("default", "ridge", "hs"),
-       mprior = 0, rd = NULL, ab = NULL, theta=0, rao.s2 = TRUE,
+       case = c("default", "ridge", "hs"), mprior = 0, rd = NULL,
+       ab = NULL, theta=0, rao.s2 = TRUE, icept = TRUE, 
        normalize = TRUE, verb = 1)
 }
 
@@ -82,6 +82,9 @@ blasso(X, y, T = 1000, thin = NULL, RJ = TRUE, M = NULL,
   \item{rao.s2 }{indicates whether Rao-Blackwellized samples for
     \eqn{\sigma^2}{s^2} should be used (default \code{TRUE}); see
     below for more details }
+  \item{icept}{ if \code{TRUE}, an implicit intercept term is fit
+    in the model, otherwise the the intercept is zero; default is
+    \code{TRUE} }
   \item{normalize}{ if \code{TRUE}, each variable is standardized
     to have unit L2-norm, otherwise it is left alone; default is
     \code{TRUE} }

@@ -245,8 +245,8 @@ monomvn(y, pre = TRUE, method = c("plsr", "pcr", "lasso", "lar",
   the bug has been reported to the authors of \pkg{lars}
 }
 
-\seealso{ \code{\link{bmonomvn}}, \code{\link[norm]{em.norm}}
-  in the \pkg{norm} package, and \code{\link[mvnmle]{mlest}}
+\seealso{ \code{\link{bmonomvn}}, \code{em.norm}
+  in the now defunct \code{norm} package, and \code{\link[mvnmle]{mlest}}
   in the \pkg{mvnmle} package}
 
 \examples{

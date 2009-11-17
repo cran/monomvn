@@ -31,11 +31,12 @@
 'bridge' <-
 function(X, y, T=1000, thin=NULL, RJ=TRUE, M=NULL, beta=NULL,
          lambda2=1, s2=var(y-mean(y)), mprior=0, rd=NULL,
-         ab=NULL, theta=0, rao.s2=TRUE, normalize=TRUE, verb=1)
+         ab=NULL, theta=0, rao.s2=TRUE, icept=TRUE, normalize=TRUE,
+         verb=1)
   {
     blasso(X=X, y=y, T=T, thin=thin, RJ=RJ, M=M, beta=beta,
            lambda2=lambda2, s2=s2, case="ridge", mprior=mprior,
-           rd=rd, ab=ab, theta=theta, rao.s2=rao.s2,
+           rd=rd, ab=ab, theta=theta, rao.s2=rao.s2, icept=icept,
            normalize=normalize, verb=verb)
 
     ## need to rename the outputs and re-work the S3 functions
@@ -51,12 +52,12 @@ function(X, y, T=1000, thin=NULL, RJ=TRUE, M=NULL, beta=NULL,
 
 'bhs' <-
 function(X, y, T=1000, thin=NULL, RJ=TRUE, M=NULL, beta=NULL,
-         lambda2=1, s2=var(y-mean(y)), mprior=0,
-         ab=NULL, theta=0, rao.s2=TRUE, normalize=TRUE, verb=1)
+         lambda2=1, s2=var(y-mean(y)), mprior=0, ab=NULL,
+         theta=0, rao.s2=TRUE, icept=TRUE, normalize=TRUE, verb=1)
   {
     blasso(X=X, y=y, T=T, thin=thin, RJ=RJ, M=M, beta=beta,
            lambda2=lambda2, s2=s2, case="hs", mprior=mprior,
-           rd=c(0,0), ab=ab, theta=theta, rao.s2=rao.s2,
+           rd=c(0,0), ab=ab, theta=theta, rao.s2=rao.s2, icept=icept,
            normalize=normalize, verb=verb)
 
     ## need to rename the outputs and re-work the S3 function
@@ -74,7 +75,7 @@ function(X, y, T=1000, thin=NULL, RJ=TRUE, M=NULL, beta=NULL,
 'blasso' <-
 function(X, y, T=1000, thin=NULL, RJ=TRUE, M=NULL, beta=NULL,
          lambda2=1, s2=var(y-mean(y)), case=c("default", "ridge", "hs"),
-         mprior=0, rd=NULL, ab=NULL, theta=0, rao.s2=TRUE,
+         mprior=0, rd=NULL, ab=NULL, theta=0, rao.s2=TRUE, icept=TRUE,
          normalize=TRUE, verb=1)
   {
     ## (quitely) double-check that blasso is clean before-hand
@@ -232,6 +233,10 @@ function(X, y, T=1000, thin=NULL, RJ=TRUE, M=NULL, beta=NULL,
     if(length(normalize) != 1 || !is.logical(normalize))
       stop("normalize must be a scalar logical")
 
+    ## check icept
+    if(length(icept) != 1 || !is.logical(icept))
+      stop("icept must be a scalar logical")
+
     ## check verb
     if(length(verb) != 1 || verb < 0)
       stop("verb must be non-negative a scalar integer")
@@ -266,6 +271,7 @@ function(X, y, T=1000, thin=NULL, RJ=TRUE, M=NULL, beta=NULL,
             b = as.double(ab[2]),
             theta = as.double(theta),
             rao.s2 = as.integer(rao.s2),
+            icept = as.integer(icept),
             normalize = as.integer(normalize),
             verb = as.integer(verb),
             PACKAGE = "monomvn")
@@ -301,6 +307,7 @@ function(X, y, T=1000, thin=NULL, RJ=TRUE, M=NULL, beta=NULL,
 
     ## make logicals again
     r$normalize = as.logical(r$normalize)
+    r$icept = as.logical(r$icept)
     r$RJ <- as.logical(r$RJ)
     r$rao.s2 <- as.logical(r$rao.s2)
     if(case != "ridge") r$hs <- as.logical(r$hs)
