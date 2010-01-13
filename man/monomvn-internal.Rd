@@ -8,6 +8,7 @@
 \alias{get.regress.C}
 \alias{adjust.elist.C}
 \alias{mvnpdf.C}
+\alias{rgig.C}
 \alias{bmonomvn.read.traces}
 \alias{read.DA.trace}
 \alias{read.muS.trace}

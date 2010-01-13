@@ -30,8 +30,8 @@
 ## model
 
 'plot.blasso' <-
-  function(x, which=c("coef", "s2", "lambda2", "tau2i", "omega2",
-                "nu", "m", "pi"),
+  function(x, which=c("coef", "s2", "lambda2", "gamma",
+                "tau2i", "omega2", "nu", "m", "pi"),
            subset=NULL, burnin=0, ...)
 {
   ## check the burnin argument
@@ -62,6 +62,11 @@
     par(mfrow=c(2,1))
     hist(x$lambda2[burnin:x$T], ...)
     plot(burnin:x$T, x$lambda2[burnin:x$T], type="l", main="lambda2 chain", ...)
+  } else if(which == "gamma") {
+    if(is.null(x$gamma)) stop("NG regression was not used")
+    par(mfrow=c(2,1))
+    hist(x$gamma[burnin:x$T], ...)
+    plot(burnin:x$T, x$gamma[burnin:x$T], type="l", main="gamma chain", ...)
   } else if(which == "m") {
     if(!x$RJ) stop("RJ was not used")
     par(mfrow=c(2,1))
@@ -117,12 +122,16 @@ function(object, burnin=0, ...)
     rl$coef <- summary(df)
     rl$s2 <- summary(object$s2[burnin:object$T])
 
-    ## only do if lasso
+    ## only do if lasso, hs or ng
     if(!is.null(object$lambda2))
       rl$lambda2 <- summary(object$lambda2[burnin:object$T])
     if(!is.null(object$tau2i))
       rl$tau2i <- summary(data.frame(object$tau2i[burnin:object$T,]))
 
+    ## only do if ng prior
+    if(!is.null(object$gamma))
+      rl$gamma <- summary(object$gamma[burnin:object$T])
+    
     ## only do if Student-t errors
     if(!is.null(object$omega2))
       rl$omega2 <- summary(data.frame(object$omega2[burnin:object$T,]))
@@ -182,6 +191,13 @@ function(object, burnin=0, ...)
     cat("\n")
   }
 
+  ## print gamma
+  if(!is.null(x$gamma)) {
+    cat("gamma:\n")
+    print(x$gamma)
+    cat("\n")
+  }
+
   ## print tau2i
   if(!is.null(x$tau2i)) {
     cat("tau2i:\n")
@@ -222,9 +238,13 @@ function(x, ...)
         " rounds\nbetween each sample\n", sep="")
 
     ## say something about lasso
-    if(!is.null(x$tau2i))
-      cat("\nLasso was used to shrink regression coefficients\n")
-    else if(!is.null(x$lambda2)) {
+    if(!is.null(x$tau2i)) {
+      if(x$hs)
+        cat("\nHorseshoe was used to shrink regression coefficients\n")
+      else if(!is.null(x$gamma))
+        cat("\nA Normal-Gamma prior was used to shrink regression coefficients\n")
+      else cat("\nLasso was used to shrink regression coefficients\n")
+    } else if(!is.null(x$lambda2)) {
       cat("\nA ridge parameter was used to shrink regression coefficients\n")
     }
 

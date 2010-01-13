@@ -88,6 +88,13 @@ c
      *     work(*), temp, sum, t1, tt, gc, gs, crval,
      *     nu, amat(fdamat,*)
       logical t1inf, t2min
+
+c
+c     Bobby: getting rid of compiler warnings
+c
+      t1 = -1
+      it1 = -1
+
       r = min(n,q)
       l = 2*n + (r*(r+5))/2 + 2*q + 1
 c 
@@ -226,7 +233,7 @@ c            nvl = i
 c            goto 72
 c         endif
  71   continue
- 72   if (nvl .EQ. 0) goto 999
+      if (nvl .EQ. 0) goto 999
 c     
 c calculate d=J^Tn^+ where n^+ is the normal vector of the violated
 c constraint. J is stored in dmat in this implementation!!
@@ -269,7 +276,7 @@ c
          work(iwrv+i) = sum
          if (iact(i) .LE. meq) goto 95
          if (sum .LE. 0.d0) goto 95
- 7       t1inf = .FALSE.
+         t1inf = .FALSE.
          it1 = i
  95   continue
 c

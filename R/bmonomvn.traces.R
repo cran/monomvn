@@ -30,7 +30,7 @@
 
 "bmonomvn.read.traces" <-
   function(N, n, M, nao, oo, nam, capm, mprior, R, cl,
-           thin, verb, rmfiles=TRUE)
+           hs, thin, verb, rmfiles=TRUE)
 {
   ## initialize the list
   trace <- list()
@@ -49,7 +49,7 @@
     lname <- paste("M", i-1, ".n", n[i], sep="")
     table <- read.table(fname, header=TRUE)
     trace$reg[[lname]] <- table2blasso(table, thin, mprior, capm,
-                                       i-1, n[i], cl)
+                                       i-1, n[i], hs, cl)
     if(rmfiles) unlink(fname)
 
     ## progress meter
@@ -157,7 +157,7 @@ read.DA.trace <- function(nao, verb, rmfiles)
 ## skeleton blasso class object so that the blasso methods
 ## like print, plot, and summary can be used
 
-table2blasso <- function(table, thin, mprior, capm, m, n, cl)
+table2blasso <- function(table, thin, mprior, capm, m, n, hs, cl)
   {
     ## first convert to a list
     tl <- as.list(table)
@@ -166,7 +166,7 @@ table2blasso <- function(table, thin, mprior, capm, m, n, cl)
     l <- list(lpost=tl[["lpost"]], llik=tl[["llik"]],
               llik.norm=tl[["llik.norm"]], s2=tl[["s2"]],
               mu=tl[["mu"]], m=tl[["m"]], lambda2=tl[["lambda2"]],
-              nu=tl[["nu"]], pi=tl[["pi"]])
+              gamma=tl[["gamma"]], nu=tl[["nu"]], pi=tl[["pi"]])
     
     ## now the vectors
     bi <- grep("beta.[0-9]+", names(table))
@@ -180,6 +180,10 @@ table2blasso <- function(table, thin, mprior, capm, m, n, cl)
     l$omega2 <- as.matrix(table[,ti])
     ## could be that Student-t is off, and omega2 doesn't exist
     if(length(l$omega2) == 0) l$omega2 <- NULL
+
+    ## determine horseshoe indicator
+    if(!is.null(l$lambda2) && hs) l$hs <- TRUE
+    else l$hs <- FALSE
 
     ## null
     if(is.null(l$llik.norm)) l$llik.norm <- NULL

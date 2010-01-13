@@ -8,17 +8,18 @@
   Bayesian estimation via sampling from the posterior distribution of the
   of the mean and covariance matrix of multivariate normal (MVN)
   distributed data with a monotone missingness pattern, via Gibbs Sampling.
-  Through the use of parsimonious/shrinkage regressions (lasso & ridge),
+  Through the use of parsimonious/shrinkage regressions (lasso/NG &
+ridge),
   where standard regressions fail, this function can handle an (almost)
   arbitrary amount of missing data
 }
 
 \usage{
 bmonomvn(y, pre = TRUE, p = 0.9, B = 100, T = 200, thin = 1,
-         economy = FALSE, method = c("lasso", "ridge", "lsr", "factor", "hs"),
-         RJ = c("p", "bpsn", "none"), capm = TRUE, start = NULL,
-         mprior = 0, rd = NULL, theta = 0, rao.s2 = TRUE, QP = NULL,
-         verb = 1, trace = FALSE)
+         economy = FALSE, method = c("lasso", "ridge", "lsr", "factor",
+         "hs", "ng"), RJ = c("p", "bpsn", "none"), capm = TRUE,
+         start = NULL, mprior = 0, rd = NULL, theta = 0, rao.s2 = TRUE,
+         QP = NULL, verb = 1, trace = FALSE)
 }
 
 \arguments{
@@ -31,7 +32,8 @@ bmonomvn(y, pre = TRUE, p = 0.9, B = 100, T = 200, thin = 1,
  \item{p}{ when performing regressions, \code{p} is the proportion of the
    number of columns to rows in the design matrix before an
    alternative regression (lasso, ridge, or RJ) is performed as if
-   least-squares regression has \dQuote{failed}.  Least-squares regression is
+   least-squares regression has \dQuote{failed}.
+   Least-squares regression is
    known to fail when the number of columns equals the number of rows,
    hence a default of \code{p = 0.9 <= 1}. Alternatively, setting
    \code{p = 0} forces a parsimonious method to be used for
@@ -59,8 +61,9 @@ bmonomvn(y, pre = TRUE, p = 0.9, B = 100, T = 200, thin = 1,
     the outset, saving dynamic allocations}
   \item{method}{ indicates the Bayesian parsimonious regression
     specification to be used, choosing between the lasso (default)
-    of Park \& Casella, a ridge regression special case of the lasso,
-    and least-squares. The \code{"factor"} method treats the first
+    of Park \& Casella, the NG extension,
+    a ridge regression special case, and least-squares.
+    The \code{"factor"} method treats the first
     \code{p} columns of \code{y} as known factors}
   \item{RJ }{ indicates the Reversible Jump strategy to be employed.
     The default argument of \code{"p"} method uses RJ whenever a
@@ -224,7 +227,8 @@ bmonomvn(y, pre = TRUE, p = 0.9, B = 100, T = 200, thin = 1,
     (columns of the design matrix) used in the regression model for
     each column of \code{y}. If input \code{RJ = FALSE} then this simply
     corresponds to the monotone ordering (these would correspond to
-    the \code{NA} entries from \code{\link{monomvn}}).  When \code{RJ = TRUE}
+    the \code{NA} entries from \code{\link{monomvn}}).
+    When \code{RJ = TRUE}
     the monotone ordering is an upper bound (on each entry)}
   \item{trace}{ if input \code{trace = TRUE} then this field contains
     traces of the samples of \eqn{\mu}{mu} in the field \code{$mu} and
@@ -264,19 +268,15 @@ bmonomvn(y, pre = TRUE, p = 0.9, B = 100, T = 200, thin = 1,
 }
 
 \references{
-  Robert B. Gramacy, Joo Hee Lee, and Ricardo Silva (2008).
-  \emph{On estimating covariances between many assets with histories 
-  of highly variable length}. \cr Preprint available on arXiv:0710.5837:
-  \url{http://arxiv.org/abs/0710.5837}
+  R.B. Gramacy and E. Pantaleo (2010).
+  \emph{Shrinkage regression for multivariate inference with missing
+    data, and an application to portfolio balancing.}  Preprint available on
+  arXiv:0710.5837
+  \url{http://arxiv.org/abs/0907.2135}
 
   Roderick J.A. Little and Donald B. Rubin (2002).
   \emph{Statistical Analysis with Missing Data}, Second Edition.
   Wilely.
-
-  Park, T., Casella, G. (2008). \emph{The Bayesian Lasso.}\cr
-  Journal of the American Statistical Association, Volume 103,
-  Number 482, June 2008 , pp. 681-686(6)\cr
-  \url{http://www.stat.ufl.edu/~casella/Papers/Lasso.pdf}
 
 \url{http://www.statslab.cam.ac.uk/~bobby/monomvn.html}
 }

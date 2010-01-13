@@ -28,7 +28,7 @@
 #include <fstream>
 #include "ustructs.h"
 
-typedef enum REG_MODEL {LASSO=901,OLS=902,RIDGE=903,FACTOR=904,HORSESHOE=905} REG_MODEL;
+typedef enum REG_MODEL {LASSO=901,OLS=902,RIDGE=903,FACTOR=904,HORSESHOE=905,NG=906} REG_MODEL;
 typedef enum MAT_STATE {NOINIT=1001,COV=1002,CHOLCOV=1003} MAT_STATE;
 
  /* regression utility structure */
@@ -107,6 +107,7 @@ class Blasso
                                or indicates Unif[0,...,Mmax] when p=0 */
   double *omega2;           /* diagonal of the covariance matrix D of Y~N(Xb,s2*D) */
   double nu;                /* degrees of freedom parameter in Student-t model */
+  double gam;               /* gamma parameter in the NG model */
 
   /* regressions utility structure(s) */
   BayesReg *breg;           /* matrices and vectors of regression quantities */
@@ -138,13 +139,16 @@ class Blasso
 
   /* parameter manipulation  */
   void GetParams(double *mu, double *beta, int *m, double *s2, double *tau2i, 
-		 double *omega2, double *nu, double *lambda2, double *pi) const;
+		 double *omega2, double *nu, double *lambda2, double *gam, 
+		 double *pi) const;
   void InitIndicators(const unsigned int M, const unsigned int Mmax, 
 		      double *beta, int *facts, const unsigned int nf);
   void InitPB(double *beta, int *facts, const unsigned int nf);
-  void InitParams(const REG_MODEL reg_model, double *beta, double s2, double lambda2);
+  void InitParams(const REG_MODEL reg_model, double *beta, double s2, 
+		  double lambda2);
   void InitParams(double * beta, const double lambda2, const double s2, 
-		  double *tau2i, const bool hs, double *omega2, const double nu);
+		  double *tau2i, bool hs, double *omega2, 
+		  const double nu, const double gam);
   void InitRegress(void);
   void InitX(const unsigned int n, double **X, const bool normalize);
   void InitX(const unsigned int n, double **Xorig, Rmiss *R, 
@@ -177,6 +181,7 @@ class Blasso
   void DrawNu(void);
   bool Compute(const bool reinit);
   void DrawLambda2(void);
+  void DrawGamma(void);
   void DrawPi(void);
 
   /* likelihood and posterior */
@@ -188,10 +193,10 @@ class Blasso
   Blasso(const unsigned int m, const unsigned int n, double **X, double *Y,
 	 const bool RJ, const unsigned int Mmax, double *beta, 
 	 const double lambda2, const double s2, double *tau2i, const bool hs,
-	 double *omega2, const double nu, double *mprior, const double r, 
-	 const double delta, const double a, const double b, const double theta, 
-	 const bool rao_s2, const bool icept, const bool normalize, 
-	 const unsigned int verb);
+	 double *omega2, const double nu, const double gam, double *mprior, 
+	 const double r, const double delta, const double a, const double b, 
+	 const double theta, const bool rao_s2, const bool icept, 
+	 const bool normalize, const unsigned int verb);
   Blasso(const unsigned int m, const unsigned int n, double **Xorig,
 	 Rmiss *R, double *Xnorm, const double Xnorm_scale, double *Xmean, 
 	 const unsigned int ldx, double *Y, const bool RJ, unsigned int Mmax, 
@@ -214,11 +219,12 @@ class Blasso
   /* MCMC sampling */
   void Rounds(const unsigned int T, const unsigned int thin, double *mu, 
 	      double **beta, int *m, double *s2, double **tau2i, double *lambda2, 
-	      double **omega2, double *nu, double *pi, double *lpost, 
+	      double *gam, double **omega2, double *nu, double *pi, double *lpost, 
 	      double *llik, double *llik_norm);
   void Draw(const double thin, const bool usenu, double *mu, double *beta, 
-	    int *m, double *s2, double *tau2i, double *lambda2, double *omega2, 
-	    double *nu, double *pi, double *lpost, double *llik, double *llik_norm);
+	    int *m, double *s2, double *tau2i, double *lambda2, double *gam, 
+	    double *omega2, double *nu, double *pi, double *lpost, double *llik, 
+	    double *llik_norm);
   void DataAugment(void);
 
     
@@ -229,6 +235,12 @@ class Blasso
   int Verb(void);
 };
 
+
+/* particular conditionals in C */
+void draw_tau2i_lasso(const unsigned int m, double *tau2i, double *beta, 
+		      double lambda2, double s2);
+void draw_tau2i_ng(const unsigned int m, double *tau2i, double *beta, 
+		   double lambda2, double gam, double s2);
 
 /* random number generation */
 void mvnrnd(double *x, double *mu, double **cov, double *rn, 
@@ -258,14 +270,16 @@ void draw_beta(const unsigned int m, double *beta, BayesReg* breg,
 	       const double s2, double *rn);
 double log_likelihood(const unsigned int n, double *resid, const double s2,
 		      const double nu);//, double *omega2);
-double log_prior(const unsigned int n, const unsigned int m, double *beta, 
-		 const double s2, double *tau2i, bool hs, const double lambda2, 
-		 double *omega2, const double nu, const double a, const double b, 
+double log_prior(const unsigned int n, const unsigned int m, const bool EI,
+		 double *beta, const double s2, double *tau2i, 
+		 const REG_MODEL reg_model, const double lambda2, double *omega2, 
+		 const double nu, const double gam, const double a, const double b, 
 		 const double r, const double delta, const double theta, 
 		 const unsigned int Mmax, const double pi, double *mprior);
 
 /* regression utility structure */
-BayesReg* new_BayesReg(const unsigned int m, const unsigned int n, double **Xp, double **DiXp);
+BayesReg* new_BayesReg(const unsigned int m, const unsigned int n, double **Xp, 
+		       double **DiXp);
 void delete_BayesReg(BayesReg* breg);
 bool compute_BayesReg(const unsigned int m, double *XtY, double *tau2i, 
 		      const double lambda2, const double s2, BayesReg *breg);
