@@ -69,6 +69,7 @@ class Bmonomvn
   int m;                     /* number of non-zero components of beta */
   double mu_s;               /* intercept term in the regression */
   double lambda2;            /* lasso penalty parameter */
+  double gam;                /* NG prior gamma parameter */
   double s2;                 /* regression error variance */
   double *beta;              /* regression coefficients */
   double *tau2i;             /* latent vector of (inverse-) diagonal 

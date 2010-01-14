@@ -197,3 +197,21 @@ get.regress.C <- function(x)
   ## return a list of the regressions
   return(reg)
 }
+
+
+## rgig.C:
+##
+## interfaces to the C routine for sampling from a generalized 
+## inverse gaussian (GIG) distribution, based on the R version
+## implemented in the ghyp package on CRAN
+
+rgig.C <- function(n, lambda, chi, psi)
+  {
+    return(.C("rgig_R",
+              n = as.integer(n),
+              lambda = as.double(lambda),
+              chi = as.double(chi),
+              psi = as.double(psi),
+              samps = double(n),
+              PACKAGE = "monomvn")$samps)
+  }

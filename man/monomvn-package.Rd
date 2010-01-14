@@ -9,10 +9,12 @@ Through the use of parsimonious/shrinkage regressions
 the package can handle a nearly arbitrary amount of missing data.
 The current version supports maximum likelihood inference and
 a full Bayesian approach employing scale-mixtures for the
-lasso (double-exponential) prior and Student-t errors.  Monotone 
+lasso (double-exponential) and Normal-Gamma priors,
+and Student-t errors.  Monotone 
 data augmentation extends this Bayesian approach to arbitrary
 missingness patterns.  A fully functional standalone interface to the 
-Bayesian lasso (from Park & Casella) and ridge regression with model 
+Bayesian lasso (from Park & Casella), the Normal-Gamma (from Griffin
+& Brown), and ridge regression with model 
 selection via Reversible Jump, and student-t errors (from Geweke) is 
 also provided}
 \details{

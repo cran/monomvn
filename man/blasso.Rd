@@ -2,9 +2,9 @@
 \alias{blasso}
 \alias{bridge}
 
-\title{ Bayesian Lasso and Ridge Regression }
+\title{ Bayesian Lasso/NG and Ridge Regression }
 \description{
-  Inference for ordinary least squares, lasso and ridge regression
+  Inference for ordinary least squares, lasso/NG and ridge regression
   models by (Gibbs) sampling from the Bayesian posterior distribution,
   augmented with Reversible Jump for model selection
 }
@@ -15,7 +15,7 @@ bridge(X, y, T = 1000, thin = NULL, RJ = TRUE, M = NULL,
        normalize = TRUE, verb = 1)
 blasso(X, y, T = 1000, thin = NULL, RJ = TRUE, M = NULL,
        beta = NULL, lambda2 = 1, s2 = var(y-mean(y)),
-       case = c("default", "ridge", "hs"), mprior = 0, rd = NULL,
+       case = c("default", "ridge", "hs", "ng"), mprior = 0, rd = NULL,
        ab = NULL, theta=0, rao.s2 = TRUE, icept = TRUE, 
        normalize = TRUE, verb = 1)
 }
@@ -49,7 +49,8 @@ blasso(X, y, T = 1000, thin = NULL, RJ = TRUE, M = NULL,
   \item{lambda2}{ square of the initial lasso penalty parameter.  If
     zero, then least squares regressions are used }
   \item{s2}{ initial variance parameter }
-  \item{case}{ specifies if ridge regression should be done instead
+  \item{case}{ specifies if ridge regression or the
+    Normal-Gamma should be done instead
     of the lasso; only meaningful when \code{lambda2 > 0} }
   \item{mprior}{ prior on the number of non-zero regression coefficients
     (and therefore covariates) \code{m} in the model. The default
@@ -136,6 +137,9 @@ blasso(X, y, T = 1000, thin = NULL, RJ = TRUE, M = NULL,
     length(y)} in which case the proper specification of \code{rd =
     c(5,10)} is used instead.
 
+  The Normal--Gamma prior (Griffin & Brown, 2009) is implemented as
+  an extension to the Bayesian lasso with \code{case = "ng"}
+
   When \code{theta > 0} then the Student-t errors via scale mixtures
   (and thereby extra latent variables \code{omega2}) of Geweke (1993)
   is applied as an extension to the Bayesian lasso/ridge model.
@@ -158,6 +162,8 @@ blasso(X, y, T = 1000, thin = NULL, RJ = TRUE, M = NULL,
   \item{s2 }{ a vector of \code{T} samples of the variance parameter}
   \item{lambda2 }{ a vector of \code{T} samples of the penalty
     parameter}
+  \item{gamma }{ a vector of \code{T} with the gamma parameter
+    when \code{case = "ng"} }
   \item{tau2i}{ a \code{T*ncol(X)} \code{matrix} of \code{T} samples from
     the (latent) inverse diagonal of the prior covariance matrix for
     \code{beta}, obtained for Lasso regressions }
@@ -196,6 +202,11 @@ blasso(X, y, T = 1000, thin = NULL, RJ = TRUE, M = NULL,
   Number 482, June 2008 , pp. 681-686(6)\cr
   \url{http://www.stat.ufl.edu/~casella/Papers/Lasso.pdf}
 
+  Griffin, J.E. and Brown, P.J. (2009).
+  \emph{Inference with Normal--Gamma prior distributions in
+    regression problems.} Tech. rep., University of Kent.\cr
+  \url{http://www.kent.ac.uk/ims/personal/jeg28/paper_ba10_final.pdf}
+  
   Chris Hans. (2008). \emph{Bayesian Lasso regression.}
   Technical Report No. 810, Department of Statistics,
   The Ohio State University, Columbus, OH 43210.\cr

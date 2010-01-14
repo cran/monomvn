@@ -14,8 +14,9 @@
 \usage{
 \method{print}{blasso}(x, ...)
 \method{summary}{blasso}(object, burnin = 0, ...)
-\method{plot}{blasso}(x, which=c("coef", "s2", "lambda2", "tau2i",
-    "omega2", "nu", "m", "pi"), subset = NULL, burnin = 0, ... )
+\method{plot}{blasso}(x, which=c("coef", "s2", "lambda2", "gamma",
+    "tau2i","omega2", "nu", "m", "pi"), subset = NULL, burnin = 0,
+    ... )
 \method{print}{summary.blasso}(x, ...)
 }
 
@@ -74,6 +75,8 @@
   \item{s2}{ a \code{summary} of \code{x$s2}, the variance parameter }
   \item{lambda2}{ a \code{summary} of \code{x$lambda2}, the penalty
     parameter, when lasso or ridge regression is active }
+  \item{lambda2}{ a \code{summary} of \code{x$gamma},
+    when the NG extensions to the lasso are used }
   \item{tau2i}{ a \code{summary} of the columns of the latent
     \code{x$tau2i} parameters when lasso is active }
   \item{omega2}{ a \code{summary} of the columns of the latent

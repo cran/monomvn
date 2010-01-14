@@ -31,7 +31,7 @@
 
 'bmonomvn' <-
 function(y, pre=TRUE, p=0.9, B=100, T=200, thin=1, economy=FALSE,
-         method=c("lasso", "ridge", "lsr", "factor", "hs"),
+         method=c("lasso", "ridge", "lsr", "factor", "hs", "ng"),
          RJ=c("p", "bpsn", "none"), capm=TRUE, #capm=method!="lasso",
          start=NULL, mprior= 0, rd=NULL, theta=0, rao.s2=TRUE, QP=NULL,
          verb=1, trace=FALSE)
@@ -85,6 +85,7 @@ function(y, pre=TRUE, p=0.9, B=100, T=200, thin=1, economy=FALSE,
     else if(method == "lsr") mi <- 2
     else if(method == "factor") mi <- 3
     else if(method == "hs") mi <- 4
+    else if(method == "ng") mi <- 5
 
     ## check p argument
     if(method == "factor" && (length(p) != 1 || p < 1)) {
@@ -124,12 +125,14 @@ function(y, pre=TRUE, p=0.9, B=100, T=200, thin=1, economy=FALSE,
 
     ## check r and delta (rd), or default
     if(is.null(rd)) {
-      if(method == "lasso") rd <- c(2,0.1)
+      if(method == "lasso" || method == "ng") rd <- c(2,0.1)
       else if(method == "ridge") rd <- c(5, 10)
       else rd <- c(0,0)
     }
     if(length(rd) != 2 || (method=="lasso" && any(rd <= 0)))
       stop("rd must be a positive 2-vector")
+    if(method == "ng" && rd[1] != 2)
+      stop("must have rd[1] = 2 for NG prior")
 
     ## check theta
     if(length(theta) != 1)# || theta < 0)
@@ -253,8 +256,8 @@ function(y, pre=TRUE, p=0.9, B=100, T=200, thin=1, economy=FALSE,
     }
     
     ## extract the methods
-    mnames <- c("bcomplete", "brjlasso", "brjhs", "brjridge", "brjlsr", 
-                "blasso", "bhs", "bridge", "blsr")
+    mnames <- c("bcomplete", "brjlasso", "brjng", "brjhs", "brjridge", "brjlsr", 
+                "blasso", "bng", "bhs", "bridge", "blsr")
     r$methods <- mnames[r$methods]
     
     ## put the original ordering back
@@ -295,7 +298,8 @@ function(y, pre=TRUE, p=0.9, B=100, T=200, thin=1, economy=FALSE,
     ## read the trace in the output files, and then delete them
     if(trace)
       r$trace <- bmonomvn.read.traces(r$N, r$n, r$M, nao, oo, nam,
-                                      capm, mprior, R, cl, r$thin, r$verb)
+                                      capm, mprior, R, cl,
+                                      method == "hs", r$thin, r$verb)
     else r$trace <- NULL
     
     ## final line

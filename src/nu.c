@@ -72,6 +72,10 @@ void nustar_durr(const double x, double *fn, double *df, const int n, const doub
  * from the full conditional for nu -- this code is a adaptation of
  * the "rtsafe" function provided by W.H.Press et al., "Numerical 
  * Recipes in C++, The art of scientific computing", CUP 2002, 2nd ed.
+ *
+ * MAYBE CALL THIS FUNCTION root_safe_newton instead, except it seems
+ * to take extra arguments (n and eta) which are particular to nustar
+ * finding
  */
 
 double nustar_urr_root 
@@ -146,9 +150,6 @@ double draw_nu_reject(const unsigned int n, const double eta,
   unsigned int counter;
 
   /* bracketing for root finding */
-  /*if(theta < 1) { x1 = theta; 0.001; x2 = 1.0/theta; }
-  else if(theta > 1) { x2 = theta; 0.001; x1 = 1.0/theta; }
-  else { x1 = 0.5; x2 = 2.0; } */
   x1 = 0.5; x2 = 2;
   f1 = nustar_urr(x1, n, eta);
   f2 = nustar_urr(x2, n, eta);
@@ -158,8 +159,6 @@ double draw_nu_reject(const unsigned int n, const double eta,
     x1 = 0.5*x1; x2 = 2.0*x2;
     f1 = nustar_urr(x1, n, eta);
     f2 = nustar_urr(x2, n, eta);
-    /* myprintf(stderr, "counter=%d, f[%g]=%g, f[%g]=%g, eta=%g\n", 
-       counter, x1, f1, x2, f2, eta); */
   } while(f1*f2 >= 0.0 && counter<100);
 
   /* check that we've actually been able to bracket the root */
@@ -177,9 +176,8 @@ double draw_nu_reject(const unsigned int n, const double eta,
   } while(log(u) >= (dn*(0.5*nu)*log(0.5*nu) - (0.5*dn*nustar)*log(0.5*nustar)
 		     + dn*lgamma(0.5*nustar) - dn*lgamma(0.5*nu)
 		     + (nu-nustar)*(1.0/nustar-eta))); 
-  /*while(log(u) >= dn*lgamma(0.5*nustar) + 0.5*dn*nu*(log(nu) - log(nustar))
-    - dn*lgamma(0.5*nu) + (1.0/nustar-eta)*(nu-nustar)); */
-
+  
+  /* done */
   return(nu);
  }
 

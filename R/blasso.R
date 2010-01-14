@@ -74,7 +74,7 @@ function(X, y, T=1000, thin=NULL, RJ=TRUE, M=NULL, beta=NULL,
 
 'blasso' <-
 function(X, y, T=1000, thin=NULL, RJ=TRUE, M=NULL, beta=NULL,
-         lambda2=1, s2=var(y-mean(y)), case=c("default", "ridge", "hs"),
+         lambda2=1, s2=var(y-mean(y)), case=c("default", "ridge", "hs", "ng"),
          mprior=0, rd=NULL, ab=NULL, theta=0, rao.s2=TRUE, icept=TRUE,
          normalize=TRUE, verb=1)
   {
@@ -114,6 +114,8 @@ function(X, y, T=1000, thin=NULL, RJ=TRUE, M=NULL, beta=NULL,
     case <- match.arg(case)
     if(case == "ridge" && lambda2 == 0)
       stop("specifying case=\"ridge\" and lambda2=0 doesn't make any sense")
+    if(case == "ng") gamma <- rep(2, T)
+    else gamma <- double(0)
     
     ## check M or default
     if(is.null(M)) {
@@ -199,8 +201,10 @@ function(X, y, T=1000, thin=NULL, RJ=TRUE, M=NULL, beta=NULL,
       } else rd <- c(2, 0.1) ## otherwise lasso G prior
     }
     ## double-check rd
-    if(length(rd) != 2 || (length(tau2i) > 0 && any(rd <= 0)))
+    if(length(rd) != 2 || (length(tau2i) > 0 && any(rd <= 0))) {
       if(case != "hs") stop("rd must be a positive 2-vector")
+      if(case == "ng" && rd[1] != 2) stop("must have rd[1] = 2 for NG prior")
+    }
 
     ## check ab or default
     if(is.null(ab) || all(ab == -1)) {
@@ -250,6 +254,7 @@ function(X, y, T=1000, thin=NULL, RJ=TRUE, M=NULL, beta=NULL,
             X = as.double(t(X)),
             y = as.double(y),
             lambda2 = lambda2,
+            gamma = gamma,
             mu = double(T),
             RJ = as.integer(RJ),
             M = as.integer(M),
@@ -322,6 +327,7 @@ function(X, y, T=1000, thin=NULL, RJ=TRUE, M=NULL, beta=NULL,
     ## null-out redundancies
     r$col <- r$n <- r$cols <- r$verb <- NULL
     if(length(r$lambda2) == 0) r$lambda2 <- NULL
+    if(length(r$gamma) == 0) r$gamma <- NULL
 
     ## assign call and class
     r$call <- cl

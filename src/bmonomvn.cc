@@ -99,7 +99,7 @@ Bmonomvn::Bmonomvn(const unsigned int M, const unsigned int N, double **Y,
   s2 = 1.0;
 
   /* utility doubles for traces etc */
-  pi = lambda2 = 0.0;
+  pi = lambda2 = gam = 0.0;
   this->theta = theta;
   onenu = false;
   if(theta != 0) {
@@ -225,6 +225,7 @@ void Bmonomvn::InitBlassos(const unsigned int method, int* facts,
       case 2: rm = OLS; break;
       case 3: rm = FACTOR; break;
       case 4: rm = HORSESHOE; break;
+      case 5: rm = NG; break;
       default: error("regression method %d not supported", method);
       }
       
@@ -251,8 +252,13 @@ void Bmonomvn::InitBlassos(const unsigned int method, int* facts,
       assert(lambda2 >= 0);
     } else { 
       beta_start = NULL;
-      lambda2 = (double) (rm != OLS);
+      lambda2 = (double) (rm != OLS);      
     }
+    
+    /* starting gamma parameter (possibly) for NG prior;
+       [not read from the start vector] */
+    if(rm == NG) gam = 2.0;
+    else gam = 1.0;
 
     /* set up the j-th regression, with initial params */
     double Xnorm_scale = sqrt(((double) n[i])/N);
@@ -319,7 +325,8 @@ void Bmonomvn::InitBlassoTrace(unsigned int i)
   REG_MODEL rm = blasso[i]->RegModel();
   if(rm != OLS) {
     fprintf(trace_lasso[i], "lambda2 ");
-    if(rm == LASSO || rm == HORSESHOE)
+    if(rm == NG) fprintf(trace_lasso[i], "gamma ");
+    if(rm == LASSO || rm == HORSESHOE || rm == NG)
       for(unsigned int j=0; j<i; j++)
 	fprintf(trace_lasso[i], "tau2i.%d ", j);
   }
@@ -365,7 +372,8 @@ void Bmonomvn::PrintTrace(unsigned int i)
   REG_MODEL rm = blasso[i]->RegModel();
   if(rm != OLS) {
     fprintf(trace_lasso[i], "%.20f ", lambda2);
-    if(rm == LASSO || rm == HORSESHOE)
+    if(rm == NG) fprintf(trace_lasso[i], "%.20f ", gam);
+    if(rm == LASSO || rm == HORSESHOE || rm == NG)
       for(unsigned int j=0; j<i; j++)
 	fprintf(trace_lasso[i], "%.20f ", tau2i[j]);
   }
@@ -488,7 +496,7 @@ double Bmonomvn::Draw(const double thin, const bool economy,
     
     /* obtain a draw from the i-th Bayesian lasso parameters */
     blasso[i]->Draw(thin, onenu, &mu_s, beta, &m, &s2, tau2i, 
-		    &lambda2, omega2, &nu, &pi, &lpost_bl, 
+		    &lambda2, &gam, omega2, &nu, &pi, &lpost_bl, 
 		    &llik_bl, &llik_norm_bl);
 
     /* accumulate eta for a global nu draw */
