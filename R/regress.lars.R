@@ -75,17 +75,18 @@
       
       ## use Cross-Validation (possibly LOO)      
       ## num.fractions could be passed in same as ncomp.max
-      cv <- cv.lars(x=y1,y=y2[,i],type=method,K=K,intercept=TRUE, use.Gram=use.Gram,
+      cv <- cv.lars(x=y1,y=y2[,i],type=method,K=K,intercept=TRUE,use.Gram=use.Gram,
                     plot.it=FALSE)
       
       ## choose with with "one-standard error rule"
       wm <- which.min(cv$cv)
       tf <- cv$cv < cv$cv[wm] + cv$cv.error[wm]
-      s <- cv$fraction[(1:100)[tf][1]]
+      s <- cv$index[(1:100)[tf][1]]
+      ## s <- cv$fraction[(1:100)[tf][1]]
       mode <- "fraction"
     
       ## get the lasso fit with fraction f
-      reglst <- lars(x=y1,y=y2[,i],type=method, intercept=TRUE, use.Gram=use.Gram)
+      reglst <- lars(x=y1,y=y2[,i],type=method,intercept=TRUE,use.Gram=use.Gram)
       
     }
 

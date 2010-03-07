@@ -1,3 +1,10 @@
+1.8-5 (7 March 2011)
+-----
+
+minor chance to regress.lars to correct for cv.lars output
+format change in latest lars package
+
+
 1.8-4 (23 Feb 2011)
 ----- 
 
