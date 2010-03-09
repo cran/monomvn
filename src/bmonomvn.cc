@@ -218,7 +218,7 @@ void Bmonomvn::InitBlassos(const unsigned int method, int* facts,
     bool RJ = false; /* corresponds to RJm = 2 */
 
     /* re-set RJ and method vi the p parameter */
-    if(rm != FACTOR && p*((double)n[i]) <= i) {
+    if(rm != FACTOR && p*((double)n[i]) <= i+2) {  /* recently changed to i + 2 (v1.8) */
       switch (method) {
       case 0: rm = LASSO; break;
       case 1: rm = RIDGE; break;
@@ -504,10 +504,8 @@ double Bmonomvn::Draw(const double thin, const bool economy,
       assert(theta != 0);
       int ni = n[i];
       if(R) ni -= R->n2[i];
-      for (int k=0; k<ni; k++) 
-	eta += 0.5*(log(omega2[k])+1.0/omega2[k]);
+      for (int k=0; k<ni; k++) eta += 0.5*(log(omega2[k])+1.0/omega2[k]);
       neta += ni;
-      // myprintf(stderr, "i=%d, nu=%g, eta=%g\n", i, nu, eta);
     }
 
     /* perform data augmentation */

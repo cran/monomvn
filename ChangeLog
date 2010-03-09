@@ -1,3 +1,12 @@
+1.8-1 (03 Mar 2010)
+-----
+
+now doing n_j <= i + 2 for stabel regression check in 
+Bmonomvn
+
+fixed rao.s2 bug that was causing a segmentation fault
+
+
 1.8 (13 Jan 2010)
 ---
 

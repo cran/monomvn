@@ -1319,7 +1319,7 @@ void Blasso::RJup(double qratio)
     linalg_daxpy(n, 0.0 - beta[m+EI], xnew, 1, resid, 1);
 
     /* other copies */
-    if(BtDi) BtDi = (double*) realloc(BtDi, sizeof(double) * (m+EI+1));
+    if(!rao_s2) BtDi = (double*) realloc(BtDi, sizeof(double) * (m+EI+1));
 
     /* add another column to the design matrix */
     Xp = new_bigger_matrix(Xp, n, m+EI, n, m+EI+1);
@@ -1506,7 +1506,7 @@ void Blasso::RJdown(double qratio)
 			     beta,1,1.0,resid,1);
 
     /* other */
-    if(BtDi) BtDi = (double*) realloc(BtDi, sizeof(double) * (m+EI-1));
+    if(!rao_s2) BtDi = (double*) realloc(BtDi, sizeof(double) * (m+EI-1));
 
     /* permanently remove the column from the design matrix */
     delete_matrix(Xp); Xp = Xp_new;
@@ -1894,7 +1894,7 @@ void Blasso::DrawS2(void)
   /* BtDB = beta'D beta/tau2 as long as lambda != 0 */
   double BtDiB;
   if(m+EI > 0 && (reg_model == LASSO || reg_model == HORSESHOE || reg_model == NG)) {
-    dupv(BtDi, beta, m);
+    dupv(BtDi, beta, m+EI);
     if(tau2i) scalev2(BtDi, m+EI, tau2i);
     else scalev(BtDi, m+EI, 1.0/lambda2);
     BtDiB = linalg_ddot(m+EI, BtDi, 1, beta, 1);
@@ -2224,7 +2224,7 @@ double log_prior(const unsigned int n, const unsigned int m, const bool EI,
   else lprior += 0.0 - log(s2);  /* Jeffrey's */
 
   /* add in the prior for tau2 */
-  if(tau2i && lambda2 != 0)
+  if(tau2i && lambda2 != 0) {
     if(reg_model == HORSESHOE) 
       lprior += LambdaCPS_lprior(m, tau2i+EI, lambda2); /* under horseshoe */
     else if(reg_model == LASSO) { /* otherwise is exponential for lasso */
@@ -2234,13 +2234,15 @@ double log_prior(const unsigned int n, const unsigned int m, const bool EI,
       for(unsigned int i=EI; i<m+EI; i++)
 	if(tau2i[i] > 0) lprior += dgamma(1.0/tau2i[i], gam, 2.0/lambda2, 1);
     }
+  }
   assert(!isinf(lprior));
   
   /* add in the lambda prior */
   if(tau2i) { /* lasso */
-    if(lambda2 != 0 && r != 0 && delta != 0) 
+    if(lambda2 != 0 && r != 0 && delta != 0) {
       if(reg_model == HORSESHOE) lprior += TauCPS_lprior(lambda2); /* under horseshoe */
       else lprior += dgamma(lambda2, r, gam/delta, 1); /* or is Gamma for lasso & ng */
+    }
   } else if(lambda2 != 0) { /* ridge */
     if(r != 0 && delta != 0) 
       lprior += dgamma(1.0/lambda2, r, 1.0/delta, 1); /* is Inv-gamma */
