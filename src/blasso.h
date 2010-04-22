@@ -197,9 +197,9 @@ class Blasso
 	 const double r, const double delta, const double a, const double b, 
 	 const double theta, const bool rao_s2, const bool icept, 
 	 const bool normalize, const unsigned int verb);
-  Blasso(const unsigned int m, const unsigned int n, double **Xorig,
+  Blasso(const unsigned int m, const unsigned int N, double **Xorig,
 	 Rmiss *R, double *Xnorm, const double Xnorm_scale, double *Xmean, 
-	 const unsigned int ldx, double *Y, const bool RJ, unsigned int Mmax, 
+	 const unsigned int ldx, double *Y, const bool RJ, const unsigned int Mmax, 
 	 double *beta_start, const double s2, const double lambda2_start, 
 	 double *mprior, const double r, const double delta, const double theta,
 	 const REG_MODEL reg_model, int *facts, const unsigned int nf, bool rao_s2, 

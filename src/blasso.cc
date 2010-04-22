@@ -1109,7 +1109,7 @@ void Blasso::Draw(const unsigned int thin, const bool fixnu)
     if(RJ) DrawPi();
 
     /* draw the latent Student-t variables */
-    if(omega2 && !isinf(nu)) DrawOmega2();
+    if(omega2 && R_FINITE(nu)) DrawOmega2();
 
     /* draw latent lasso variables, and update Bmu and Vb, etc. */
     if(reg_model == LASSO || reg_model == HORSESHOE || reg_model == NG) 
@@ -1125,7 +1125,7 @@ void Blasso::Draw(const unsigned int thin, const bool fixnu)
       error("ill-posed regression in DrawTau2i");
     
     /* draw nu based on the omega2s */
-    if(!isinf(nu) && omega2 && !fixnu) DrawNu();
+    if(R_FINITE(nu) && omega2 && !fixnu) DrawNu();
 
     /* only depends on tau2i for LASSO/HORSESHOE/NG, and beta for RIDGE */
     if(reg_model != OLS) DrawLambda2();
@@ -1961,7 +1961,7 @@ void Blasso::DrawOmega2(void)
   for (unsigned int i=0; i<n; i++)	{ 
     double scale = 0.5*(nu+sq(resid[i])/s2); 
     omega2[i] = 1.0/rgamma(shape,1.0/scale);
-    assert(!isinf(omega2[i]));
+    assert(R_FINITE(omega2[i]));
   }
 
   /* update XtY, which will change when omega2 has changed */
@@ -2147,12 +2147,12 @@ void Blasso::logPosterior(void)
 
   /* add in the model prior */
   lpost += lprior_model(m, Mmax, pi);
-  assert(!isinf(lpost));
+  assert(R_FINITE(lpost));
   
   /* add in the model order probability */
   if(mprior[1] != 0 && pi != 0) 
     lpost += dbeta(pi, mprior[0] + (double)m, mprior[1] + (double)(Mmax-m), 1);
-  assert(!isinf(lpost));
+  assert(R_FINITE(lpost));
 }
 
 
@@ -2177,9 +2177,9 @@ double log_likelihood(const unsigned int n, double *resid, const double s2,
   double sd = sqrt(s2);	
   unsigned int i;
   /* both nu = 0 and nu = inf indicate no Student-t errors */
-  if(isinf(nu) || nu == 0) for(i=0; i<n; i++) llik += dnorm(resid[i], 0.0, sd, 1);
+  if(!R_FINITE(nu) || nu == 0) for(i=0; i<n; i++) llik += dnorm(resid[i], 0.0, sd, 1);
   else for(i=0; i<n; i++) llik += dt(resid[i]/sd, nu, 1);
-  assert(!isinf(llik) && !isnan(llik));
+  assert(R_FINITE(llik) && !isnan(llik));
  
    /* return the log likelihood */
   return llik;
@@ -2205,7 +2205,7 @@ double log_prior(const unsigned int n, const unsigned int m, const bool EI,
   /* for summing in the (log) posterior */
   double lprior = 0.0;
   double sd = sqrt(s2);
-
+  
   /* add in the prior for beta */
   if(tau2i) { /* under the lasso */
     for(unsigned int i=EI; i<m+EI; i++) 
@@ -2216,13 +2216,13 @@ double log_prior(const unsigned int n, const unsigned int m, const bool EI,
     for(unsigned int i=EI; i<m+EI; i++)
       lprior += dnorm(beta[i], 0.0, sd*lambda, 1);
   } /* nothing to do under flat/Jeffrey's OLS prior */
-  assert(!isinf(lprior));
-
+  assert(R_FINITE(lprior));
+  
   /* add in the prior for s2 */
   if(a != 0 && b != 0) 
     lprior += dgamma(1.0/s2, 0.5*a, 2.0/b, 1);
   else lprior += 0.0 - log(s2);  /* Jeffrey's */
-
+  
   /* add in the prior for tau2 */
   if(tau2i && lambda2 != 0) {
     if(reg_model == HORSESHOE) 
@@ -2235,7 +2235,7 @@ double log_prior(const unsigned int n, const unsigned int m, const bool EI,
 	if(tau2i[i] > 0) lprior += dgamma(1.0/tau2i[i], gam, 2.0/lambda2, 1);
     }
   }
-  assert(!isinf(lprior));
+  assert(R_FINITE(lprior));
   
   /* add in the lambda prior */
   if(tau2i) { /* lasso */
@@ -2248,7 +2248,7 @@ double log_prior(const unsigned int n, const unsigned int m, const bool EI,
       lprior += dgamma(1.0/lambda2, r, 1.0/delta, 1); /* is Inv-gamma */
     else lprior += 0.0 - log(lambda2); /* Jeffrey's */
   }
-  assert(!isinf(lprior));
+  assert(R_FINITE(lprior));
 
   /* add in the gamma prior in the NG model */
   if(reg_model == NG) lprior += dexp(gam, 1.0, 1);
@@ -2510,7 +2510,7 @@ void draw_tau2i_ng(const unsigned int m, double *tau2i, double *beta,
     rgig(1, gam - 0.5, sq(beta[j])/s2, lambda2, &tau2); 
   
     /* check to make sure there were no numerical problems */
-    if(tau2 < DOUBLE_EPS || !isfinite(tau2)) {
+    if(tau2 < DOUBLE_EPS || R_FINITE(tau2)) {
 #ifdef DEBUG
       myprintf(stdout, "tau2i_ng: j=%d, m=%d, gam=%g, l2=%g, s2=%g, \
 beta=%g, tau2i=%g, tau2=%g\n", 

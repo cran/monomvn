@@ -1,3 +1,9 @@
+1.8-2 (21 April 2010)
+-----
+
+replaced isinf by R_FINITE as suggested by Brian Ripley
+
+
 1.8-1 (03 Mar 2010)
 -----
 
