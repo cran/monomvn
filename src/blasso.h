@@ -202,8 +202,8 @@ class Blasso
 	 const unsigned int ldx, double *Y, const bool RJ, const unsigned int Mmax, 
 	 double *beta_start, const double s2, const double lambda2_start, 
 	 double *mprior, const double r, const double delta, const double theta,
-	 const REG_MODEL reg_model, int *facts, const unsigned int nf, bool rao_s2, 
-	 const unsigned int verb);
+	 const REG_MODEL reg_model, int *facts, const unsigned int nf, 
+         const bool rao_s2, const unsigned int verb);
   ~Blasso();
   void Economize(void);
 
