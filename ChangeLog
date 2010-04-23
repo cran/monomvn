@@ -1,3 +1,10 @@
+1.8-4 (23 Feb 2011)
+----- 
+
+Updated rhelp.c file with new my_r_process_events
+fixed off-by-one error in Cp method in regress.lars
+
+
 1.8-3 (23 April 2010)
 -----
 

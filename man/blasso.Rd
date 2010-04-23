@@ -80,7 +80,7 @@ blasso(X, y, T = 1000, thin = NULL, RJ = TRUE, M = NULL,
    Student-t errors implemented by a scale-mixture prior.
    The default setting of \code{theta = 0} turns off this prior,
    defaulting to a normal errors prior }
-  \item{rao.s2 }{indicates whether Rao-Blackwellized samples for
+  \item{rao.s2}{indicates whether Rao-Blackwellized samples for
     \eqn{\sigma^2}{s^2} should be used (default \code{TRUE}); see
     below for more details }
   \item{icept}{ if \code{TRUE}, an implicit intercept term is fit
@@ -94,7 +94,7 @@ blasso(X, y, T = 1000, thin = NULL, RJ = TRUE, M = NULL,
 }
 \details{
   The Bayesian lasso model and Gibbs Sampling algorithm is described
-  in detail in Park \& Casella (2008).  The algorithm implemented
+  in detail in Park & Casella (2008).  The algorithm implemented
   by this function is identical to that described therein, with
   the exception of an added \dQuote{option} to use a Rao-Blackwellized
   sample of \eqn{\sigma^2}{s^2} (with \eqn{\beta}{beta} integrated out)
@@ -113,7 +113,7 @@ blasso(X, y, T = 1000, thin = NULL, RJ = TRUE, M = NULL,
   The RJ mechanism implemented here for the Bayesian lasso model
   selection differs from the one described by Hans (2008),
   which is based on an idea from Geweke (1996).
-  Those methods require departing from the Park \& Casella
+  Those methods require departing from the Park & Casella
   (2008) latent-variable model and requires sampling from each conditional
   \eqn{\beta_i | \beta_{(-i)}, \dots}{beta[i] | beta[-i], ...} for all
   \eqn{i}{i}, since a mixture prior with a point-mass at zero is
@@ -123,7 +123,7 @@ blasso(X, y, T = 1000, thin = NULL, RJ = TRUE, M = NULL,
   we believe yields better mixing in the Markov chain.  RJ
   proposals to increase/decrease the number of non-zero entries
   does proceed component-wise, but the acceptance rates are high due
-  due to marginalized between-model moves (Troughton \& Godsill, 1997).
+  due to marginalized between-model moves (Troughton & Godsill, 1997).
 
   When the lasso prior or RJ is used, the automatic thinning level
   (unless \code{thin != NULL}) is determined by the number of columns
