@@ -68,8 +68,8 @@
       reglst <- lars(x=y1, y=y2[,i],type=method,intercept=TRUE, use.Gram=use.Gram)
       if(sum(is.nan(reglst$Cp))) ## unsuccessful
         return(y1, y2, method=method, validation="CV", verb=verb)
-      s <- as.numeric(names(which.min(reglst$Cp)))
-      co <- coef(reglst, s=s)
+      s <- as.numeric(names(which.min(reglst$Cp))) + 1
+      mode <- "step"
 
     } else {
       
@@ -77,38 +77,32 @@
       ## num.fractions could be passed in same as ncomp.max
       cv <- cv.lars(x=y1,y=y2[,i],type=method,K=K,intercept=TRUE, use.Gram=use.Gram,
                     plot.it=FALSE)
-
+      
       ## choose with with "one-standard error rule"
       wm <- which.min(cv$cv)
       tf <- cv$cv < cv$cv[wm] + cv$cv.error[wm]
       s <- cv$fraction[(1:100)[tf][1]]
-        
+      mode <- "fraction"
+    
       ## get the lasso fit with fraction f
       reglst <- lars(x=y1,y=y2[,i],type=method, intercept=TRUE, use.Gram=use.Gram)
-      co <- coef(reglst, s=s, mode="fraction")
+      
     }
 
-    ## get the intercept and residulas and check that they
-    ## have led to a valid regression
-    ##for(j in 1:2) {
-      ## extract regression coefficients and parameters
-      y1co <- drop(y1 %*% co)
-      icept <- reglst$mu - mean(y1co)
-      bvec[,i] <- c(icept, co)
+    ## extract the coefficients
+    co <- coef(reglst, s=s, mode=mode)
+  
+    ## extract regression coefficients and parameters
+    y1co <- drop(y1 %*% co)
+    icept <- reglst$mu - mean(y1co)
+    bvec[,i] <- c(icept, co)
     
-      ## use predict to get the residuals
-      ## res[,i] <- y2[,i] - predict(reglst, s=s, newx=y1, mode="fraction")$fit
-      res[,i] <- y2[,i] - (icept + y1co)
-
-      ## check that the residuals aren't too small
-      ##if(mean(res[,i]^2) < 1e-7) ##sqrt(.Machine$double.eps))
-        ##{ co <- coef(reglst, s=0, mode="fraction"); next; }
-      ##else break;
-    ##}
+    ## use predict to get the residuals
+    res[,i] <- y2[,i] - (icept + y1co)
 
     ## calculate the number of nonzero coefficients, and extract lambda
     nzb[i] <- sum(co != 0)
-    if(!is.null(lambda)) lambda[i] <- get.lambda(reglst, s)
+    if(!is.null(lambda)) lambda[i] <- get.lambda(reglst, s, mode)
     if(verb > 0) cat(paste(" ", nzb[i], sep=""))
 
   }
@@ -127,13 +121,13 @@
 ## fraction setting (s).  No checking of inputs is
 ## currently provided
 
-get.lambda <- function(obj, s)
+get.lambda <- function(obj, s, mode)
   {
     ## base case
     if(s == 0) return(max(obj$lambda))
     
     ## extract the regression coefficients for the desired fraction
-    beta <- coef(obj, s=s, mode="fraction")
+    beta <- coef(obj, s=s, mode=mode)
 
     ## get the non-zero entries and their count
     bnz <- beta != 0

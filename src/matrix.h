@@ -39,6 +39,7 @@ typedef struct rect {
 	
 Rect* new_rect(unsigned int d);
 Rect* new_dup_rect(Rect* oldR);
+Rect* new_drect(double **drect, int d);
 void delete_rect(Rect* rect);
 unsigned int matrix_constrained(int *p, double **X, unsigned int n1, unsigned int n2, 
 				Rect *rect);
@@ -50,6 +51,7 @@ double **get_data_rect(double **X, unsigned int N, unsigned int d);
 
 void normalize(double **Xall, double **rect, int N, int d, double normscale);
 void zero(double **M, unsigned int n1, unsigned int n2);
+int isZero(double **M, unsigned int m, int sym);
 void id(double **M, unsigned int n);
 double ** new_id_matrix(unsigned int n);
 double ** new_zero_matrix(unsigned int n1, unsigned int n2);
@@ -109,8 +111,8 @@ double* dseq(double from, double to, double by);
 int* iseq(double from, double to);
  
 int* find(double *V, unsigned int n, FIND_OP op, double val, unsigned int* len);
-int* find_col(double **V, unsigned int n, unsigned int var, FIND_OP op, 
-	double val, unsigned int* len);
+int* find_col(double **V, int *p, unsigned int n, unsigned int var, 
+	      FIND_OP op, double val, unsigned int* len);
 
 double kth_smallest(double a[], int n, int k);
 double quick_select(double arr[], int n, int k);
@@ -168,6 +170,7 @@ void copy_sub_ivector(int *V, int *p, int *v, unsigned int n);
 int* new_sub_ivector(int *p, int *v, unsigned int n);
 int sumiv(int *v, unsigned int n);
 int meaniv(int *iv, unsigned int n);
+void add_ivector(int *v1, int *v2, unsigned int n);
 
 unsigned int* new_uivector(unsigned int n);
 unsigned int* new_dup_uivector(unsigned int *iv, unsigned int n);
