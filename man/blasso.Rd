@@ -16,7 +16,7 @@ bridge(X, y, T = 1000, thin = NULL, RJ = TRUE, M = NULL,
 blasso(X, y, T = 1000, thin = NULL, RJ = TRUE, M = NULL,
        beta = NULL, lambda2 = 1, s2 = var(y-mean(y)),
        case = c("default", "ridge", "hs", "ng"), mprior = 0, rd = NULL,
-       ab = NULL, theta=0, rao.s2 = TRUE, icept = TRUE, 
+       ab = NULL, theta = 0, rao.s2 = TRUE, icept = TRUE, 
        normalize = TRUE, verb = 1)
 }
 
@@ -68,7 +68,9 @@ blasso(X, y, T = 1000, thin = NULL, RJ = TRUE, M = NULL,
     the \eqn{\lambda^2}{lambda2}
     parameter under the ridge regression model. A default of \code{NULL}
    generates appropriate non-informative values depending on the
-   nature of the regression.  See the details below for information
+   nature of the regression.  Specifying \code{rd=FALSE} causes
+  \code{lambda2} values to be fixed at their starting value, i.e., not
+  sampled.  See the details below for information
    on the special settings for ridge regression }
  \item{ab}{ \code{=c(a, b)}, the \eqn{\alpha}{alpha} (shape)
    parameter and the \eqn{\beta}{beta} (scale) parameter for the

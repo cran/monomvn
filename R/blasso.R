@@ -199,11 +199,14 @@ function(X, y, T=1000, thin=NULL, RJ=TRUE, M=NULL, beta=NULL,
         ## big-p small-n setting for ridge
         if(m >= n) rd <- c(5, 10) 
       } else rd <- c(2, 0.1) ## otherwise lasso G prior
-    }
+    } 
     ## double-check rd
     if(length(rd) != 2 || (length(tau2i) > 0 && any(rd <= 0))) {
-      if(case != "hs") stop("rd must be a positive 2-vector")
-      if(case == "ng" && rd[1] != 2) stop("must have rd[1] = 2 for NG prior")
+      if(length(rd) == 1 && rd == FALSE) rd <- c(-1,-1) ## fixed lambda2
+      else { ## actual error handling
+        if(case != "hs") stop("rd must be a positive 2-vector")
+        if(case == "ng" && rd[1] != 2) stop("must have rd[1] = 2 for NG prior")
+      }
     }
 
     ## check ab or default

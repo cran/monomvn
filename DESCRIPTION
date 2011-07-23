@@ -2,8 +2,8 @@ Package: monomvn
 Type: Package
 Title: Estimation for multivariate normal and Student-t data with
         monotone missingness
-Version: 1.8-5
-Date: 2010-03-07
+Version: 1.8-6
+Date: 2011-07-07
 Author: Robert B. Gramacy <bobby@statslab.cam.ac.uk>
 Maintainer: Robert B. Gramacy <bobby@statslab.cam.ac.uk>
 Description: Estimation of multivariate normal and student-t data of
@@ -24,6 +24,6 @@ Depends: R (>= 2.4), pls, lars, MASS
 Suggests: quadprog, mvtnorm, accuracy
 License: LGPL
 URL: http://www.statslab.cam.ac.uk/~bobby/monomvn.html
-Packaged: 2011-03-07 19:31:59 UTC; rgramacy
+Packaged: 2011-07-08 14:47:57 UTC; rgramacy
 Repository: CRAN
-Date/Publication: 2011-03-08 07:27:03
+Date/Publication: 2011-07-23 13:57:31

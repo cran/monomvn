@@ -1,3 +1,10 @@
+1.8-6 (7 July 2011)
+-----
+
+allow rd=FALSE in blasso to specify fixing lamda2 at its
+starting value
+
+
 1.8-5 (7 March 2011)
 -----
 

@@ -1103,6 +1103,10 @@ void Blasso::Draw(const unsigned int thin, const bool fixnu)
   /* sanity check */
   assert(thin > 0);
 
+  /* since not drawing Lambda, need to initialize with Compute */
+  if(reg_model == RIDGE && r < 0 && delta < 0 && M > 0)
+    if(!Compute(false)) error("ill-posed regression in Draw, s2=%g, m=%d", s2, m);
+
   for(unsigned int t=0; t<thin; t++) {
 
     /* draw from the model prior parameter */
@@ -1128,9 +1132,9 @@ void Blasso::Draw(const unsigned int thin, const bool fixnu)
     if(R_FINITE(nu) && omega2 && !fixnu) DrawNu();
 
     /* only depends on tau2i for LASSO/HORSESHOE/NG, and beta for RIDGE */
-    if(reg_model != OLS) DrawLambda2();
+    if(reg_model != OLS && r > 0 && delta > 0) DrawLambda2();
     else { /* is OLS */
-      assert(lambda2 == 0 && tau2i == NULL);
+      if(reg_model == OLS) assert(lambda2 == 0 && tau2i == NULL);
       if(m+EI > 0) refresh_Vb(breg, s2);
     }
 
@@ -1385,7 +1389,7 @@ double Blasso::ProposeTau2i(double *lpq_ratio)
 
     /* randomly propose a new lambda */   
     assert(lambda2 == 0);                     /* sanity check */
-    if(r != 0 && delta != 0){   /* then sample from the prior */
+    if(r > 0 && delta > 0){   /* then sample from the prior */
       prop = 1.0/rgamma(r, 1.0/delta);        /* is Inv-gamma */
       /* then prior to proposal ratios cancel */
     } else {
@@ -1430,7 +1434,7 @@ double Blasso::UnproposeTau2i(double *lqp_ratio, unsigned int iin)
   } else if(reg_model == RIDGE && m == 1) { 
 
     prop = lambda2; lambda2 = 0.0;
-    if(r == 0 || delta == 0) *lqp_ratio = dexp(prop,1,1) + log(lambda2);
+    if(r <= 0 || delta <= 0) *lqp_ratio = dexp(prop,1,1) + log(lambda2);
     /* otherwise the proposal ratios cancel */
 
   } else if(reg_model == RIDGE) prop = lambda2;
@@ -2239,14 +2243,15 @@ double log_prior(const unsigned int n, const unsigned int m, const bool EI,
   
   /* add in the lambda prior */
   if(tau2i) { /* lasso */
-    if(lambda2 != 0 && r != 0 && delta != 0) {
+    if(lambda2 != 0 && r > 0 && delta > 0) {
       if(reg_model == HORSESHOE) lprior += TauCPS_lprior(lambda2); /* under horseshoe */
       else lprior += dgamma(lambda2, r, gam/delta, 1); /* or is Gamma for lasso & ng */
     }
   } else if(lambda2 != 0) { /* ridge */
-    if(r != 0 && delta != 0) 
+    if(r > 0 && delta > 0) 
       lprior += dgamma(1.0/lambda2, r, 1.0/delta, 1); /* is Inv-gamma */
-    else lprior += 0.0 - log(lambda2); /* Jeffrey's */
+    else if(r == 0 && delta == 0) lprior += 0.0 - log(lambda2); /* Jeffrey's */
+    /* do nothing in r,d < 0 case */
   }
   assert(R_FINITE(lprior));
 
