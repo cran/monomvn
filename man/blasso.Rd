@@ -291,34 +291,6 @@ mean(exp(regt.blas$llik[-(1:200)] - regt.blas$llik.norm[-(1:200)]))
 
 ## clean up
 detach(diabetes)
-
-
-##
-## a big-p small-n example
-##
-
-n <- 25; m <- 51
-xmuS <- randmvn(n, m)
-X <- xmuS$x[,1:(m-1)]
-Y <- drop(xmuS$x[,m])
-obl <- blasso(X, Y, verb=0)
-
-## plot summary of the model order
-plot(obl, burnin=10, which="m")
-
-## fit a standard lasso model
-oml <- regress(X, Y, method="lasso")
-
-## compare via RMSE, most often blasso will win
-beta <- xmuS$S[m,-m] \%*\% solve(xmuS$S[-m,-m])
-sqrt(mean((apply(obl$beta, 2, mean) - beta)^2))
-sqrt(mean((oml$b[-1] - beta)^2))
-
-## now try both Bayesian & ML ridge regression
-obr <- bridge(X, Y, verb=0)
-omr <- regress(X, Y, method="ridge")
-sqrt(mean((apply(obr$beta[-c(1:200),], 2, mean) - beta)^2))
-sqrt(mean((omr$b[-1] - beta)^2))
 }
 
 % Add one or more standard keywords, see file 'KEYWORDS' in the

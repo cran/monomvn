@@ -723,7 +723,8 @@ void get_regress(const unsigned int m, double *mu, double *s21, double **s11,
   /* first calculate Si = inv(S) */
   double ** s11util = new_dup_matrix(s11, m, m);
   double ** s11i = new_id_matrix(m); 
-  int info = linalg_dposv(m, s11util, s11i);
+  int info = 0;
+  info = linalg_dposv(m, s11util, s11i);
   assert(info == 0);
 
   /* beta <- drop(s21 %*% solve(s11)) */
