@@ -317,6 +317,7 @@ function(y, pre=TRUE, p=0.9, B=100, T=200, thin=1, economy=FALSE,
     r$capm <- as.logical(r$capm)
     r$economy <- as.logical(r$economy)
     r$RJi <- NULL; r$RJ <- RJ
+    r$facts <- facts
     if(r$mprior[2] == 0) r$mprior <- r$mprior[-2]
 
     ## off-by-one

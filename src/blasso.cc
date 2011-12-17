@@ -1485,7 +1485,8 @@ void Blasso::RJdown(double qratio)
   BayesReg *breg_new = new_BayesReg(m+EI-1, n, Xp_new, DiXp_new);
 
   /* compute the new regression quantities */
-  assert(compute_BayesReg(m+EI-1, XtY, tau2i, lambda2, s2, breg_new));
+  bool success = compute_BayesReg(m+EI-1, XtY, tau2i, lambda2, s2, breg_new);
+  assert(success);
 
   /* calculate the acceptance probability breg -> breg_new */
   double lalpha = rj_betas_lratio(breg, breg_new, s2, prop);
@@ -2515,7 +2516,7 @@ void draw_tau2i_ng(const unsigned int m, double *tau2i, double *beta,
     rgig(1, gam - 0.5, sq(beta[j])/s2, lambda2, &tau2); 
   
     /* check to make sure there were no numerical problems */
-    if(tau2 < DOUBLE_EPS || R_FINITE(tau2)) {
+    if(tau2 < DOUBLE_EPS || !R_FINITE(tau2)) {
 #ifdef DEBUG
       myprintf(stdout, "tau2i_ng: j=%d, m=%d, gam=%g, l2=%g, s2=%g, \
 beta=%g, tau2i=%g, tau2=%g\n", 
