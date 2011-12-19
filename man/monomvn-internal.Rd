@@ -38,6 +38,5 @@
   waiting for proper documentation to be written :))
 }
 %\references{
-%\url{http://www.statslab.cam.ac.uk/~bobby/monomvn.html}
 %}
 \keyword{ internal }

@@ -65,7 +65,7 @@ randmvn(N, d, method = c("normwish", "parsimonious"),
     \code{mu} and covariance \code{matrix} \code{S}; otherwise when
     \code{N = 0} this component is not included}
 }
-\author{ Robert B. Gramacy \email{bobby@statslab.cam.ac.uk} }
+\author{ Robert B. Gramacy \email{rbgramacy@chicagobooth.edu} }
 \note{ requires the \code{\link[mvtnorm]{rmvnorm}} function of the
     \pkg{mvtnorm} package }
   \seealso{ \code{\link{rwish}}, \code{\link[mvtnorm]{rmvnorm}},

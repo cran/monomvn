@@ -60,7 +60,7 @@ data(market.test)
   of highly variable length}. \cr Preprint available on arXiv:0710.5837:
   \url{http://arxiv.org/abs/0710.5837}
 
-  \url{http://www.statslab.cam.ac.uk/~ bobby/monomvn.html}
+  \url{http://faculty.chicagobooth.edu/robert.gramacy/monomvn.html}
 }
 
 \seealso{
