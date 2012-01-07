@@ -77,9 +77,9 @@
       vector with the number of zeros in each column of the inverse
       of \code{object$S} }
 }
-\author{ Robert B. Gramacy \email{rbgramacy@chicagobooth.edu} }
+\author{ Robert B. Gramacy \email{bobby@statslab.cam.ac.uk} }
 \references{
-\url{http://faculty.chicagobooth.edu/robert.gramacy/monomvn.html}
+\url{http://www.statslab.cam.ac.uk/~bobby/monomvn.html}
 }
 \note{
   There is one further S3 function for \code{"monomvn"}-class

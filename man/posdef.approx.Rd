@@ -34,9 +34,9 @@ posdef.approx(S, name = "S", quiet=FALSE)
     Scientist.} John Wiley and Sons, New York.\cr
   \url{http://www.hmdc.harvard.edu/micah\_altman/numal/}
 
-\url{http://faculty.chicagobooth.edu/robert.gramacy/monomvn.html}
+\url{http://www.statslab.cam.ac.uk/~bobby/monomvn.html}
 }
-\author{ Robert B. Gramacy \email{rbgramacy@chicagobooth.edu} }
+\author{ Robert B. Gramacy \email{bobby@statslab.cam.ac.uk} }
 
 \seealso{ \code{\link[accuracy]{sechol}} in the \pkg{accuracy} package }
 \examples{

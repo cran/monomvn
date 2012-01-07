@@ -278,10 +278,10 @@ bmonomvn(y, pre = TRUE, p = 0.9, B = 100, T = 200, thin = 1,
   \emph{Statistical Analysis with Missing Data}, Second Edition.
   Wilely.
 
-\url{http://faculty.chicagobooth.edu/robert.gramacy/monomvn.html}
+\url{http://www.statslab.cam.ac.uk/~bobby/monomvn.html}
 }
 
-\author{ Robert B. Gramacy \email{rbgramacy@chicagobooth.edu} }
+\author{ Robert B. Gramacy \email{bobby@statslab.cam.ac.uk} }
 
 \note{
   Whenever the \code{bmonomvn} algorithm requires a regression
