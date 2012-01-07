@@ -1,7 +1,13 @@
-1.8-8 (18 Dec 2011)
+1.8-9 (07 Jan 2012)
 -----
 
-upped R version to 2.14, and put Booth contact info
+shortended blasso examples
+
+
+1.8-8 (06 Jan 2012)
+-----
+
+added NAMESPACE file
 
 
 1.8-7 (16 Dec 2011)

@@ -94,10 +94,10 @@
   }
 }
 
-\author{ Robert B. Gramacy \email{rbgramacy@chicagobooth.edu} }
+\author{ Robert B. Gramacy \email{bobby@statslab.cam.ac.uk} }
 
 \references{
-\url{http://faculty.chicagobooth.edu/robert.gramacy/monomvn.html}
+\url{http://www.statslab.cam.ac.uk/~bobby/monomvn.html}
 }
 
 \seealso{ \code{\link{blasso}} }

@@ -30,9 +30,9 @@ rmono(x, m = 7, ab = NULL)
 \value{
   returns a \code{matrix} with the same dimensions as the input \code{x}
 }
-\author{ Robert B. Gramacy \email{rbgramacy@chicagobooth.edu}}
+\author{ Robert B. Gramacy \email{bobby@statslab.cam.ac.uk}}
 \references{
-\url{http://faculty.chicagobooth.edu/robert.gramacy/monomvn.html}
+\url{http://www.statslab.cam.ac.uk/~bobby/monomvn.html}
 }
 \seealso{ \code{randmvn} }
 

@@ -228,10 +228,10 @@ blasso(X, y, T = 1000, thin = NULL, RJ = TRUE, M = NULL,
     Student-t linear model.} Journal of Applied Econometrics, Vol. 8,
     S19-S40
   
-  \url{http://faculty.chicagobooth.edu/robert.gramacy/monomvn.html}
+  \url{http://www.statslab.cam.ac.uk/~bobby/monomvn.html}
 }
 
-\author{ Robert B. Gramacy \email{rbgramacy@chicagobooth.edu} }
+\author{ Robert B. Gramacy \email{bobby@statslab.cam.ac.uk} }
 
  \seealso{
    \code{\link{lm}} ,
@@ -278,6 +278,8 @@ s$s2
 plot(reg.blas, burnin=200, which="lambda2")
 s$lambda2
 
+
+\dontrun{
 ## fit with Student-t errors
 ## (~400-times slower due to automatic thinning level)
 regt.blas <- blasso(x, y, theta=0.1)
@@ -288,6 +290,7 @@ quantile(regt.blas$nu[-(1:200)], c(0.05, 0.95))
 
 ## Bayes Factor shows strong evidence for Student-t model
 mean(exp(regt.blas$llik[-(1:200)] - regt.blas$llik.norm[-(1:200)]))
+}
 
 ## clean up
 detach(diabetes)

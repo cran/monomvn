@@ -224,9 +224,9 @@ monomvn(y, pre = TRUE, method = c("plsr", "pcr", "lasso", "lar",
   by code found on the world wide web, written by Daniel Heitjan,\cr
   \url{http://www.cceb.upenn.edu/pages/heitjan/courses/bsta782/examples/fcn.q}
 
-\url{http://faculty.chicagobooth.edu/robert.gramacy/monomvn.html}
+\url{http://www.statslab.cam.ac.uk/~bobby/monomvn.html}
 }
-\author{ Robert B. Gramacy \email{rbgramacy@chicagobooth.edu}}
+\author{ Robert B. Gramacy \email{bobby@statslab.cam.ac.uk}}
 
 \note{
   The CV in \pkg{plsr} and \pkg{lars} are random in nature, and so
