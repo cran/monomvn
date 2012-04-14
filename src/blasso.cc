@@ -1054,7 +1054,7 @@ void Blasso::Rounds(const unsigned int T, const unsigned int thin,
     
     /* print progress meter */
     if(verb && t > 0 && ((t+1) % 100 == 0))
-      myprintf(stdout, "t=%d, m=%d\n", t+1, this->m);
+      myprintf(mystdout, "t=%d, m=%d\n", t+1, this->m);
 
     /* check R for interrupts and flush console every second */
     itime = my_r_process_events(itime);
@@ -1486,7 +1486,7 @@ void Blasso::RJdown(double qratio)
 
   /* compute the new regression quantities */
   bool success = compute_BayesReg(m+EI-1, XtY, tau2i, lambda2, s2, breg_new);
-  assert(success);
+  assert(success); success = true;
 
   /* calculate the acceptance probability breg -> breg_new */
   double lalpha = rj_betas_lratio(breg, breg_new, s2, prop);
@@ -1679,7 +1679,7 @@ bool Blasso::Compute(const bool reinit)
 
 #ifdef DEBUG
   if(YtY - breg->BtAB <= 0) { 
-    myprintf(stdout, "YtY=%.20f, BtAB=%.20f\n", YtY, breg->BtAB);
+    myprintf(mystdout, "YtY=%.20f, BtAB=%.20f\n", YtY, breg->BtAB);
     assert(0);
   }
 #endif
@@ -2456,7 +2456,7 @@ double lprior_model(const unsigned int m, const unsigned int Mmax,
   assert(pi >= 0 && pi <= 1);
   if(Mmax == 0 || pi == 0.0 || pi == 1.0) return 0.0;
   
-  /* myprintf(stdout, "m=%d, Mmax=%d, pi=%g, lp=%g\n", 
+  /* myprintf(mystdout, "m=%d, Mmax=%d, pi=%g, lp=%g\n", 
      m, Mmax, pi, dbinom((double) m, (double) Mmax, pi, 1));  */
 
   return dbinom((double) m, (double) Mmax, pi, 1);
@@ -2489,7 +2489,7 @@ void draw_tau2i_lasso(const unsigned int m, double *tau2i, double *beta,
     /* check to make sure there were no numerical problems */
     if(tau2i_temp <= 0 || tau2i_temp > 1.0/DOUBLE_EPS) {
 #ifdef DEBUG
-      myprintf(stdout, "tau2i_lasso: j=%d, m=%d, l2=%g, s2=%g, beta=%g, tau2i=%g\n", 
+      myprintf(mystdout, "tau2i_lasso: j=%d, m=%d, l2=%g, s2=%g, beta=%g, tau2i=%g\n", 
 	       j, m, lambda2, s2, beta[j], tau2i[j]);
 #endif
       /* tau2i[j] = 0.0; */
@@ -2518,7 +2518,7 @@ void draw_tau2i_ng(const unsigned int m, double *tau2i, double *beta,
     /* check to make sure there were no numerical problems */
     if(tau2 < DOUBLE_EPS || !R_FINITE(tau2)) {
 #ifdef DEBUG
-      myprintf(stdout, "tau2i_ng: j=%d, m=%d, gam=%g, l2=%g, s2=%g, \
+      myprintf(mystdout, "tau2i_ng: j=%d, m=%d, gam=%g, l2=%g, s2=%g, \
 beta=%g, tau2i=%g, tau2=%g\n", 
 	       j, m, gam, lambda2, s2, beta[j], tau2i[j], tau2);
 #endif
@@ -2640,7 +2640,7 @@ double Igamma_inv(const double a, const double y, const int lower,
   if(ulog) r = Rgamma_inv(a, y - Cgamma(a, ulog), lower, ulog);
   else r = Rgamma_inv(a, y / Cgamma(a, ulog), lower, ulog);
   assert(!isnan(r));
-  /* myprintf(stdout, "Rgamma_inv: a=%g, y=%g, lower=%d, ulog=%d, r=%g\n", 
+  /* myprintf(mystdout, "Rgamma_inv: a=%g, y=%g, lower=%d, ulog=%d, r=%g\n", 
      a, y, lower, ulog, r); */
   return(r);
 }
@@ -2657,7 +2657,7 @@ double Cgamma(const double a, const int ulog)
   double r;
   if(ulog) r = lgammafn(a) / M_LN10;
   else r = gammafn(a);
-  /* myprintf(stdout, "Cgamma: a=%g, ulog=%d, r=%g\n", a, ulog, r); */
+  /* myprintf(mystdout, "Cgamma: a=%g, ulog=%d, r=%g\n", a, ulog, r); */
   assert(!isnan(r));
   return(r);
 }
@@ -2675,7 +2675,7 @@ double Rgamma_inv(const double a, const double y, const int lower,
   double r;
   if(ulog) r = qgamma(y*M_LN10, a, /*scale=*/ 1.0, lower, ulog);
   else r = qgamma(y, a, /*scale=*/ 1.0, lower, ulog);
-  /*myprintf(stdout, "Rgamma_inv: a=%g, y=%g, lower=%d, ulog=%d, r=%g\n", 
+  /*myprintf(mystdout, "Rgamma_inv: a=%g, y=%g, lower=%d, ulog=%d, r=%g\n", 
     a, y, lower, ulog, r); */
   assert(!isnan(r)); 
   return(r);
@@ -2700,10 +2700,12 @@ Blasso *blasso = NULL;
 int blasso_seed_set;
 
 void blasso_R(int *T, int *thin, int *M, int *n, double *X_in, 
-	      double *Y, double *lambda2, double *gamma, double *mu, int *RJ, 
-	      int *Mmax, double *beta, int *m, double *s2, 
-	      double *tau2i, int *hs, double *omega2, double *nu, double *pi, 
-	      double *lpost, double *llik, double *llik_norm, double *mprior, 
+	      double *Y, int *lambda2_len, double *lambda2, int *gamma_len,
+	      double *gamma, double *mu, int *RJ, int *Mmax, double *beta, 
+	      int *m, double *s2, int *tau2i_len, double *tau2i, int *hs, 
+	      int *omega2_len, double *omega2, int *nu_len, double *nu, 
+	      int *pi_len, double *pi, double *lpost, double *llik, 
+	      int *llik_norm_len, double *llik_norm, double *mprior, 
 	      double *r, double *delta, double *a, double *b, double *theta, 
 	      int *rao_s2, int *icept, int *normalize, int *verb)
 {
@@ -2720,34 +2722,42 @@ void blasso_R(int *T, int *thin, int *M, int *n, double *X_in,
   beta_mat = new_matrix_bones(beta, *T, *M);
 
   /* initialize a matrix for tau2i samples */
-  if(tau2i != NULL) { /* for lasso */
+  if(*tau2i_len > 0) { /* for lasso */
     tau2i_mat = new_matrix_bones(&(tau2i[*M]), (*T)-1, *M);
-  } else tau2i_mat = NULL; /* for ridge or OLS */
+  } else { tau2i = NULL; tau2i_mat = NULL; } /* for ridge or OLS */
 
   /* initialize a matrix for omega2 samples */
-  if(omega2 != NULL) { /* for lasso */
+  if(*omega2_len > 0) { /* for lasso */
     omega2_mat = new_matrix_bones(&(omega2[*n]), (*T)-1, *n);
-  } else omega2_mat = NULL; /* not using scale mixture Student-t */
+  } else { omega2 = NULL; omega2_mat = NULL; } 
+  /* not using scale mixture Student-t */
 
   /* starting and sampling lambda2 if not null */
   double lambda2_start = 0.0;
   double *lambda2_samps = NULL;
-  if(lambda2 != NULL) {
+  if(*lambda2_len > 0) {
     lambda2_start = lambda2[0];
     lambda2_samps = &(lambda2[1]);
-  }
+  } else lambda2 = NULL;
 
   /* starting and sampling gamma if not null */
   double gamma_start = 1.0;
   double *gamma_samps = NULL;
-  if(gamma != NULL) {
+  if(*gamma_len > 0) {
     gamma_start = gamma[0];
     gamma_samps = &(gamma[1]);
-  }
+  } gamma = NULL;
 
   /* extract nu starting value if relevant */
   double nu_start = 0.0;
-  if(nu) nu_start = *nu;
+  if(*nu_len > 0) { nu_start = *nu; nu = nu + 1; }
+  else nu = NULL;
+
+  /* other pointer/output manipulation */
+  if(*pi_len > 0) pi = pi + 1;
+  else pi = NULL;
+  if(*llik_norm_len > 0) llik_norm = llik_norm + 1;
+  else llik_norm = NULL;
 
   /* create a new Bayesian lasso regression */
   blasso =  new Blasso(*M, *n, X, Y, (bool) *RJ, *Mmax, beta_mat[0], 
@@ -2761,8 +2771,7 @@ void blasso_R(int *T, int *thin, int *M, int *n, double *X_in,
   /* Gibbs draws for the parameters */
   blasso->Rounds((*T)-1, *thin, &(mu[1]), &(beta_mat[1]), &(m[1]), 
 		 &(s2[1]), tau2i_mat, lambda2_samps, gamma_samps,
-		 omega2_mat, &(nu[1]), &(pi[1]), &(lpost[1]), &(llik[1]), 
-		 &(llik_norm[1]));
+		 omega2_mat, nu, pi, &(lpost[1]), &(llik[1]), llik_norm);
 
   delete blasso;
   blasso = NULL;
@@ -2792,7 +2801,7 @@ void blasso_cleanup(void)
   /* free blasso model */
   if(blasso) { 
     if(blasso->Verb() >= 1)
-      myprintf(stderr, "INTERRUPT: blasso model leaked, is now destroyed\n");
+      myprintf(mystderr, "INTERRUPT: blasso model leaked, is now destroyed\n");
     delete blasso; 
     blasso = NULL; 
   }

@@ -156,7 +156,7 @@ function(y, pre=TRUE, p=0.9, B=100, T=200, thin=1, economy=FALSE,
     if(method == "factor") {
       if(is.null(oo)) facts <- 1:p
       else facts <- oo[1:p]
-    } else facts <- NULL
+    } else facts <- double(0)
     
     ## check the start argument
     start <- check.start(start, nao, M)
@@ -186,12 +186,17 @@ function(y, pre=TRUE, p=0.9, B=100, T=200, thin=1, economy=FALSE,
             R = as.integer(t(R)),
             p = as.double(p),
             mi = as.integer(mi),
+            facts.len = as.integer(length(facts)),
             facts = as.integer(facts-1),
             RJi = as.integer(RJi),
             capm = as.integer(capm),
+            smu.len = as.integer(length(start$mu)),
             smu = as.double(start$mu),
+            sS.len = as.integer(length(start$S)),
             sS = as.double(start$S),
+            sncomp.len = as.integer(length(start$ncomp)),
             sncomp = as.integer(start$ncomp),
+            slambda.len = as.integer(length(start$lambda)),
             slambda = as.double(start$lambda),
             mprior = as.double(mprior),
             rd = as.double(rd),
@@ -224,14 +229,17 @@ function(y, pre=TRUE, p=0.9, B=100, T=200, thin=1, economy=FALSE,
             lpost.map = double(1),
             which.map = integer(1),
             llik = double(T),
+            llik.norm.len = as.integer(T * (theta != 0)),
             llik.norm = double(T * (theta != 0)),
             methods = integer(M),
             thin.act = integer(M),
+            nu.len = as.integer(T*(theta < 0)),
             nu = double(T*(theta < 0)),
             lambda2 = double(M),
             ncomp = double(M),
 
             ## begin Quadratic Programming outputs
+            W.len = as.integer(T*length(QPin$cols)*(!is.null(QPin$Amat))),
             W = double(T*length(QPin$cols)*(!is.null(QPin$Amat))),
             
             PACKAGE = "monomvn")
@@ -240,6 +248,10 @@ function(y, pre=TRUE, p=0.9, B=100, T=200, thin=1, economy=FALSE,
     r$Y <- NULL; r$y <- y;
     if(sum(R == 2) == 0) r$R <- NULL
     else r$R <- R
+
+    ## remove lengths
+    r$facts.len <- r$smu.len <- r$sS.len <- r$sncomp.len <- r$slambda.len <- NULL
+    r$llik.norm.len <- r$nu.len <- r$W.len <- NULL 
 
     ## make S and other covars into matrices
     r$mu.cov <- matrix(r$mu.cov, ncol=M)

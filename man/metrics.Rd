@@ -67,7 +67,7 @@ kl.norm(mu1, S1, mu2, S2, quiet=FALSE, symm=FALSE)
   real number depicting the \emph{distance} between the
   two normal distributions
 }
-\author{ Robert B. Gramacy \email{bobby@statslab.cam.ac.uk} }
+\author{ Robert B. Gramacy \email{rbgramacy@chicagobooth.edu} }
 \note{
   The KL-divergence is not symmetric.  Therefore
 
@@ -80,7 +80,7 @@ kl.norm(mu1, S1, mu2, S2, quiet=FALSE, symm=FALSE)
   or by using \code{symm = TRUE}
 }
 \references{
-\url{http://www.statslab.cam.ac.uk/~bobby/monomvn.html}
+\url{http://faculty.chicagobooth.edu/robert.gramacy/monomvn.html}
 }
 \seealso{ \code{\link{posdef.approx}} }
 \examples{

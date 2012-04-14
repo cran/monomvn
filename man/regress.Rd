@@ -145,10 +145,10 @@ regress(X, y, method = c("lsr", "plsr", "pcr", "lasso", "lar",
   Annals of Statistics \bold{32}(2); see also \cr
   \url{http://www-stat.stanford.edu/~hastie/Papers/LARS/LeastAngle_2002.pdf}
   
-\url{http://www.statslab.cam.ac.uk/~bobby/monomvn.html}
+\url{http://faculty.chicagobooth.edu/robert.gramacy/monomvn.html}
 }
 
-\author{ Robert B. Gramacy \email{bobby@statslab.cam.ac.uk} }
+\author{ Robert B. Gramacy \email{rbgramacy@chicagobooth.edu} }
 
 \note{
   The CV in \pkg{plsr} and \pkg{lars} are random in nature, and so
