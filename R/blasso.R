@@ -189,8 +189,8 @@ function(X, y, T=1000, thin=NULL, RJ=TRUE, M=NULL, beta=NULL,
       mprior <- c(mprior, 0)
     } else if(length(mprior) != 2)
       stop("mprior should be a scalar or 2-vector in [0,1]")
-    if(mprior[2] != 0) pi = as.double(rep(mprior[1]/(mprior[1]+mprior[2]), T))
-    else pi = double(0)
+    if(mprior[2] != 0) pi <- as.double(rep(mprior[1]/(mprior[1]+mprior[2]), T))
+    else pi <- double(0)
     
     ## check r and delta (rd)
     if(is.null(rd)) {
@@ -256,7 +256,9 @@ function(X, y, T=1000, thin=NULL, RJ=TRUE, M=NULL, beta=NULL,
             n = as.integer(n),
             X = as.double(t(X)),
             y = as.double(y),
+            lambda2.len = as.integer(length(lambda2)),
             lambda2 = lambda2,
+            gamma.len = as.integer(length(gamma)),
             gamma = gamma,
             mu = double(T),
             RJ = as.integer(RJ),
@@ -264,13 +266,18 @@ function(X, y, T=1000, thin=NULL, RJ=TRUE, M=NULL, beta=NULL,
             beta = as.double(rep(beta, T)),
             m = as.integer(rep(sum(beta!=0), T)),
             s2 = as.double(rep(s2, T)),
+            tau2i.len = as.integer(length(tau2i)),
             tau2i = tau2i,
             hs = as.integer(case == "hs"),
+            omega2.len = as.integer(length(omega2)),
             omega2 = omega2,
+            nu.len = as.integer(length(nu)),
             nu = nu,
+            pi.len = as.integer(length(pi)),
             pi = pi,
             lpost = double(T),
             llik = double(T),
+            llik.norm.len = as.integer(T * (theta != 0)),
             llik.norm = double(T * (theta != 0)),
             mprior = as.double(mprior),
             r = as.double(rd[1]),
@@ -293,7 +300,7 @@ function(X, y, T=1000, thin=NULL, RJ=TRUE, M=NULL, beta=NULL,
                      dimnames=list(NULL,paste("b.", 1:m, sep="")))
 
     ## turn the tau2i vector of samples into a matrix
-    if(r$lambda[1] != 0 && length(r$tau2i) > 0) {
+    if(r$lambda2[1] != 0 && length(r$tau2i) > 0) {
       r$tau2i <- matrix(r$tau2i, nrow=T, ncol=m, byrow=TRUE,
                         dimnames=list(NULL,paste("tau2i.", 1:m, sep="")))
       ## put NAs where tau2i has -1
@@ -328,7 +335,8 @@ function(X, y, T=1000, thin=NULL, RJ=TRUE, M=NULL, beta=NULL,
     }
 
     ## null-out redundancies
-    r$col <- r$n <- r$cols <- r$verb <- NULL
+    r$pi.len <- r$col <- r$n <- r$cols <- r$verb <- NULL
+    r$lambda2.len <- r$gamma.len <- r$tau2i.len <- r$omega2.len <- r$nu.len <- NULL
     if(length(r$lambda2) == 0) r$lambda2 <- NULL
     if(length(r$gamma) == 0) r$gamma <- NULL
 

@@ -22,10 +22,10 @@ For a fuller overview including a complete list of functions, demos and
 vignettes, please use \code{help(package="monomvn")}.
 }
 \author{
-Robert B. Gramacy \email{bobby@statslab.cam.ac.uk}
+Robert B. Gramacy \email{rbgramacy@chicagobooth.edu}
 
 Maintainer: 
-Robert B. Gramacy \email{bobby@statslab.cam.ac.uk}
+Robert B. Gramacy \email{rbgramacy@chicagobooth.edu}
 }
 \references{
 Robert B. Gramacy, Joo Hee Lee and Ricardo Silva (2008).
@@ -33,7 +33,7 @@ Robert B. Gramacy, Joo Hee Lee and Ricardo Silva (2008).
 of highly variable length}. \cr Preprint available on arXiv:0710.5837:
 \url{http://arxiv.org/abs/0710.5837}
 
-\url{http://www.statslab.cam.ac.uk/~bobby/monomvn.html}
+\url{http://faculty.chicagobooth.edu/robert.gramacy/monomvn.html}
 }
 \keyword{ package }
 \seealso{ \code{\link{monomvn}}, the now defunct \code{norm} package, \pkg{mvnmle} }

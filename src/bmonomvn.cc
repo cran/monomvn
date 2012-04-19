@@ -420,7 +420,7 @@ void Bmonomvn::Rounds(const unsigned int T, const double thin,
     
     /* progress meter */
     if(verb && (t>0) && (t<=(int)T-1) && ((t+1) % 100 == 0)) 
-      myprintf(stdout, "t=%d\n", t+1);
+      myprintf(mystdout, "t=%d\n", t+1);
 
     /* take one draw after thinning */
     double llik_temp, llik_norm_temp;
@@ -448,7 +448,7 @@ void Bmonomvn::Rounds(const unsigned int T, const double thin,
       if(onenu) nu[t] = this->nu;
 
       /* check for new best MAP */
-      // myprintf(stdout, "lpost = %g, lpost_map = %g\n", lpost, lpost_map);
+      // myprintf(mystdout, "lpost = %g, lpost_map = %g\n", lpost, lpost_map);
       if(lpost > lpost_map) {
 	lpost_map = lpost;
 	MVN_copy(map, mu, S, M);
@@ -796,11 +796,18 @@ double **S_start = NULL;
 void bmonomvn_R(
 		/* estimation inputs */
 		int *B, int *T, double *thin, int *M, int *N, double *Y_in, 
-		int *n, int *R_in, double *p, int *method, int *facts,
-		int *RJ, int *capm, double *mu_start, double *S_start_in, 
-		int *ncomp_start, double *lambda_start, double *mprior, 
-		double *rd, double *theta, int *rao_s2, int *economy, 
-		int *verb, int *trace, 
+		int *n, int *R_in, double *p, int *method, int *facts_len, 
+		int *facts, int *RJ, int *capm,
+
+		/* starting values */
+		int *mu_start_len, double *mu_start, 
+		int *S_start_len, double *S_start_in, 
+		int *ncomp_start_len, int *ncomp_start, 
+		int *lambda_start_len, double *lambda_start, 
+
+		/* other inputs */
+		double *mprior, double *rd, double *theta, int *rao_s2, 
+		int *economy, int *verb, int *trace, 
 
 		/* Quadratic Programming inputs */
 		int *qpnf, double *dvec, int *dmu, double *Amat, 
@@ -813,18 +820,22 @@ void bmonomvn_R(
 
 		/* estimation outputs: other */
 		double *lpost_map, int *which_map, double *llik,
-		double *llik_norm,  int *methods, int *thin_out, 
-		double *nu, double *lambda2_mean, double *m_mean,
+		int *llik_norm_len, double *llik_norm, int *methods, 
+		int *thin_out, int *nu_len, double *nu, 
+		double *lambda2_mean, double *m_mean,
 
 		/* Quadratic Programming outputs */
-		double *w)
+		int* w_len, double *w)
 {
   /* copy the vector(s) input Y and R into matrix form */
   Y = new_matrix_bones(Y_in, *N, *M);
   R = new_Rmiss_R(R_in, *N, *M);
 
   /* copy the vector input S_start into matrix form */
-  if(S_start_in) S_start = new_matrix_bones(S_start_in, *M, *M);
+  if(*S_start_len > 0) S_start = new_matrix_bones(S_start_in, *M, *M);
+  if(*mu_start_len == 0) mu_start = NULL;
+  if(*ncomp_start_len == 0) ncomp_start = NULL;
+  if(*lambda_start_len == 0) lambda_start = NULL;
 
   /* load copy the vectors mu, S_mean, mu_var, and S_var
      into the MVNsum structures */
@@ -836,8 +847,14 @@ void bmonomvn_R(
   MVNnzSi = new_MVNsum_R(*M, NULL, Si_nz);
 
   /* load Quadratic Programming inputs into the QP structure */
+  if(*w_len == 0) w = NULL;
   qps = new_QPsamp_R(qpnf[0], *T, (qpnf+1), dvec, 
 		     (bool) *dmu, Amat, b0, mu_constr, *q, *meq, w);
+
+  /* deal with NULLs */
+  if(*nu_len == 0) nu = NULL;
+  if(*llik_norm_len == 0) llik_norm = NULL;
+  if(*facts_len == 0) facts = NULL;
 
   /* get the random number generator state from R */
   GetRNGstate(); bmonomvn_seed_set = 1;
@@ -852,7 +869,7 @@ void bmonomvn_R(
 			(bool) (*trace));
 
   /* do burn-in rounds */
-  if(*verb) myprintf(stdout, "%d burnin rounds\n", *B);
+  if(*verb) myprintf(mystdout, "%d burnin rounds\n", *B);
   bmonomvn->Rounds(*B, *thin, (bool) *economy, true, NULL, NULL, NULL);
   
   /* set up the mu and S sums for calculating means and variances */
@@ -862,7 +879,7 @@ void bmonomvn_R(
   bmonomvn->SetQPsamp(qps);
 
   /* and now sampling rounds */
-  if(*verb) myprintf(stdout, "%d sampling rounds\n", *T);
+  if(*verb) myprintf(mystdout, "%d sampling rounds\n", *T);
   bmonomvn->Rounds(*T, *thin, (bool) *economy, false, nu, llik, llik_norm);
 
   /* copy back the mean and variance(s) of mu and S */
@@ -932,7 +949,7 @@ void bmonomvn_cleanup(void)
   /* free bmonomvn model */
   if(bmonomvn) { 
     if(bmonomvn->Verb() >= 1)
-      myprintf(stderr, "INTERRUPT: bmonomvn model leaked, is now destroyed\n\n");
+      myprintf(mystderr, "INTERRUPT: bmonomvn model leaked, is now destroyed\n\n");
     delete bmonomvn; 
     bmonomvn = NULL; 
   }

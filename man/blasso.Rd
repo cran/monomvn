@@ -228,10 +228,10 @@ blasso(X, y, T = 1000, thin = NULL, RJ = TRUE, M = NULL,
     Student-t linear model.} Journal of Applied Econometrics, Vol. 8,
     S19-S40
   
-  \url{http://www.statslab.cam.ac.uk/~bobby/monomvn.html}
+  \url{http://faculty.chicagobooth.edu/robert.gramacy/monomvn.html}
 }
 
-\author{ Robert B. Gramacy \email{bobby@statslab.cam.ac.uk} }
+\author{ Robert B. Gramacy \email{rbgramacy@chicagobooth.edu} }
 
  \seealso{
    \code{\link{lm}} ,
