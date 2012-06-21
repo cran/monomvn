@@ -1,14 +1,18 @@
 \name{blasso}
 \alias{blasso}
+\alias{bhs}
 \alias{bridge}
 
-\title{ Bayesian Lasso/NG and Ridge Regression }
+\title{ Bayesian Lasso/NG, Horseshoe, and Ridge Regression }
 \description{
-  Inference for ordinary least squares, lasso/NG and ridge regression
-  models by (Gibbs) sampling from the Bayesian posterior distribution,
-  augmented with Reversible Jump for model selection
+  Inference for ordinary least squares, lasso/NG, horseshoe and ridge 
+  regression models by (Gibbs) sampling from the Bayesian posterior 
+  distribution, augmented with Reversible Jump for model selection
 }
 \usage{
+bhs(X, y, T=1000, thin=NULL, RJ=TRUE, M=NULL, beta=NULL,
+         lambda2=1, s2=var(y-mean(y)), mprior=0, ab=NULL,
+         theta=0, rao.s2=TRUE, icept=TRUE, normalize=TRUE, verb=1)
 bridge(X, y, T = 1000, thin = NULL, RJ = TRUE, M = NULL,
        beta = NULL, lambda2 = 1, s2 = var(y-mean(y)), mprior = 0,
        rd = NULL, ab = NULL, theta=0, rao.s2 = TRUE, icept = TRUE,
@@ -49,8 +53,8 @@ blasso(X, y, T = 1000, thin = NULL, RJ = TRUE, M = NULL,
   \item{lambda2}{ square of the initial lasso penalty parameter.  If
     zero, then least squares regressions are used }
   \item{s2}{ initial variance parameter }
-  \item{case}{ specifies if ridge regression or the
-    Normal-Gamma should be done instead
+  \item{case}{ specifies if ridge regression, the
+    Normal-Gamma, or the horseshoe prior should be done instead
     of the lasso; only meaningful when \code{lambda2 > 0} }
   \item{mprior}{ prior on the number of non-zero regression coefficients
     (and therefore covariates) \code{m} in the model. The default
@@ -113,7 +117,7 @@ blasso(X, y, T = 1000, thin = NULL, RJ = TRUE, M = NULL,
   \code{M} specifies the maximal number of columns.
 
   The RJ mechanism implemented here for the Bayesian lasso model
-  selection differs from the one described by Hans (2008),
+  selection differs from the one described by Hans (2009),
   which is based on an idea from Geweke (1996).
   Those methods require departing from the Park & Casella
   (2008) latent-variable model and requires sampling from each conditional
@@ -140,7 +144,9 @@ blasso(X, y, T = 1000, thin = NULL, RJ = TRUE, M = NULL,
     c(5,10)} is used instead.
 
   The Normal--Gamma prior (Griffin & Brown, 2009) is implemented as
-  an extension to the Bayesian lasso with \code{case = "ng"}
+  an extension to the Bayesian lasso with \code{case = "ng"}.  Many
+  thanks to James Scott for providing the code needed to extend the
+  method(s) to use the horseshoe prior (Carvalho, Polson, Scott, 2009).
 
   When \code{theta > 0} then the Student-t errors via scale mixtures
   (and thereby extra latent variables \code{omega2}) of Geweke (1993)
@@ -150,6 +156,7 @@ blasso(X, y, T = 1000, thin = NULL, RJ = TRUE, M = NULL,
   in \code{X} since this many latent variables are introduced
 }
 \value{
+
   \code{blasso} returns an object of class \code{"blasso"}, which is a
   \code{list} containing a copy of all of the input arguments as well as
   of the components listed below.
@@ -205,14 +212,18 @@ blasso(X, y, T = 1000, thin = NULL, RJ = TRUE, M = NULL,
   \url{http://www.stat.ufl.edu/~casella/Papers/Lasso.pdf}
 
   Griffin, J.E. and Brown, P.J. (2009).
-  \emph{Inference with Normal--Gamma prior distributions in
+  \emph{Inference with Normal-Gamma prior distributions in
     regression problems.} Tech. rep., University of Kent.\cr
   \url{http://www.kent.ac.uk/ims/personal/jeg28/paper_ba10_final.pdf}
   
-  Chris Hans. (2008). \emph{Bayesian Lasso regression.}
-  Technical Report No. 810, Department of Statistics,
-  The Ohio State University, Columbus, OH 43210.\cr
-  \url{http://www.stat.osu.edu/~hans/Papers/blasso.pdf}
+  Hans, C. (2009). \emph{Bayesian Lasso regression.}
+  Biometrika 96, pp. 835-845.\cr
+  \url{http://biomet.oxfordjournals.org/content/96/4/835.abstract}
+
+  Carvalho, C.M., Polson, N.G., and Scott, J.G. (2010) \emph{The
+ horseshoe estimator for sparse signals} Biometrika 97(2):
+ pp. 465-480.\cr
+  \url{http://ftp.stat.duke.edu/WorkingPapers/08-31.pdf}
 
   Geweke, J. (1996). \emph{Variable selection and model comparison
     in regression.} In Bayesian Statistics 5.  Editors: J.M. Bernardo,

@@ -61,7 +61,7 @@ bmonomvn(y, pre = TRUE, p = 0.9, B = 100, T = 200, thin = 1,
     the outset, saving dynamic allocations}
   \item{method}{ indicates the Bayesian parsimonious regression
     specification to be used, choosing between the lasso (default)
-    of Park \& Casella, the NG extension,
+    of Park \& Casella, the NG extension, the horseshoe,
     a ridge regression special case, and least-squares.
     The \code{"factor"} method treats the first
     \code{p} columns of \code{y} as known factors}
