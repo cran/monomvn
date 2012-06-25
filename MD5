@@ -1,5 +1,5 @@
-0e6c885388eeb22736a0ef546f119d8d *ChangeLog
-7c6ae7b23d678fce6d0e0c61c94e3dfa *DESCRIPTION
+e7fed76a5eb87dab28aa53de5f33c7b7 *ChangeLog
+22ddf998bfa3e63e0aa5c747f58d9f71 *DESCRIPTION
 1c5c73c2d48664ee4fd57f0fc47af729 *LICENSE
 e48496ea12e6c81a4645c449f0d3cf89 *NAMESPACE
 64879e36bfedfbd90cfff3c49f7f2157 *R/addy.R
@@ -28,14 +28,14 @@ cc92b3bec075ea06c2765fa6bd5680e1 *R/rwish.R
 cbf4524508d7ebfcdad4e208f452b445 *data/market.test.rda
 c6b8bed054a935524c8aa3dceffb2dde *data/returns.rda
 2f6f7f78d179c7531a8f39eb4094e885 *data/returns.test.rda
-1af9dfcd8da0568979b878713009cab4 *man/blasso.Rd
+82237514860ed728fd75116089a53f17 *man/blasso.Rd
 dd8bb394b6d1127c13ebc4b9ac56c425 *man/blasso.s3.Rd
 14b5e7b0ec18b11313d43c1215aa9de2 *man/bmonomvn.Rd
 8ea1309cd544e89bbc4d0fece0ae2d8d *man/cement.Rd
 d8d15390bc4826d488cf8a639caa184d *man/default.QP.Rd
 134241a23833dd61a068ae2a6f694848 *man/metrics.Rd
 b47bf3f342f418a8994df5b1b149c12e *man/monomvn-internal.Rd
-5387e70ccb6a31431f72c78db8621f27 *man/monomvn-package.Rd
+8715214b44a05c6bd1693198196144ad *man/monomvn-package.Rd
 1bf7ea0c3d22d856a563aab192089132 *man/monomvn.Rd
 0ae9c16975282277663557fcaf497320 *man/monomvn.s3.Rd
 000af10568dd19882dca54ba6b8336c4 *man/monomvn.solve.QP.Rd

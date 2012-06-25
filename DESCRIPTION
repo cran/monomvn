@@ -2,8 +2,8 @@ Package: monomvn
 Type: Package
 Title: Estimation for multivariate normal and Student-t data with
         monotone missingness
-Version: 1.9
-Date: 2012-06-20
+Version: 1.9-1
+Date: 2012-06-25
 Author: Robert B. Gramacy <rbgramacy@chicagobooth.edu>
 Maintainer: Robert B. Gramacy <rbgramacy@chicagobooth.edu>
 Description: Estimation of multivariate normal and student-t data of
@@ -13,18 +13,17 @@ Description: Estimation of multivariate normal and student-t data of
         regressions fail, the package can handle a nearly arbitrary
         amount of missing data.  The current version supports maximum
         likelihood inference and a full Bayesian approach employing
-        scale-mixtures for the lasso (double-exponential) and
-        Normal-Gamma priors, and Student-t errors.  Monotone data
-        augmentation extends this Bayesian approach to arbitrary
-        missingness patterns.  A fully functional standalone interface
-        to the Bayesian lasso (from Park & Casella), Normal-Gamma (from
-        Griffin & Brown), and ridge regression with model selection via
-        Reversible Jump, and student-t errors (from Geweke) is also
-        provided
+        scale-mixtures for Gibbs sampling.  Monotone data augmentation
+        extends this Bayesian approach to arbitrary missingness
+        patterns.  A fully functional standalone interface to the
+        Bayesian lasso (from Park & Casella), Normal-Gamma (from
+        Griffin & Brown), Horseshoe (from Carvalho, Polson, & Scott),
+        and ridge regression with model selection via Reversible Jump,
+        and student-t errors (from Geweke) is also provided
 Depends: R (>= 2.10), pls, lars, MASS
 Suggests: quadprog, mvtnorm, accuracy
 License: LGPL
-URL: http://www.statslab.cam.ac.uk/~bobby/monomvn.html
-Packaged: 2012-06-20 20:51:36 UTC; rgramacy
+URL: http://faculty.chicagobooth.edu/robert.gramacy/monomvn.html
+Packaged: 2012-06-25 08:43:39 UTC; bobby
 Repository: CRAN
-Date/Publication: 2012-06-21 05:48:24
+Date/Publication: 2012-06-25 09:20:49

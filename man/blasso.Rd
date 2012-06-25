@@ -146,7 +146,7 @@ blasso(X, y, T = 1000, thin = NULL, RJ = TRUE, M = NULL,
   The Normal--Gamma prior (Griffin & Brown, 2009) is implemented as
   an extension to the Bayesian lasso with \code{case = "ng"}.  Many
   thanks to James Scott for providing the code needed to extend the
-  method(s) to use the horseshoe prior (Carvalho, Polson, Scott, 2009).
+  method(s) to use the horseshoe prior (Carvalho, Polson, Scott, 2010).
 
   When \code{theta > 0} then the Student-t errors via scale mixtures
   (and thereby extra latent variables \code{omega2}) of Geweke (1993)
@@ -221,7 +221,7 @@ blasso(X, y, T = 1000, thin = NULL, RJ = TRUE, M = NULL,
   \url{http://biomet.oxfordjournals.org/content/96/4/835.abstract}
 
   Carvalho, C.M., Polson, N.G., and Scott, J.G. (2010) \emph{The
- horseshoe estimator for sparse signals} Biometrika 97(2):
+ horseshoe estimator for sparse signals.} Biometrika 97(2):
  pp. 465-480.\cr
   \url{http://ftp.stat.duke.edu/WorkingPapers/08-31.pdf}
 
