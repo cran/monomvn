@@ -82,7 +82,6 @@ kl.norm(mu1, S1, mu2, S2, quiet=FALSE, symm=FALSE)
 \references{
 \url{http://faculty.chicagobooth.edu/robert.gramacy/monomvn.html}
 }
-\seealso{ \code{\link{posdef.approx}} }
 \examples{
 mu1 <- rnorm(5)
 s1 <- matrix(rnorm(100), ncol=5)

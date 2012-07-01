@@ -4,8 +4,8 @@ useDynLib(monomvn)
 # Exports
 export(add.pe.QP, bridge, blasso, bhs, bmonomvn,
        default.QP, rmse.muS, Ellik.norm, kl.norm,
-       monomvn, monomvn.solve.QP, posdef.approx,
-       randmvn, regress, rmono, rwish)
+       monomvn, monomvn.solve.QP, randmvn, regress, 
+       rmono, rwish)
 
 # Import all packages listed as Imports or Depends
 import(pls, lars, MASS)

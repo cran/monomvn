@@ -1,4 +1,10 @@
-19.-1 (25 June 2012)
+1.9-2 (1 July 2012)
+-----
+
+removed orphaned accuracy dependency
+
+
+1.9-1 (25 June 2012)
 -----
 
 typo fixes and updates of docs from 1.9 version
