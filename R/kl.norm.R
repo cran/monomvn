@@ -33,12 +33,6 @@
 `kl.norm` <-
 function(mu1, S1, mu2, S2, quiet=FALSE, symm=FALSE)
 {
-  ## check that library(accuracy) can be loaded
-  if(require(accuracy, quietly=TRUE) == FALSE) {
-    if(!quiet) warning("library(accuracy) is recommended for kl.norm")
-    sechol <- chol
-  }
-  
   N <- length(mu1)
 
   ## check that the mean vectors have the same length
@@ -50,11 +44,9 @@ function(mu1, S1, mu2, S2, quiet=FALSE, symm=FALSE)
   if(ncol(S2) != N || nrow(S2) != N)
     stop("must have nrow(S2) == ncol(S2) == length(mu2)")
 
-  ## force positive definiteness of the covs
-  ## S1 <- posdef.approx(S1, "S1", quiet)
-  ## S2 <- posdef.approx(S2, "S2", quiet)
-  S1c <- sechol(S1)
-  S2c <- sechol(S2)
+  ## cholesky
+  S1c <- chol(S1)
+  S2c <- chol(S2)
 
   ##
   ## distance calculation in parts
@@ -92,12 +84,6 @@ function(mu1, S1, mu2, S2, quiet=FALSE, symm=FALSE)
 
 Ellik.norm <- function(mu1, S1, mu2, S2, quiet=FALSE)
   {
-    ## check that library(accuracy) can be loaded
-    if(require(accuracy, quietly=TRUE) == FALSE) {
-      if(!quiet) warning("library(accuracy) is recommended for Ellik")
-      sechol <- chol
-    }
-    
     N <- length(mu1)
     
     ## check that the mean vectors have the same length
@@ -110,12 +96,12 @@ Ellik.norm <- function(mu1, S1, mu2, S2, quiet=FALSE)
       stop("must have nrow(S2) == ncol(S2) == length(mu2)")
 
     ## first calculate the differential entropy
-    S2c <- sechol(S2)
+    S2c <- chol(S2)
     ld2 <-  2*sum(log(diag(S2c)))
     de <- 0.5*(N*log((2*pi*exp(1))) + ld2)
 
     ## the calculate the KL-divergence
-    S1c <- try(sechol(S1), silent=TRUE)
+    S1c <- try(chol(S1), silent=TRUE)
     if(class(S1c) == "try-error") return(NA)
     ld1 <- 2*sum(log(diag(S1c)))
     S1i <- chol2inv(S1c)
