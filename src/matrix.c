@@ -758,7 +758,7 @@ void sum_of_columns(double *s, double **M, unsigned int n1, unsigned int n2)
   
   /* calculate sum of columns */
   for(i=0; i<n2; i++) {
-    s[i] = M[j][0];
+    s[i] = M[0][0];
     for(j=1; j<n1; j++) s[i] += M[j][i];
   }
 }

@@ -22,9 +22,7 @@ kl.norm(mu1, S1, mu2, S2, quiet=FALSE, symm=FALSE)
   \item{S1}{ covariance matrix of first (estimated) MVN }
   \item{mu2}{ mean vector of second (true, baseline, or comparator) MVN }
   \item{S2}{ covariance matrix of second (true, baseline, or comparator) MVN }
-  \item{quiet}{ when \code{FALSE} (default), gives a warning if
-    the \pkg{accuracy} package cannot be loaded to deal with (possibly)
-    non-positive definite \code{S1} and \code{S2}}
+  \item{quiet}{ when \code{FALSE} (default) }
   \item{symm}{ when \code{TRUE} a symmetrized version of the
   KL divergence is used; see the note below }
 }
@@ -53,12 +51,6 @@ kl.norm(mu1, S1, mu2, S2, quiet=FALSE, symm=FALSE)
   \deqn{ -\frac{1}{2} \ln \{(2\pi e)^N |\Sigma_2|\} -
     D_{\mbox{\tiny KL}}(N_1 \| N_2).
   }{ -0.5 ln((2 pi e)^N |S2|) - kl.norm(mu1, S1, mu2, S2). }
-  
-  The \code{\link[accuracy]{sechol}} function from the \pkg{accuracy}
-  package is used to decompose
-  (possibly) non-positive definite \code{S1} and/or \code{S2}
-  to give more stable and robust calculations in the face of
-  numerical instabilities that might occur for larger problems
 }
 \value{
   In the case of the expected log likelihood the result is

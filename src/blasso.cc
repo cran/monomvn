@@ -1132,7 +1132,7 @@ void Blasso::Draw(const unsigned int thin, const bool fixnu)
     if(R_FINITE(nu) && omega2 && !fixnu) DrawNu();
 
     /* only depends on tau2i for LASSO/HORSESHOE/NG, and beta for RIDGE */
-    if(reg_model != OLS && r > 0 && delta > 0) DrawLambda2();
+    if(reg_model != OLS && r >= 0 && delta >= 0) DrawLambda2();
     else { /* is OLS */
       if(reg_model == OLS) assert(lambda2 == 0 && tau2i == NULL);
       if(m+EI > 0) refresh_Vb(breg, s2);

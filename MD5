@@ -1,5 +1,5 @@
-fce5536bf3c4de4165aceb460867061c *ChangeLog
-74402b38c8ace0149ba1f80bf37e2381 *DESCRIPTION
+86fc3c7efac3931c7d5247c13828aaf8 *ChangeLog
+31928b0c1d67895ae33a524d018eca8a *DESCRIPTION
 1c5c73c2d48664ee4fd57f0fc47af729 *LICENSE
 b62b1c49e01e5523f49fa760dc7ab8be *NAMESPACE
 64879e36bfedfbd90cfff3c49f7f2157 *R/addy.R
@@ -14,7 +14,7 @@ e6c1147554fbdb360db02c8b19e3d59a *R/monomvn.R
 eccbd272802171d059d876f43705fd53 *R/randmvn.R
 ea13f691f53bb8e1b123747c7094ef2d *R/regress.R
 73c7b2c5cc8a6eed29bd7ed63f8df455 *R/regress.fact.R
-e1fa9737a88f5db4ce564e70cf4237f8 *R/regress.lars.R
+0eea795c9fb4f21e9ef1da499d2ebfe0 *R/regress.lars.R
 fa65752895031409bb146fca7e38537e *R/regress.ls.R
 bf89284954bd8dc1d4a5b811be77ba25 *R/regress.pls.R
 9f993085d2d17188838ac3d58656fb0c *R/regress.ridge.R
@@ -32,7 +32,7 @@ dd8bb394b6d1127c13ebc4b9ac56c425 *man/blasso.s3.Rd
 14b5e7b0ec18b11313d43c1215aa9de2 *man/bmonomvn.Rd
 8ea1309cd544e89bbc4d0fece0ae2d8d *man/cement.Rd
 d8d15390bc4826d488cf8a639caa184d *man/default.QP.Rd
-24354f847cfc39c2e93f303a53aab4f9 *man/metrics.Rd
+7f0e98048ff01872a5337ecfb4e1374f *man/metrics.Rd
 b47bf3f342f418a8994df5b1b149c12e *man/monomvn-internal.Rd
 8715214b44a05c6bd1693198196144ad *man/monomvn-package.Rd
 1bf7ea0c3d22d856a563aab192089132 *man/monomvn.Rd
@@ -45,7 +45,7 @@ ecddeea3b90aa52ade72a4c4da07f053 *man/returns.Rd
 7b145947a69cd2e665811ac82a54e2bd *man/rmono.Rd
 39f5b0be8eccc3f737dbfe824c1cdaca *man/rwish.Rd
 673c27002abd77a1807220906959e184 *src/Makevars
-ee0da55abfbc927c8b4a21a9ece7980f *src/blasso.cc
+1d5784d92c7dc773e360584dc44c33eb *src/blasso.cc
 ced245ce042925fa780d976899cc4be6 *src/blasso.h
 5a9621f1d1b8bca927bf7b2dc7962e54 *src/bmonomvn.cc
 8982ffe01a8f06deb8254466426fdb47 *src/bmonomvn.h
@@ -53,7 +53,7 @@ d095660993e96e9c0e0b70f8b52b8b43 *src/hshoe.c
 9e486c700ad265ecded7bc920055a848 *src/hshoe.h
 712ac63a3202f6c83546e3ee6bb6ea8d *src/linalg.c
 c651e50a7f9e4fb7a3a6cbcb0df56824 *src/linalg.h
-fba3e1b7f6a12a6ef971494ecca45967 *src/matrix.c
+8f1f14041b025e37ae551baa925fc00d *src/matrix.c
 7e1dc1ff793653a73184a0d943a01ac3 *src/matrix.h
 63010c14bb55ae36c07849c288b051da *src/nu.c
 ed07e6f6abd783432789fcb66a2b6b82 *src/nu.h
