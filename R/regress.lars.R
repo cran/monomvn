@@ -130,23 +130,19 @@ get.lambda <- function(obj, s, mode)
     ## extract the regression coefficients for the desired fraction
     beta <- coef(obj, s=s, mode=mode)
 
-    ## get the non-zero entries and their count
+    ## get the non-zero entries
     bnz <- beta != 0
-    lbnz <- sum(bnz)
-
-    ## extract the first non-zero coefficient
-    nz <- ((1:length(beta))[beta != 0])[1]
-    b <- beta[nz]
+    b <- beta[bnz]
 
     ## extract the norm of OLS coefficients
     bls2 <- sum(coef(obj, s=0, mode="lambda")^2)#[nz]
 
     ## objective function to be minimized for x
-    of <- function(x, obj, lbnz, nz, b, bls2)
+    of <- function(x, obj, bnz, b, bls2)
       {
         beta <- coef(obj, s=x, mode="lambda")
-        zdiff2 <- (lbnz - sum(beta != 0))^2
-        bdiff2 <- (b - beta[nz])^2/bls2
+        zdiff2 <- sum((bnz - (beta != 0))^2)
+        bdiff2 <- sum((b - beta[bnz])^2)/bls2
         r <- bdiff2 + zdiff2
         return(r)
       }
@@ -155,8 +151,8 @@ get.lambda <- function(obj, s, mode)
     lrange <- c(0, max(obj$lambda))
 
     ## find the corresponding lambda
-    r <- optimize(of, interval=lrange, obj=obj, lbnz=lbnz,
-             nz=nz, b=b, bls=bls2)$minimum
+    r <- optimize(of, interval=lrange, obj=obj, bnz=bnz,
+                  b=b, bls=bls2)$minimum
 
     ## return the lambda that was found
     return(r)

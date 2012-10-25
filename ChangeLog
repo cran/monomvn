@@ -1,3 +1,13 @@
+1.9-3 (25 Oct 2012)
+-----
+
+fixed ridge inequality bug causing lambda2 to not
+get sampled
+
+changed how get.lambda works for a higher fidelity
+search
+
+
 1.9-2 (1 July 2012)
 -----
 
