@@ -2,8 +2,8 @@ Package: monomvn
 Type: Package
 Title: Estimation for multivariate normal and Student-t data with
         monotone missingness
-Version: 1.9-3
-Date: 2012-10-25
+Version: 1.9-4
+Date: 2013-04-17
 Author: Robert B. Gramacy <rbgramacy@chicagobooth.edu>
 Maintainer: Robert B. Gramacy <rbgramacy@chicagobooth.edu>
 Description: Estimation of multivariate normal and student-t data of
@@ -24,6 +24,7 @@ Depends: R (>= 2.10), pls, lars, MASS
 Suggests: quadprog, mvtnorm
 License: LGPL
 URL: http://faculty.chicagobooth.edu/robert.gramacy/monomvn.html
-Packaged: 2012-10-25 14:46:32 UTC; bobby
+Packaged: 2013-04-18 16:51:58 UTC; bobby
+NeedsCompilation: yes
 Repository: CRAN
-Date/Publication: 2012-10-25 15:45:33
+Date/Publication: 2013-04-18 21:41:28
