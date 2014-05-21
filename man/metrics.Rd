@@ -40,7 +40,9 @@ kl.norm(mu1, S1, mu2, S2, quiet=FALSE, symm=FALSE)
     }{0.5 (log(|S1|/|S2|) + tr(inv(S1)S2) + t(mu1-m2)inv(S2)(mu1-mu2) - N)}
   
     where \eqn{N}{N} is \code{length(mu1)}, and must agree with
-    the dimensions of the other parameters.
+    the dimensions of the other parameters.  Note that the parameterization
+    used involves swapped arguments compared to some other references,
+    e.g., as provided by Wikipedia.  See note below.
 
     The expected log likelihood can be formulated in terms of the
     KL divergence.  That is, the expected log likelihood of data
@@ -69,7 +71,9 @@ kl.norm(mu1, S1, mu2, S2, quiet=FALSE, symm=FALSE)
 
   \code{0.5 * (kl.norm(mu1,S1,mu2,S2) + kl.norm(mu2,S2,mu1,S1))}
 
-  or by using \code{symm = TRUE}
+  or by using \code{symm = TRUE}.  The arguments are reversed
+  compared to some other references, like Wikipedia.  To match
+  those versions use \code{kl.norm(mu2, S2, mu1, s1)}
 }
 \references{
 \url{http://faculty.chicagobooth.edu/robert.gramacy/monomvn.html}

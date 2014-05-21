@@ -1,3 +1,13 @@
+1.9-5 (22 May 2014)
+-----
+
+Fixed kl.norm bug thanks to Felix-Antoine Fortin, and made
+note in documentation that the order of arguments is reversed
+compared to other references like Wikipedia 
+
+removed License
+
+
 1.9-4 (17 April 2013)
 -----
 

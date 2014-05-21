@@ -60,7 +60,8 @@ function(mu1, S1, mu2, S2, quiet=FALSE, symm=FALSE)
   ## if(ld1$sign == -1) { warning("S1 is not posdef"); return(Inf) }
   ld1 <- 2*sum(log(diag(S1c)))
   ##ldet <- ld2$modulus[1] - ld1$modulus[1]
-  ldet <- ld2 - ld1
+  ##ldet <- ld2 - ld1
+  ldet <- ld1 - ld2
   
   ## rest of the calculation
   ## S2i <- solve(S2)
