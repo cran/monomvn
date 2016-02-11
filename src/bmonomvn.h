@@ -47,7 +47,7 @@ class Bmonomvn
   double **Y;                /* the data matrix */
   int *n;                    /* number of non-NA in each col of Y */
   Rmiss *R;                  /* the missingness pattern structure */
-  int *n2;                   /* number of R=2's in each col of R for DA */
+  // int *n2;                   /* number of R=2's in each col of R for DA */
   double p;                  /* the parsimony proportion */
 
   /* large normed design matrix used in regressions */

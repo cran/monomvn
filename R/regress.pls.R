@@ -65,10 +65,11 @@ function(y1, y2, method="plsr", ncomp.max=Inf, validation="CV",
     bvec <- matrix(NA, nrow=numpred+1, ncol=numreg)
     res <- matrix(NA, nrow=numobs, ncol=numreg)
     a <- matrix(RMSEP(reglst, estimate="CV", intercept=FALSE)$val, nrow=numreg)
+    a[!is.finite(a)] <- 1
     if(verb > 0) cat("ncomp:")
     for(i in 1:numreg) {
       ## in future, the "one standard error" rule should be used here instead
-      ## but the se=TRUE argument is not implemented yet in RMSEP
+      ## but the se=TRUE argument was not implemented yet in RMSEP
       ncomp[i] <- which.min(a[i,] + (max(a[i,])-min(a[i,]))*seq(0,1,length=ncol(a)))
       ## plot(a[i,]); abline(v=ncomp[i]); readline("pr: ")
       if(verb > 0) cat(paste(" ", ncomp[i], sep=""))

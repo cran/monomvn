@@ -22,6 +22,7 @@
  *
  ****************************************************************************/
 
+#include "R.h"
 
 extern "C"
 {
@@ -29,7 +30,6 @@ extern "C"
 #include "matrix.h"
 #include "linalg.h"
 #include "Rmath.h"
-#include "R.h"
 #include "assert.h"
 #include "nu.h"
 #include "rgig.h"
@@ -971,15 +971,15 @@ void Blasso::GetParams(double *mu, double *beta, int *m, double *s2,
 
 void Blasso::PrintParams(FILE *outfile) const
 {
-  myprintf(outfile, "m=%d, lambda2=%g, s2=%g, EI=%d\n", m, lambda2, s2, EI);
-  myprintf(outfile, "beta = ");
+  MYprintf(outfile, "m=%d, lambda2=%g, s2=%g, EI=%d\n", m, lambda2, s2, EI);
+  MYprintf(outfile, "beta = ");
   printVector(beta, m+EI, outfile, HUMAN);
   if(tau2i) {
-    myprintf(outfile, "tau2i = ");
+    MYprintf(outfile, "tau2i = ");
     printVector(tau2i, m+EI, outfile, HUMAN);
   }
   if(omega2) {
-    myprintf(outfile, "omega2 = ");
+    MYprintf(outfile, "omega2 = ");
     printVector(omega2, n, outfile, HUMAN);
   }
 }
@@ -1054,10 +1054,10 @@ void Blasso::Rounds(const unsigned int T, const unsigned int thin,
     
     /* print progress meter */
     if(verb && t > 0 && ((t+1) % 100 == 0))
-      myprintf(mystdout, "t=%d, m=%d\n", t+1, this->m);
+      MYprintf(MYstdout, "t=%d, m=%d\n", t+1, this->m);
 
     /* check R for interrupts and flush console every second */
-    itime = my_r_process_events(itime);
+    itime = MY_r_process_events(itime);
   }
 
   /* (un)-norm the beta samples, like Efron and Hastie */
@@ -1486,7 +1486,9 @@ void Blasso::RJdown(double qratio)
 
   /* compute the new regression quantities */
   bool success = compute_BayesReg(m+EI-1, XtY, tau2i, lambda2, s2, breg_new);
-  assert(success); success = true;
+  assert(success); 
+  if(!success) MYprintf(MYstdout, "compute_BayesReg did not return success\n");
+  else success = true;
 
   /* calculate the acceptance probability breg -> breg_new */
   double lalpha = rj_betas_lratio(breg, breg_new, s2, prop);
@@ -1679,7 +1681,7 @@ bool Blasso::Compute(const bool reinit)
 
 #ifdef DEBUG
   if(YtY - breg->BtAB <= 0) { 
-    myprintf(mystdout, "YtY=%.20f, BtAB=%.20f\n", YtY, breg->BtAB);
+    MYprintf(MYstdout, "YtY=%.20f, BtAB=%.20f\n", YtY, breg->BtAB);
     assert(0);
   }
 #endif
@@ -2184,7 +2186,7 @@ double log_likelihood(const unsigned int n, double *resid, const double s2,
   /* both nu = 0 and nu = inf indicate no Student-t errors */
   if(!R_FINITE(nu) || nu == 0) for(i=0; i<n; i++) llik += dnorm(resid[i], 0.0, sd, 1);
   else for(i=0; i<n; i++) llik += dt(resid[i]/sd, nu, 1);
-  assert(R_FINITE(llik) && !isnan(llik));
+  assert(R_FINITE(llik) && !ISNAN(llik));
  
    /* return the log likelihood */
   return llik;
@@ -2456,7 +2458,7 @@ double lprior_model(const unsigned int m, const unsigned int Mmax,
   assert(pi >= 0 && pi <= 1);
   if(Mmax == 0 || pi == 0.0 || pi == 1.0) return 0.0;
   
-  /* myprintf(mystdout, "m=%d, Mmax=%d, pi=%g, lp=%g\n", 
+  /* MYprintf(MYstdout, "m=%d, Mmax=%d, pi=%g, lp=%g\n", 
      m, Mmax, pi, dbinom((double) m, (double) Mmax, pi, 1));  */
 
   return dbinom((double) m, (double) Mmax, pi, 1);
@@ -2489,7 +2491,7 @@ void draw_tau2i_lasso(const unsigned int m, double *tau2i, double *beta,
     /* check to make sure there were no numerical problems */
     if(tau2i_temp <= 0 || tau2i_temp > 1.0/DOUBLE_EPS) {
 #ifdef DEBUG
-      myprintf(mystdout, "tau2i_lasso: j=%d, m=%d, l2=%g, s2=%g, beta=%g, tau2i=%g\n", 
+      MYprintf(MYstdout, "tau2i_lasso: j=%d, m=%d, l2=%g, s2=%g, beta=%g, tau2i=%g\n", 
 	       j, m, lambda2, s2, beta[j], tau2i[j]);
 #endif
       /* tau2i[j] = 0.0; */
@@ -2518,7 +2520,7 @@ void draw_tau2i_ng(const unsigned int m, double *tau2i, double *beta,
     /* check to make sure there were no numerical problems */
     if(tau2 < DOUBLE_EPS || !R_FINITE(tau2)) {
 #ifdef DEBUG
-      myprintf(mystdout, "tau2i_ng: j=%d, m=%d, gam=%g, l2=%g, s2=%g, \
+      MYprintf(MYstdout, "tau2i_ng: j=%d, m=%d, gam=%g, l2=%g, s2=%g, \
 beta=%g, tau2i=%g, tau2=%g\n", 
 	       j, m, gam, lambda2, s2, beta[j], tau2i[j], tau2);
 #endif
@@ -2639,8 +2641,8 @@ double Igamma_inv(const double a, const double y, const int lower,
   double r;
   if(ulog) r = Rgamma_inv(a, y - Cgamma(a, ulog), lower, ulog);
   else r = Rgamma_inv(a, y / Cgamma(a, ulog), lower, ulog);
-  assert(!isnan(r));
-  /* myprintf(mystdout, "Rgamma_inv: a=%g, y=%g, lower=%d, ulog=%d, r=%g\n", 
+  assert(!ISNAN(r));
+  /* MYprintf(MYstdout, "Rgamma_inv: a=%g, y=%g, lower=%d, ulog=%d, r=%g\n", 
      a, y, lower, ulog, r); */
   return(r);
 }
@@ -2657,8 +2659,8 @@ double Cgamma(const double a, const int ulog)
   double r;
   if(ulog) r = lgammafn(a) / M_LN10;
   else r = gammafn(a);
-  /* myprintf(mystdout, "Cgamma: a=%g, ulog=%d, r=%g\n", a, ulog, r); */
-  assert(!isnan(r));
+  /* MYprintf(MYstdout, "Cgamma: a=%g, ulog=%d, r=%g\n", a, ulog, r); */
+  assert(!ISNAN(r));
   return(r);
 }
 
@@ -2675,9 +2677,9 @@ double Rgamma_inv(const double a, const double y, const int lower,
   double r;
   if(ulog) r = qgamma(y*M_LN10, a, /*scale=*/ 1.0, lower, ulog);
   else r = qgamma(y, a, /*scale=*/ 1.0, lower, ulog);
-  /*myprintf(mystdout, "Rgamma_inv: a=%g, y=%g, lower=%d, ulog=%d, r=%g\n", 
+  /*MYprintf(MYstdout, "Rgamma_inv: a=%g, y=%g, lower=%d, ulog=%d, r=%g\n", 
     a, y, lower, ulog, r); */
-  assert(!isnan(r)); 
+  assert(!ISNAN(r)); 
   return(r);
 }
 
@@ -2801,7 +2803,7 @@ void blasso_cleanup(void)
   /* free blasso model */
   if(blasso) { 
     if(blasso->Verb() >= 1)
-      myprintf(mystderr, "INTERRUPT: blasso model leaked, is now destroyed\n");
+      MYprintf(MYstderr, "INTERRUPT: blasso model leaked, is now destroyed\n");
     delete blasso; 
     blasso = NULL; 
   }

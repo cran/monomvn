@@ -61,7 +61,7 @@
 }
 \author{ Robert B. Gramacy \email{rbgramacy@chicagobooth.edu} }
 \references{
-\url{http://faculty.chicagobooth.edu/robert.gramacy/monomvn.html}
+\url{http://bobby.gramacy.com/r_packages/monomvn}
 }
 \seealso{ \code{\link{bmonomvn}}, \code{\link{print.monomvn}},
            \code{\link{summary.monomvn}} }

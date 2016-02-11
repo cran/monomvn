@@ -8,7 +8,14 @@ export(add.pe.QP, bridge, blasso, bhs, bmonomvn,
        rmono, rwish)
 
 # Import all packages listed as Imports or Depends
-import(pls, lars, MASS)
+import(pls, lars, MASS, quadprog, mvtnorm)
+
+## required for CRAN checks
+importFrom("graphics", "abline", "boxplot", "hist", "image", "legend",
+           "par", "plot", "points", "title")
+importFrom("stats", "coef", "cov", "lm", "optimize", "quantile",
+           "rbeta", "rbinom", "rchisq", "rgamma", "rnorm", "sd", "var")
+importFrom("utils", "read.table")
 
 # S3
 S3method(plot, blasso)

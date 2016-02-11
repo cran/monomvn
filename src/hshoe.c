@@ -85,25 +85,25 @@ void UpdateLambdaCPS(int p, double* Beta, double lambda2PC,
 void UpdateTauCPS(int p, double *Beta, double *tau2iPC, 
 		  double sigma2, double *lambda2PC) 
 { 
-  double a, b, mytau, lambdaCPS;
+  double a, b, MYtau, lambdaCPS;
   double eta, u, q, upper, scale, bound; 
   int ltail, logflag, j; 
 
   /* sample from the prior when p == 0 */
   if(p == 0) {
-    mytau = rt(1.0);
-    *lambda2PC = 1.0/(mytau*mytau);
+    MYtau = rt(1.0);
+    *lambda2PC = 1.0/(MYtau*MYtau);
     return;
   }
 
-  mytau = *lambda2PC; mytau = sqrt(1.0/mytau);  
+  MYtau = *lambda2PC; MYtau = sqrt(1.0/MYtau);  
   ltail=1; logflag=0;
   b = 0.0;
 
   a = ((double)p+1.0)/2.0; 
   for(j = 0; j < p; j++) 
     { 
-      lambdaCPS = 1.0/mytau;
+      lambdaCPS = 1.0/MYtau;
       lambdaCPS *= 1.0/sqrt(tau2iPC[j]);
       /* b += pow(Beta[j],2.0) / (pow(lambdaCPS, 2.0) * sigma2); */
       b += (Beta[j]*Beta[j]) / ((lambdaCPS*lambdaCPS) * sigma2); 
@@ -111,8 +111,8 @@ void UpdateTauCPS(int p, double *Beta, double *tau2iPC,
   b = 0.5*b; 
  
   /* First sample u | eta */
-  /* eta = 1.0/(pow(mytau, 2.0)); */
-  eta = 1.0/((mytau*mytau)); 
+  /* eta = 1.0/(pow(MYtau, 2.0)); */
+  eta = 1.0/((MYtau*MYtau)); 
   bound = 1.0/(1.0 + eta); 
   u = runif(0.0, bound); 
  
@@ -123,8 +123,8 @@ void UpdateTauCPS(int p, double *Beta, double *tau2iPC,
   u = runif(0,upper); 
   eta = qgamma(u, a, scale, ltail, logflag); 
   q = sqrt(1.0/eta); 
-  mytau = q;
-  *lambda2PC = 1.0/(mytau*mytau);
+  MYtau = q;
+  *lambda2PC = 1.0/(MYtau*MYtau);
 } 
  
 
@@ -137,11 +137,11 @@ void UpdateTauCPS(int p, double *Beta, double *tau2iPC,
 
 double LambdaCPS_lprior(int m, double *tau2iPC, double lambda2PC)
 {
-  double mytau, lambdaCPS, lprior;
+  double MYtau, lambdaCPS, lprior;
   lprior = m*log(2.0);
-  mytau = lambda2PC; mytau = sqrt(1.0/mytau);
+  MYtau = lambda2PC; MYtau = sqrt(1.0/MYtau);
   for(int j=0; j<m; j++) {
-    lambdaCPS = 1.0/mytau;
+    lambdaCPS = 1.0/MYtau;
     lambdaCPS *= 1.0/sqrt(tau2iPC[j]);
     lprior += dt(lambdaCPS, 1.0, 1);
   }
@@ -158,10 +158,10 @@ double LambdaCPS_lprior(int m, double *tau2iPC, double lambda2PC)
 
 double LambdaCPS_prior_draw(double lambda2PC)
 {
-  double lambdaCPS, mytau;
-  mytau = lambda2PC; mytau = sqrt(1.0/mytau);
+  double lambdaCPS, MYtau;
+  MYtau = lambda2PC; MYtau = sqrt(1.0/MYtau);
   lambdaCPS = fabs(rt(1.0));
-  return /*1.0/*/sqrt(mytau*lambdaCPS);
+  return /*1.0/*/sqrt(MYtau*lambdaCPS);
 }
 
 
@@ -174,8 +174,8 @@ double LambdaCPS_prior_draw(double lambda2PC)
 
 double TauCPS_lprior(double lambda2PC)
 {
-  double mytau = 1.0/sqrt(lambda2PC);
-  return log(2.0) + dt(mytau, 1.0, 1);
+  double MYtau = 1.0/sqrt(lambda2PC);
+  return log(2.0) + dt(MYtau, 1.0, 1);
 }
 
 

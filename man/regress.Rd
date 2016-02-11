@@ -145,7 +145,7 @@ regress(X, y, method = c("lsr", "plsr", "pcr", "lasso", "lar",
   Annals of Statistics \bold{32}(2); see also \cr
   \url{http://www-stat.stanford.edu/~hastie/Papers/LARS/LeastAngle_2002.pdf}
   
-\url{http://faculty.chicagobooth.edu/robert.gramacy/monomvn.html}
+\url{http://bobby.gramacy.com/r_packages/monomvn}
 }
 
 \author{ Robert B. Gramacy \email{rbgramacy@chicagobooth.edu} }

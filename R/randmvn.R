@@ -62,10 +62,6 @@ function(N, d, method=c("normwish", "parsimonious"),
     if(length(nu) != 1 || d < 1)
       stop("nu should be a scalar >= 1")
 
-    ## load mvtnorm
-    if(require(mvtnorm, quietly=TRUE) == FALSE)
-      stop("this function requires library(mvtnorm)")
-
     ## using normal and inverse wishart method
     if(method == "normwish") {
     

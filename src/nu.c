@@ -235,9 +235,9 @@ double draw_nu_mh(const double nu_old, const unsigned int n, const double eta)
   //nu = unif_propose_pos(nu_old-1.0, &qf, &qb) + 1.0;
   nu = unif_propose_pos(nu_old, &qf, &qb);
   alpha = exp(nu_lpdf(nu, n, eta) - nu_lpdf(nu_old, n, eta));
-  myprintf(mystdout, "nu_old=%g, nu=%g, alpha=%g, qratio=%g", nu_old, nu, alpha, qb/qf);
+  MYprintf(MYstdout, "nu_old=%g, nu=%g, alpha=%g, qratio=%g", nu_old, nu, alpha, qb/qf);
   u = unif_rand();
-  myprintf(mystdout, " u=%g", u);
-  if(u < alpha*qb/qf) { myprintf(mystdout, " accept\n"); return nu; }
-  else { myprintf(mystdout, " reject\n"); return nu_old; }
+  MYprintf(MYstdout, " u=%g", u);
+  if(u < alpha*qb/qf) { MYprintf(MYstdout, " accept\n"); return nu; }
+  else { MYprintf(MYstdout, " reject\n"); return nu_old; }
 }

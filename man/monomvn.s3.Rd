@@ -79,7 +79,7 @@
 }
 \author{ Robert B. Gramacy \email{rbgramacy@chicagobooth.edu} }
 \references{
-\url{http://faculty.chicagobooth.edu/robert.gramacy/monomvn.html}
+\url{http://bobby.gramacy.com/r_packages/monomvn}
 }
 \note{
   There is one further S3 function for \code{"monomvn"}-class

@@ -1,3 +1,15 @@
+1.9-6 (10 Feb 2015)
+-----
+
+moved R.h and Rmath.h out of extern C for new g++
+
+(via linking to tgp) fixed three abs to fabs in matrix.c
+
+fixed some other warnings from gcc compiler
+
+added line to address bug arizing from NaN returned by RMSEP
+
+
 1.9-5 (22 May 2014)
 -----
 

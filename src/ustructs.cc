@@ -27,14 +27,14 @@
  * blasso.cc/.h 
  */
 
+#include "Rmath.h"
+#include "R.h"
 
 extern "C"
 {
 #include "rhelp.h"
 #include "matrix.h"
 #include "linalg.h"
-#include "Rmath.h"
-#include "R.h"
 #include <assert.h>
 }
 #include "ustructs.h"
@@ -495,7 +495,7 @@ void QPsolve(QPsamp *qps, const unsigned int t, const unsigned int m,
   /* MIGHT make all of the W's positive, and then renormalize */
   
   /* MIGHT want to check ierr */
-  // myprintf(stdout, "ierr = %d\n", ierr);
+  // MYprintf(stdout, "ierr = %d\n", ierr);
   assert(ierr==0);
 }
 
@@ -579,10 +579,10 @@ void delete_Rmiss_R(Rmiss *R)
 void print_Rmiss(Rmiss *R, FILE *outfile, const bool tidy)
 {
   /* nothing to print if NULL */
-  if(!R) { myprintf(outfile, "Rmiss is NULL\n"); return; }
+  if(!R) { MYprintf(outfile, "Rmiss is NULL\n"); return; }
 
   /* print dimensions */
-  myprintf(outfile, "Rmiss: n=%d, m=%d\nR=\n", R->n, R->m);
+  MYprintf(outfile, "Rmiss: n=%d, m=%d\nR=\n", R->n, R->m);
 
   if(!tidy) {
     /* print the transpose matrix */
@@ -592,10 +592,10 @@ void print_Rmiss(Rmiss *R, FILE *outfile, const bool tidy)
   /* print the list(s) of indices */
   for(unsigned int i=0; i<R->m; i++) {
     if(tidy && R->n2[i] == 0) continue;
-    myprintf(outfile, "R2[%d] =", i, R->n2[i]);
+    MYprintf(outfile, "R2[%d] =", i, R->n2[i]);
     for(unsigned int j=0; j<R->n2[i]; j++)
-      myprintf(outfile, " %d", R->R2[i][j]);
-    myprintf(outfile, "; (%d)\n", R->n2[i]);
+      MYprintf(outfile, " %d", R->R2[i][j]);
+    MYprintf(outfile, "; (%d)\n", R->n2[i]);
   }
 }
 
@@ -616,13 +616,13 @@ void print_Rmiss_X(Rmiss *R, double **X, const unsigned int n,
   /* loop over the elements of R[j][i] == 2 */
   for(unsigned int i=0; i<m; i++) {
     for(unsigned int j=0; j<R->n2[i]; j++) {
-      if(type==HUMAN) myprintf(outfile, "%g ", X[R->R2[i][j]][i]);
-      else if(type==MACHINE) myprintf(outfile, "%.20f ", X[R->R2[i][j]][i]);
+      if(type==HUMAN) MYprintf(outfile, "%g ", X[R->R2[i][j]][i]);
+      else if(type==MACHINE) MYprintf(outfile, "%.20f ", X[R->R2[i][j]][i]);
     }
   }
   
   /* add a newline */
-  myprintf(outfile, "\n");
+  MYprintf(outfile, "\n");
 }
 
 
@@ -640,10 +640,10 @@ void print_Rmiss_Xhead(Rmiss *R, FILE *outfile)
   /* loop over the elements of R[j][i] == 2 */
   for(unsigned int i=0; i<R->m; i++) {
     for(unsigned int j=0; j<R->n2[i]; j++) {
-      myprintf(outfile, "i%dj%d ", (R->R2[i][j])+1, i+1);
+      MYprintf(outfile, "i%dj%d ", (R->R2[i][j])+1, i+1);
     }
   }
   
   /* add a newline */
-  myprintf(outfile, "\n");
+  MYprintf(outfile, "\n");
 }

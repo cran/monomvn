@@ -22,6 +22,8 @@
  *
  ****************************************************************************/
 
+#include "Rmath.h"
+#include "R.h"
 
 extern "C"
 {
@@ -29,8 +31,6 @@ extern "C"
 #include "matrix.h"
 #include "linalg.h"
 #include "nu.h"
-#include "Rmath.h"
-#include "R.h"
 #include <assert.h>
 }
 #include "ustructs.h"
@@ -56,7 +56,7 @@ Bmonomvn::Bmonomvn(const unsigned int M, const unsigned int N, double **Y,
   this->n = n;
   this->Y = Y;
   this->R = R;
-  this->n2 = n2;
+  // this->n2 = n2;
   this->verb = verb;
   this->p = p;
 
@@ -420,7 +420,7 @@ void Bmonomvn::Rounds(const unsigned int T, const double thin,
     
     /* progress meter */
     if(verb && (t>0) && (t<=(int)T-1) && ((t+1) % 100 == 0)) 
-      myprintf(mystdout, "t=%d\n", t+1);
+      MYprintf(MYstdout, "t=%d\n", t+1);
 
     /* take one draw after thinning */
     double llik_temp, llik_norm_temp;
@@ -448,7 +448,7 @@ void Bmonomvn::Rounds(const unsigned int T, const double thin,
       if(onenu) nu[t] = this->nu;
 
       /* check for new best MAP */
-      // myprintf(mystdout, "lpost = %g, lpost_map = %g\n", lpost, lpost_map);
+      // MYprintf(MYstdout, "lpost = %g, lpost_map = %g\n", lpost, lpost_map);
       if(lpost > lpost_map) {
 	lpost_map = lpost;
 	MVN_copy(map, mu, S, M);
@@ -460,7 +460,7 @@ void Bmonomvn::Rounds(const unsigned int T, const double thin,
     }
 
     /* periodically check R for interrupts and flush console every second */
-    itime = my_r_process_events(itime);
+    itime = MY_r_process_events(itime);
   }
 }
 
@@ -726,6 +726,7 @@ void get_regress(const unsigned int m, double *mu, double *s21, double **s11,
   int info = 0;
   info = linalg_dposv(m, s11util, s11i);
   assert(info == 0);
+  if(info != 0) MYprintf(MYstdout, "linalg_dposv failed in get_regress\n");
 
   /* beta <- drop(s21 %*% solve(s11)) */
   linalg_dsymv(m, 1.0, s11i, m, s21, 1, 0.0, beta_out, 1);
@@ -869,7 +870,7 @@ void bmonomvn_R(
 			(bool) (*trace));
 
   /* do burn-in rounds */
-  if(*verb) myprintf(mystdout, "%d burnin rounds\n", *B);
+  if(*verb) MYprintf(MYstdout, "%d burnin rounds\n", *B);
   bmonomvn->Rounds(*B, *thin, (bool) *economy, true, NULL, NULL, NULL);
   
   /* set up the mu and S sums for calculating means and variances */
@@ -879,7 +880,7 @@ void bmonomvn_R(
   bmonomvn->SetQPsamp(qps);
 
   /* and now sampling rounds */
-  if(*verb) myprintf(mystdout, "%d sampling rounds\n", *T);
+  if(*verb) MYprintf(MYstdout, "%d sampling rounds\n", *T);
   bmonomvn->Rounds(*T, *thin, (bool) *economy, false, nu, llik, llik_norm);
 
   /* copy back the mean and variance(s) of mu and S */
@@ -949,7 +950,7 @@ void bmonomvn_cleanup(void)
   /* free bmonomvn model */
   if(bmonomvn) { 
     if(bmonomvn->Verb() >= 1)
-      myprintf(mystderr, "INTERRUPT: bmonomvn model leaked, is now destroyed\n\n");
+      MYprintf(MYstderr, "INTERRUPT: bmonomvn model leaked, is now destroyed\n\n");
     delete bmonomvn; 
     bmonomvn = NULL; 
   }

@@ -212,10 +212,6 @@ postprocess.QP <- function(QP, W, M, T, nam)
 
 monomvn.solve.QP <- function(S, QP, mu = NULL)
 {
-  ## check that we can load quadprog
-  if(require(quadprog, quietly=TRUE) == FALSE)
-    stop("install library(quadprog) to use this function")
-  
   ## check the dims of S
   if(!is.matrix(S) || ncol(S) != nrow(S))
     stop("must have a symmetric matrix for S")

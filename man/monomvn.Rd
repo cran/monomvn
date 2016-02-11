@@ -221,10 +221,10 @@ monomvn(y, pre = TRUE, method = c("plsr", "pcr", "lasso", "lar",
   \emph{Elements of Statistical Learning.} Springer, NY. [HTF]
   
   Some of the code for \code{monomvn}, and its subroutines, was inspired
-  by code found on the world wide web, written by Daniel Heitjan,\cr
-  \url{http://www.cceb.upenn.edu/pages/heitjan/courses/bsta782/examples/fcn.q}
+  by code found on the world wide web, written by Daniel Heitjan.
+  Search for \dQuote{fcn.q}
 
-\url{http://faculty.chicagobooth.edu/robert.gramacy/monomvn.html}
+\url{http://bobby.gramacy.com/r_packages/monomvn}
 }
 \author{ Robert B. Gramacy \email{rbgramacy@chicagobooth.edu}}
 
