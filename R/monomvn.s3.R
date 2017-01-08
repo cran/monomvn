@@ -126,7 +126,7 @@ function(object, Si=FALSE, ...)
   ## check if there is anything to plot
   if(all(x$S0 == 0)) {
     cat("S has no zero entries, so there is nothing to plot\n")
-    return
+    return(NULL)
   }
   
   ## count the number of things we've plotted

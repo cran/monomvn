@@ -94,7 +94,7 @@
   }
 }
 
-\author{ Robert B. Gramacy \email{rbgramacy@chicagobooth.edu} }
+\author{ Robert B. Gramacy \email{rbg@vt.edu} }
 
 \references{
 \url{http://bobby.gramacy.com/r_packages/monomvn}

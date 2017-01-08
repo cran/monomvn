@@ -242,7 +242,7 @@ blasso(X, y, T = 1000, thin = NULL, RJ = TRUE, M = NULL,
   \url{http://bobby.gramacy.com/r_packages/monomvn}
 }
 
-\author{ Robert B. Gramacy \email{rbgramacy@chicagobooth.edu} }
+\author{ Robert B. Gramacy \email{rbg@vt.edu} }
 
  \seealso{
    \code{\link{lm}} ,

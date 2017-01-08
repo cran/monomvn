@@ -61,7 +61,7 @@ kl.norm(mu1, S1, mu2, S2, quiet=FALSE, symm=FALSE)
   real number depicting the \emph{distance} between the
   two normal distributions
 }
-\author{ Robert B. Gramacy \email{rbgramacy@chicagobooth.edu} }
+\author{ Robert B. Gramacy \email{rbg@vt.edu} }
 \note{
   The KL-divergence is not symmetric.  Therefore
 

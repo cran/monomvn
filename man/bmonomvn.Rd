@@ -281,7 +281,7 @@ bmonomvn(y, pre = TRUE, p = 0.9, B = 100, T = 200, thin = 1,
 \url{http://bobby.gramacy.com/r_packages/monomvn}
 }
 
-\author{ Robert B. Gramacy \email{rbgramacy@chicagobooth.edu} }
+\author{ Robert B. Gramacy \email{rbg@vt.edu} }
 
 \note{
   Whenever the \code{bmonomvn} algorithm requires a regression

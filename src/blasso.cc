@@ -2025,7 +2025,7 @@ void Blasso::DrawGamma(void)
   double lrat = (gamp - gam)*(m*log(0.5*lambda2) + ltau2sum);
 
   /* now add in the log ratio of gamma functions */
-  lrat += m*(lgamma(gam) - lgamma(gamp));
+  lrat += m*(lgammafn(gam) - lgammafn(gamp));
   
   /* calculate log ratio of the pis */
   lrat += 0.0 - 2.0*log(gamp) - gamp - delta*lambda2/gamp;

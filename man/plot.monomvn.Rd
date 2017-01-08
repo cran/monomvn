@@ -59,7 +59,7 @@
 \value{
   The only output of this function is beautiful plots
 }
-\author{ Robert B. Gramacy \email{rbgramacy@chicagobooth.edu} }
+\author{ Robert B. Gramacy \email{rbg@vt.edu} }
 \references{
 \url{http://bobby.gramacy.com/r_packages/monomvn}
 }

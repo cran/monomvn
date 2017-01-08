@@ -114,7 +114,7 @@ default.QP(m, dmu = FALSE, mu.constr = NULL)
 }
 %\references{ ~put references to the literature/web site here ~ }
 
-\author{ Robert B. Gramacy \email{rbgramacy@chicagobooth.edu} }
+\author{ Robert B. Gramacy \email{rbg@vt.edu} }
 \seealso{ \code{\link{bmonomvn}} and \code{\link[quadprog]{solve.QP}}
   in the \pkg{quadprog} package, \code{\link{monomvn.solve.QP}} }
 \examples{

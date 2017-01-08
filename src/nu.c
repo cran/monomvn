@@ -174,7 +174,7 @@ double draw_nu_reject(const unsigned int n, const double eta,
     //nu = rexp(1.0/nustar);
     nu = rexp(nustar);
   } while(log(u) >= (dn*(0.5*nu)*log(0.5*nu) - (0.5*dn*nustar)*log(0.5*nustar)
-		     + dn*lgamma(0.5*nustar) - dn*lgamma(0.5*nu)
+		     + dn*lgammafn(0.5*nustar) - dn*lgammafn(0.5*nu)
 		     + (nu-nustar)*(1.0/nustar-eta))); 
   
   /* done */

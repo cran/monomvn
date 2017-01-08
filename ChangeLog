@@ -1,3 +1,10 @@
+1.9-7 (28 Dec 2016)
+-----
+
+Fixed Brian Ripley's Solaris problems; although there are 
+some annoying warnings
+
+
 1.9-6 (10 Feb 2015)
 -----
 

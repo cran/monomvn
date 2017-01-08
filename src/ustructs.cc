@@ -53,7 +53,7 @@ void mean_of_each_col_miss(double *mean, double **M, unsigned int *n1,
   unsigned int i,j, count;
  
   /* sanity checks */
-  if(n1 <= 0 || n2 <= 0) {return;}
+  if(n2 <= 0) {return;}
   assert(mean && M);
   
   /* calculate mean of columns */

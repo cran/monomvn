@@ -226,7 +226,7 @@ monomvn(y, pre = TRUE, method = c("plsr", "pcr", "lasso", "lar",
 
 \url{http://bobby.gramacy.com/r_packages/monomvn}
 }
-\author{ Robert B. Gramacy \email{rbgramacy@chicagobooth.edu}}
+\author{ Robert B. Gramacy \email{rbg@vt.edu}}
 
 \note{
   The CV in \pkg{plsr} and \pkg{lars} are random in nature, and so
