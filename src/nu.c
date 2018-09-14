@@ -143,8 +143,7 @@ double nustar_urr_root
  * the degrees of freedom parameter to the Student-t distribution
  */
 
-double draw_nu_reject(const unsigned int n, const double eta, 
-		      const double theta)
+double draw_nu_reject(const unsigned int n, const double eta)
 {
   double x1, x2, f1, f2, nustar, u, nu, dn;
   unsigned int counter;
@@ -222,22 +221,37 @@ double unif_propose_pos(const double last, double *q_fwd, double *q_bak)
   return ret;
 }
 
-double nu_lpdf(const double nu, const unsigned int n, const double eta)
+
+/*
+ * nu_lpdf:
+ *
+ * evaluate log density function for eta conditional
+ */
+
+double nu_lpdf(const double nu, const unsigned int n, const double eta, const double alpha)
 {
   double dn = (double) n;
-  return 0.5*(dn*nu)*log(0.5*nu) - dn*lgamma(0.5*nu) - eta*nu;
+  return 0.5*(dn*nu)*log(0.5*nu) - dn*lgamma(0.5*nu) - eta*nu + (alpha - 1.0)*log(nu);
 }
 
-double draw_nu_mh(const double nu_old, const unsigned int n, const double eta) 
+
+/*
+ * draw_nu_mh:
+ *
+ * use Metropolis-Hastings as an alternative nu-drawing mechanism, using the
+ * conditional pdf above
+ */
+
+double draw_nu_mh(const double nu_old, const unsigned int n, const double eta, const double alpha) 
 {
-  double qf, qb, nu, alpha, u;
+  double qf, qb, nu, a, u;
   
   //nu = unif_propose_pos(nu_old-1.0, &qf, &qb) + 1.0;
   nu = unif_propose_pos(nu_old, &qf, &qb);
-  alpha = exp(nu_lpdf(nu, n, eta) - nu_lpdf(nu_old, n, eta));
-  MYprintf(MYstdout, "nu_old=%g, nu=%g, alpha=%g, qratio=%g", nu_old, nu, alpha, qb/qf);
+  a = exp(nu_lpdf(nu, n, eta, alpha) - nu_lpdf(nu_old, n, eta, alpha));
+  /* MYprintf(MYstdout, "nu_old=%g, nu=%g, alpha=%g, qratio=%g", nu_old, nu, alpha, qb/qf); */
   u = unif_rand();
-  MYprintf(MYstdout, " u=%g", u);
-  if(u < alpha*qb/qf) { MYprintf(MYstdout, " accept\n"); return nu; }
-  else { MYprintf(MYstdout, " reject\n"); return nu_old; }
+  /* MYprintf(MYstdout, " u=%g", u); */
+  if(u < a*qb/qf) { /* MYprintf(MYstdout, " accept\n"); */ return nu; }
+  else { /* MYprintf(MYstdout, " reject\n"); */ return nu_old; }
 }

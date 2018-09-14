@@ -54,8 +54,8 @@ Blasso::Blasso(const unsigned int M, const unsigned int N, double **Xorig,
 	       const bool RJ, const unsigned int Mmax, double *beta_start, 
 	       const double s2_start, const double lambda2_start, 
 	       double *mprior, const double r, const double delta, 
-	       const double theta, const REG_MODEL reg_model, int *facts, 
-	       const unsigned int nf, const bool rao_s2, 
+	       const double alpha, const double theta, const REG_MODEL reg_model, 
+         int *facts, const unsigned int nf, const bool rao_s2, 
 	       const unsigned int verb)
 {
   /* sanity checks */
@@ -72,8 +72,9 @@ Blasso::Blasso(const unsigned int M, const unsigned int N, double **Xorig,
   /* initialize the parameters */
   this->r = r;
   this->delta = delta;
+  this->alpha = alpha;
   this->theta = theta;
-  this->nu = 1.0/theta;
+  this->nu = alpha/theta;
   this->EI = (this->theta != 0);
   this->icept = true;
 
@@ -133,8 +134,8 @@ Blasso::Blasso(const unsigned int M, const unsigned int n, double **X,
 	       double *tau2i, const bool hs, double *omega2, const double nu, 
 	       const double gam, double *mprior, const double r, 
 	       const double delta, const double a, const double b, 
-	       const double theta, const bool rao_s2, const bool icept, 
-	       const bool normalize, const unsigned int verb)
+	       const double alpha, const double theta, const bool rao_s2, 
+         const bool icept, const bool normalize, const unsigned int verb)
 {
   /* copy RJ setting */
   this->RJ = RJ;
@@ -145,6 +146,7 @@ Blasso::Blasso(const unsigned int M, const unsigned int n, double **X,
   /* initialize the parameters */
   this->r = r;
   this->delta = delta;
+  this->alpha = alpha;
   this->theta = theta;
 
   /* deal with intercept arguments */
@@ -773,7 +775,7 @@ void Blasso::InitParams(REG_MODEL reg_model, double *beta, double s2,
 
   /* intialize omega2 */
   if(theta != 0) omega2 = ones(n, theta);
-  nu = 1.0/theta;
+  nu = alpha/theta;
 }
 
 
@@ -1996,8 +1998,8 @@ void Blasso::DrawNu(void)
     eta += 0.5*(log(omega2[i])+1.0/omega2[i]);
 
   /* use rejection sampling */
-  nu = draw_nu_reject(n, eta, theta);
-  // nu = draw_nu_mh(nu, n, eta);
+  if(alpha == 1.0) nu = draw_nu_reject(n, eta);
+  else nu = draw_nu_mh(nu, n, eta, alpha);
 }
 
 
@@ -2708,8 +2710,8 @@ void blasso_R(int *T, int *thin, int *M, int *n, double *X_in,
 	      int *omega2_len, double *omega2, int *nu_len, double *nu, 
 	      int *pi_len, double *pi, double *lpost, double *llik, 
 	      int *llik_norm_len, double *llik_norm, double *mprior, 
-	      double *r, double *delta, double *a, double *b, double *theta, 
-	      int *rao_s2, int *icept, int *normalize, int *verb)
+	      double *r, double *delta, double *a, double *b, double *alpha,
+        double *theta, int *rao_s2, int *icept, int *normalize, int *verb)
 {
   /* sanity check */
   assert(*T > 1);
@@ -2763,8 +2765,8 @@ void blasso_R(int *T, int *thin, int *M, int *n, double *X_in,
 
   /* create a new Bayesian lasso regression */
   blasso =  new Blasso(*M, *n, X, Y, (bool) *RJ, *Mmax, beta_mat[0], 
-		       lambda2_start, s2[0], tau2i, (bool) *hs, omega2, 
-		       nu_start, gamma_start, mprior, *r, *delta, *a, *b, *theta, 
+		       lambda2_start, s2[0], tau2i, (bool) *hs, omega2, nu_start, 
+           gamma_start, mprior, *r, *delta, *a, *b, *alpha, *theta, 
 		       (bool) *rao_s2, (bool) *icept, (bool) *normalize, *verb);
 
   /* part of the constructor which could fail has been moved outside */

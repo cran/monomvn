@@ -209,7 +209,7 @@ blasso(X, y, T = 1000, thin = NULL, RJ = TRUE, M = NULL,
   Park, T., Casella, G. (2008). \emph{The Bayesian Lasso.}\cr
   Journal of the American Statistical Association, 103(482),
   June 2008, pp. 681-686\cr
-  \url{http://www.stat.ufl.edu/~casella/Papers/Lasso.pdf}
+  \url{https://www.jstor.org/stable/27640090}
 
   Griffin, J.E. and Brown, P.J. (2009).
   \emph{Inference with Normal-Gamma prior distributions in

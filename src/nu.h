@@ -28,11 +28,13 @@
 double nustar_urr(const double x, const int n, const double eta);
 void nustar_durr(const double x, double *fn, double *df, const int n, const double eta);
 double nustar_urr_root(void funcd(const double, double*, double*, const int, const double), 
-		       const int n, const double eta, const double x1, const double x2, 
-		       const double xacc);
-double draw_nu_reject(const unsigned int n, const double eta, const double theta);
-double draw_nu_mh(const double nu_old, const unsigned int n, const double eta);
-double nu_lpdf(const double nu, const unsigned int n, const double eta);
+	const int n, const double eta, const double x1, const double x2, 
+	const double xacc);
+double draw_nu_reject(const unsigned int n, const double eta);
+double draw_nu_mh(const double nu_old, const unsigned int n, const double eta, 
+	const double alpha);
+double nu_lpdf(const double nu, const unsigned int n, const double eta, 
+	const double alpha);
 double unif_propose_pos(const double last, double *q_fwd, double *q_bak);
 
 #endif

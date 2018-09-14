@@ -162,7 +162,7 @@ function(X, y, T=1000, thin=NULL, RJ=TRUE, M=NULL, beta=NULL,
       else if(length(lambda2) > 0) thin <- 2
       else thin <- 1
       ## thin a bit for the Student-t latent variables
-      if(theta > 0) thin <- thin + n
+      if(theta[1] > 0) thin <- thin + n
     }
     if(length(thin) != 1 || thin < 1)
       stop("thin must be a scalar integer >= 1")
@@ -225,6 +225,10 @@ function(X, y, T=1000, thin=NULL, RJ=TRUE, M=NULL, beta=NULL,
       stop("must have ab > c(0,0) when case!=\"ridge\", !RJ, and ncol(X) >= length(y)")
 
     ## check theta and possibly allocate omega2
+    if(length(theta) == 2) {  ## this is for Chris; not sure if permanent change
+      alpha <- theta[2]
+      theta <- theta[1]
+    } else alpha <- 1
     if(length(theta) != 1 || theta < 0)
       stop("theta must be a non-negative scalar")
     if(theta > 0) {
@@ -284,6 +288,7 @@ function(X, y, T=1000, thin=NULL, RJ=TRUE, M=NULL, beta=NULL,
             delta = as.double(rd[2]),
             a = as.double(ab[1]),
             b = as.double(ab[2]),
+            alpha = as.double(alpha),
             theta = as.double(theta),
             rao.s2 = as.integer(rao.s2),
             icept = as.integer(icept),

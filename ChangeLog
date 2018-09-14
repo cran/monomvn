@@ -1,3 +1,14 @@
+1.9-8 (14 Sep 2018)
+-----
+
+Expanded exponential to Gamma prior for Student-t errors
+to support Chris Franick's Bayes Factor paper
+ 
+fixed Bayesian Lasso reference
+
+added monomvn_init.c
+
+
 1.9-7 (28 Dec 2016)
 -----
 

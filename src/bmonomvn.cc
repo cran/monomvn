@@ -265,7 +265,7 @@ void Bmonomvn::InitBlassos(const unsigned int method, int* facts,
     if(R) Xnorm_scale = sqrt(((double)(n[i] - R->n2[i]))/N);
     blasso[i] = new Blasso(i, n[i], Y, R, Xnorm, Xnorm_scale, Xmean, M, 
 			   yvec, RJ, mmax, beta_start, s2, lambda2, mprior, 
-			   r, delta, theta, rm, facts, nf, rao_s2, verb-1);
+			   r, delta, 1.0, theta, rm, facts, nf, rao_s2, verb-1);
     if(!economy) blasso[i]->Init();
   }
 
@@ -450,9 +450,9 @@ void Bmonomvn::Rounds(const unsigned int T, const double thin,
       /* check for new best MAP */
       // MYprintf(MYstdout, "lpost = %g, lpost_map = %g\n", lpost, lpost_map);
       if(lpost > lpost_map) {
-	lpost_map = lpost;
-	MVN_copy(map, mu, S, M);
-	which_map = t;
+        lpost_map = lpost;
+	        MVN_copy(map, mu, S, M);
+	        which_map = t;
       }
 
       /* calculate the QP solution */
@@ -555,7 +555,7 @@ double Bmonomvn::Draw(const double thin, const bool economy,
   }
 
   /* update the single, pooled eta, nu */
-  if(onenu) nu = draw_nu_reject(neta, eta, theta);  
+  if(onenu) nu = draw_nu_reject(neta, eta);  
 
   /* return the log posterior probability of the draw */
   return lpost;

@@ -121,6 +121,7 @@ class Blasso
   double r;                 /* Gamma alpha (shape) prior parameter for lambda */
   double delta;             /* Gamma beta (scale) prior parameter for lambda */
   double theta;             /* Exp rate parameter to omegas for St errors */
+  double alpha;             /* changes Exp nu-prior for St errors to Gamma(alpha, theta) */
 
   /* posterior probability evaluation */
   double lpost;             /* log posterior of parameters (not including mu) */
@@ -195,15 +196,15 @@ class Blasso
 	 const double lambda2, const double s2, double *tau2i, const bool hs,
 	 double *omega2, const double nu, const double gam, double *mprior, 
 	 const double r, const double delta, const double a, const double b, 
-	 const double theta, const bool rao_s2, const bool icept, 
+	 const double alpha, const double theta, const bool rao_s2, const bool icept, 
 	 const bool normalize, const unsigned int verb);
   Blasso(const unsigned int m, const unsigned int N, double **Xorig,
 	 Rmiss *R, double *Xnorm, const double Xnorm_scale, double *Xmean, 
 	 const unsigned int ldx, double *Y, const bool RJ, const unsigned int Mmax, 
 	 double *beta_start, const double s2, const double lambda2_start, 
-	 double *mprior, const double r, const double delta, const double theta,
-	 const REG_MODEL reg_model, int *facts, const unsigned int nf, 
-         const bool rao_s2, const unsigned int verb);
+	 double *mprior, const double r, const double delta, const double alpha, 
+   const double theta, const REG_MODEL reg_model, int *facts, 
+   const unsigned int nf, const bool rao_s2, const unsigned int verb);
   ~Blasso();
   void Economize(void);
 
