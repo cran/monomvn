@@ -83,7 +83,8 @@
       tf <- cv$cv < cv$cv[wm] + cv$cv.error[wm]
       s <- cv$index[(1:100)[tf][1]]
       ## s <- cv$fraction[(1:100)[tf][1]]
-      mode <- "fraction"
+      if(any(cv$index > 1)) mode <- "step"
+      else mode <- "fraction"
     
       ## get the lasso fit with fraction f
       reglst <- lars(x=y1,y=y2[,i],type=method,intercept=TRUE,use.Gram=use.Gram)

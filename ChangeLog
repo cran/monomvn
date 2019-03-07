@@ -1,3 +1,11 @@
+1.9-9 (06 Mar 2019)
+-----
+
+fixed a bug in use of lars output, and removed example init 
+from monomvn to bmonomvn due to lambda mismatch that I 
+don't have time to debug right now
+
+
 1.9-8 (14 Sep 2018)
 -----
 

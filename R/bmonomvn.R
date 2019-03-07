@@ -391,7 +391,7 @@ check.start <- function(start, nao, M)
       s$lambda <- start$lambda
       na <- is.na(s$lambda)
       s$lambda <- s$lambda[nao]
-      s$lambda[na[nao]] <- 0
+      s$lambda[na[nao]] <- 0 
       if(length(s$lambda) != M || any(s$lambda < 0) )
         stop("start$lambda should be a non-neg vector of length ncol(y)")
     } else s$lambda <- rep(0, M)

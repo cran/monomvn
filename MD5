@@ -1,10 +1,10 @@
-e85c62e7a467f3af7fe9442e5df379bc *ChangeLog
-ddb82a6e72248def946b056e3991bd7b *DESCRIPTION
+76f2e17f882141fcdab0dfef3b42a408 *ChangeLog
+d1486734a3867ffce5edad477804c02a *DESCRIPTION
 3a52f5d8b0e6d9a4696cbeaf5e563cec *NAMESPACE
 64879e36bfedfbd90cfff3c49f7f2157 *R/addy.R
 b0b180e2bf9ba31f9bf925ec81234322 *R/blasso.R
 a65104010206fddaa4cb0fa5f71886bd *R/blasso.s3.R
-2f81690b95380742c2b7a4e38c73659c *R/bmonomvn.R
+e67f8702560e0e550ce838d148a784be *R/bmonomvn.R
 7aa08d73b4de6570befff12497e21955 *R/bmonomvn.traces.R
 451fe3c64ae736fd9dc0db8107279f68 *R/default.QP.R
 dd2456cad2ec0679a4f39cf1fc7f4ba9 *R/kl.norm.R
@@ -13,7 +13,7 @@ b41954abe4c45983a46a2214fa8e727e *R/monomvn.s3.R
 8181d2937ef25947aa12c7386cb4798e *R/randmvn.R
 ea13f691f53bb8e1b123747c7094ef2d *R/regress.R
 73c7b2c5cc8a6eed29bd7ed63f8df455 *R/regress.fact.R
-0eea795c9fb4f21e9ef1da499d2ebfe0 *R/regress.lars.R
+7e5f82802e88085511bf64bb81e4f728 *R/regress.lars.R
 fa65752895031409bb146fca7e38537e *R/regress.ls.R
 ce7f4b845031798f417f89d92c133956 *R/regress.pls.R
 9f993085d2d17188838ac3d58656fb0c *R/regress.ridge.R
@@ -28,7 +28,7 @@ c6b8bed054a935524c8aa3dceffb2dde *data/returns.rda
 2f6f7f78d179c7531a8f39eb4094e885 *data/returns.test.rda
 6fcbad53e7fa5b02a81e8e9331353267 *man/blasso.Rd
 37bc0c09ab590e036ae97ca6fc1d24d1 *man/blasso.s3.Rd
-bf323a91ef0c8566d778326c2909a02f *man/bmonomvn.Rd
+d17c64071711176b738b0260dc239da9 *man/bmonomvn.Rd
 3a9b26033fd2ed9d56ba069b4b06d692 *man/cement.Rd
 cfceacdbe9fec77c1652e8b5f110ce42 *man/default.QP.Rd
 dcbba2daebc6f9f75872a65d51a18d34 *man/metrics.Rd
@@ -52,7 +52,7 @@ db41e39899f89c3c8548f297ce147326 *src/bmonomvn.h
 9e486c700ad265ecded7bc920055a848 *src/hshoe.h
 712ac63a3202f6c83546e3ee6bb6ea8d *src/linalg.c
 c651e50a7f9e4fb7a3a6cbcb0df56824 *src/linalg.h
-b65eb574d37883e53e0ea0957fe62c5e *src/matrix.c
+d2dec33f02d84e520ab19ea647ea7642 *src/matrix.c
 82a72086e29c44601a675e129bea5401 *src/matrix.h
 8d7cee76de6d23ad81578033675c9c20 *src/monomvn_init.c
 3458838dde85a5b6b6c18864b39d0289 *src/nu.c

@@ -270,8 +270,8 @@ bmonomvn(y, pre = TRUE, p = 0.9, B = 100, T = 200, thin = 1,
 \references{
   R.B. Gramacy and E. Pantaleo (2010).
   \emph{Shrinkage regression for multivariate inference with missing
-    data, and an application to portfolio balancing.}  Preprint available on
-  arXiv:0710.5837
+    data, and an application to portfolio balancing.}  Bayesian Analysis.
+    5(1), 237-262. Preprint available on arXiv:0710.5837
   \url{http://arxiv.org/abs/0907.2135}
 
   Roderick J.A. Little and Donald B. Rubin (2002).
@@ -375,21 +375,17 @@ add.pe.QP(obl.daf, oml.daf)
 ##
 
 ## fit Bayesian and classical lasso
-obls <- bmonomvn(xmiss, p=0.25)
+p <- 0.25
+obls <- bmonomvn(xmiss, p=p)
 Ellik.norm(obls$mu, obls$S, xmuS$mu, xmuS$S)
-omls <- monomvn(xmiss, p=0.25, method="lasso")
+omls <- monomvn(xmiss, p=p, method="lasso")
 Ellik.norm(omls$mu, omls$S, xmuS$mu, xmuS$S)
 
 ## compare to ridge regression
-obrs <- bmonomvn(xmiss, p=0.25, method="ridge")
+obrs <- bmonomvn(xmiss, p=p, method="ridge")
 Ellik.norm(obrs$mu, obrs$S, xmuS$mu, xmuS$S)
-omrs <- monomvn(xmiss, p=0.25, method="ridge")
+omrs <- monomvn(xmiss, p=p, method="ridge")
 Ellik.norm(omrs$mu, omrs$S, xmuS$mu, xmuS$S)
-
-## using the maximum likelihood solution to initialize
-## the Markov chain and avoid burn-in.  
-ob2s <- bmonomvn(xmiss, p=0.25, B=0, start=omls, RJ="p")
-Ellik.norm(ob2s$mu, ob2s$S, xmuS$mu, xmuS$S)
 }
 
 % Add one or more standard keywords, see file 'KEYWORDS' in the
