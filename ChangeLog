@@ -1,3 +1,10 @@
+1.9-10 (10 Jun 2019)
+-----
+
+Updated linalg.c/.h BLAS and Lapack headers (from tgp) in 
+response to gcc-9 LTO issue point out by Brian 
+
+
 1.9-9 (06 Mar 2019)
 -----
 

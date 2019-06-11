@@ -2,8 +2,8 @@ Package: monomvn
 Type: Package
 Title: Estimation for Multivariate Normal and Student-t Data with
         Monotone Missingness
-Version: 1.9-9
-Date: 2019-03-06
+Version: 1.9-10
+Date: 2019-06-10
 Author: Robert B. Gramacy <rbg@vt.edu>
 Maintainer: Robert B. Gramacy <rbg@vt.edu>
 Description: Estimation of multivariate normal and student-t data of 
@@ -24,6 +24,6 @@ Imports: quadprog, mvtnorm
 License: LGPL
 URL: http://bobby.gramacy.com/r_packages/monomvn
 NeedsCompilation: yes
-Packaged: 2019-03-06 19:54:04 UTC; bobby
+Packaged: 2019-06-10 14:59:53 UTC; bobby
 Repository: CRAN
-Date/Publication: 2019-03-07 08:50:03 UTC
+Date/Publication: 2019-06-11 16:20:03 UTC
