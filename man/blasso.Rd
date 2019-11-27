@@ -223,7 +223,7 @@ blasso(X, y, T = 1000, thin = NULL, RJ = TRUE, M = NULL,
   Carvalho, C.M., Polson, N.G., and Scott, J.G. (2010) \emph{The
  horseshoe estimator for sparse signals.} Biometrika 97(2):
  pp. 465-480.\cr
-  \url{http://ftp.stat.duke.edu/WorkingPapers/08-31.pdf}
+  \url{https://faculty.chicagobooth.edu/nicholas.polson/research/papers/Horse.pdf}
 
   Geweke, J. (1996). \emph{Variable selection and model comparison
     in regression.} In Bayesian Statistics 5.  Editors: J.M. Bernardo,

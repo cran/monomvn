@@ -103,7 +103,7 @@ Ellik.norm <- function(mu1, S1, mu2, S2, quiet=FALSE)
 
     ## the calculate the KL-divergence
     S1c <- try(chol(S1), silent=TRUE)
-    if(class(S1c) == "try-error") return(NA)
+    if(class(S1c)[1] == "try-error") return(NA)
     ld1 <- 2*sum(log(diag(S1c)))
     S1i <- chol2inv(S1c)
     tr <- sum(diag(S1i %*% S2))

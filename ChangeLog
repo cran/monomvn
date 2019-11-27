@@ -1,3 +1,23 @@
+1.9-13 (27 Nov 2019)
+------
+
+Fixed try class problem 
+
+
+1.9-12 (27 Nov 2019)
+------
+
+shortened title to under 65 characters
+
+
+1.9-11 (15 Nov 2019)
+------
+
+updated author to Author to include Cleve Moler 
+(dpotri/LINPACK) and Berwin Turlach (qpgen2/quadprog) for 
+Brian
+
+
 1.9-10 (10 Jun 2019)
 -----
 

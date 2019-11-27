@@ -1,5 +1,5 @@
-a29b6b2ee9017d48b3e231a66399643e *ChangeLog
-039f9f9c0f49aa89896088408cfbbfd5 *DESCRIPTION
+80de4a05a8a5edbc9a1812bbbafb1617 *ChangeLog
+4eff3ee49ed4853f9d027849f4d06c40 *DESCRIPTION
 3a52f5d8b0e6d9a4696cbeaf5e563cec *NAMESPACE
 64879e36bfedfbd90cfff3c49f7f2157 *R/addy.R
 b0b180e2bf9ba31f9bf925ec81234322 *R/blasso.R
@@ -7,7 +7,7 @@ a65104010206fddaa4cb0fa5f71886bd *R/blasso.s3.R
 e67f8702560e0e550ce838d148a784be *R/bmonomvn.R
 7aa08d73b4de6570befff12497e21955 *R/bmonomvn.traces.R
 451fe3c64ae736fd9dc0db8107279f68 *R/default.QP.R
-dd2456cad2ec0679a4f39cf1fc7f4ba9 *R/kl.norm.R
+89f4628ced5c99596cddd6d4b573f70d *R/kl.norm.R
 e6c1147554fbdb360db02c8b19e3d59a *R/monomvn.R
 b41954abe4c45983a46a2214fa8e727e *R/monomvn.s3.R
 8181d2937ef25947aa12c7386cb4798e *R/randmvn.R
@@ -21,12 +21,12 @@ ce7f4b845031798f417f89d92c133956 *R/regress.pls.R
 cc92b3bec075ea06c2765fa6bd5680e1 *R/rwish.R
 19b695727a9e862d4c5bf1e3d6134f01 *R/util.R
 763a9b607e5e3c578996d5a5b3ecaca0 *data/cement.miss.rda
-4e5fe0164057fadb435ccd81bbbb674a *data/cement.rda
+1bd1100fd644000c1c16a2d7493e69f8 *data/cement.rda
 0f91082a9995d17bd2429e33f43c5c32 *data/market.rda
 cbf4524508d7ebfcdad4e208f452b445 *data/market.test.rda
 c6b8bed054a935524c8aa3dceffb2dde *data/returns.rda
 2f6f7f78d179c7531a8f39eb4094e885 *data/returns.test.rda
-6fcbad53e7fa5b02a81e8e9331353267 *man/blasso.Rd
+b5eab7e37adaa5fc560e7d3e226a7263 *man/blasso.Rd
 37bc0c09ab590e036ae97ca6fc1d24d1 *man/blasso.s3.Rd
 d17c64071711176b738b0260dc239da9 *man/bmonomvn.Rd
 3a9b26033fd2ed9d56ba069b4b06d692 *man/cement.Rd

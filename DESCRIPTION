@@ -1,13 +1,13 @@
 Package: monomvn
 Type: Package
-Title: Estimation for Multivariate Normal and Student-t Data with
-        Monotone Missingness
-Version: 1.9-10
-Date: 2019-06-10
-Author: Robert B. Gramacy <rbg@vt.edu>
+Title: Estimation for MVN and Student-t Data with Monotone Missingness
+Version: 1.9-13
+Date: 2019-11-27
+Author: Robert B. Gramacy <rbg@vt.edu>, with Fortran contributions from Cleve Moler (dpotri/LINPACK) as updated by Berwin A. Turlach (qpgen2/quadprog)
 Maintainer: Robert B. Gramacy <rbg@vt.edu>
-Description: Estimation of multivariate normal and student-t data of 
+Description: Estimation of multivariate normal (MVN) and student-t data of 
  arbitrary dimension where the pattern of missing data is monotone.
+ See Pantaleo and Gramacy (2010) <doi:10.1214/10-BA602>.
  Through the use of parsimonious/shrinkage regressions 
  (plsr, pcr, lasso, ridge,  etc.), where standard regressions fail, 
  the package can handle a nearly arbitrary amount of missing data. 
@@ -24,6 +24,6 @@ Imports: quadprog, mvtnorm
 License: LGPL
 URL: http://bobby.gramacy.com/r_packages/monomvn
 NeedsCompilation: yes
-Packaged: 2019-06-10 14:59:53 UTC; bobby
+Packaged: 2019-11-27 17:31:39 UTC; bobby
 Repository: CRAN
-Date/Publication: 2019-06-11 16:20:03 UTC
+Date/Publication: 2019-11-27 23:10:02 UTC
