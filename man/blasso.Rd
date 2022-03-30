@@ -209,16 +209,16 @@ blasso(X, y, T = 1000, thin = NULL, RJ = TRUE, M = NULL,
   Park, T., Casella, G. (2008). \emph{The Bayesian Lasso.}\cr
   Journal of the American Statistical Association, 103(482),
   June 2008, pp. 681-686\cr
-  \url{https://www.jstor.org/stable/27640090}
+  \doi{10.1198/016214508000000337}
 
   Griffin, J.E. and Brown, P.J. (2009).
   \emph{Inference with Normal-Gamma prior distributions in
     regression problems.} Bayesian Analysis, 5, pp. 171-188.\cr
-  \url{http://projecteuclid.org/euclid.ba/1340369797}
+  \doi{10.1214/10-BA507}
   
   Hans, C. (2009). \emph{Bayesian Lasso regression.}
   Biometrika 96, pp. 835-845.\cr
-  \url{http://biomet.oxfordjournals.org/content/96/4/835.abstract}
+  \doi{10.1093/biomet/asp047}
 
   Carvalho, C.M., Polson, N.G., and Scott, J.G. (2010) \emph{The
  horseshoe estimator for sparse signals.} Biometrika 97(2):
@@ -239,7 +239,7 @@ blasso(X, y, T = 1000, thin = NULL, RJ = TRUE, M = NULL,
     Student-t linear model.} Journal of Applied Econometrics, Vol. 8,
     S19-S40
   
-  \url{http://bobby.gramacy.com/r_packages/monomvn}
+  \url{https://bobby.gramacy.com/r_packages/monomvn/}
 }
 
 \author{ Robert B. Gramacy \email{rbg@vt.edu} }

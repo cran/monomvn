@@ -754,7 +754,7 @@ void get_regress(const unsigned int m, double *mu, double *s21, double **s11,
 
   /* for parsimony */
   /* for(unsigned int i=0; i<m-1; i++)
-     if(fabs(beta_out[i]) < sqrt(DOUBLE_EPS)) beta_out[i] = 0.0; */
+     if(fabs(beta_out[i]) < sqrt(DBL_EPSILON)) beta_out[i] = 0.0; */
 
   /* b0 <- drop(m2 - beta %*% m1) */
   *mu_out = mu[m] - linalg_ddot(m, beta_out, 1, mu, 1);

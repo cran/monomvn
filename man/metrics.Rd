@@ -76,7 +76,7 @@ kl.norm(mu1, S1, mu2, S2, quiet=FALSE, symm=FALSE)
   those versions use \code{kl.norm(mu2, S2, mu1, s1)}
 }
 \references{
-\url{http://bobby.gramacy.com/r_packages/monomvn}
+\url{https://bobby.gramacy.com/r_packages/monomvn/}
 }
 \examples{
 mu1 <- rnorm(5)

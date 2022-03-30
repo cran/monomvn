@@ -271,14 +271,14 @@ bmonomvn(y, pre = TRUE, p = 0.9, B = 100, T = 200, thin = 1,
   R.B. Gramacy and E. Pantaleo (2010).
   \emph{Shrinkage regression for multivariate inference with missing
     data, and an application to portfolio balancing.}  Bayesian Analysis.
-    5(1), 237-262. Preprint available on arXiv:0710.5837
-  \url{http://arxiv.org/abs/0907.2135}
+    5(1), 237-262.  \doi{10.1214/10-BA602}
+   Preprint available on arXiv:0710.5837 \url{https://arxiv.org/abs/0907.2135}
 
   Roderick J.A. Little and Donald B. Rubin (2002).
   \emph{Statistical Analysis with Missing Data}, Second Edition.
   Wilely.
 
-\url{http://bobby.gramacy.com/r_packages/monomvn}
+\url{https://bobby.gramacy.com/r_packages/monomvn/}
 }
 
 \author{ Robert B. Gramacy \email{rbg@vt.edu} }

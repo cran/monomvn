@@ -2491,7 +2491,7 @@ void draw_tau2i_lasso(const unsigned int m, double *tau2i, double *beta,
     tau2i_temp = rinvgauss(exp(l_mup), lambda2); 
     
     /* check to make sure there were no numerical problems */
-    if(tau2i_temp <= 0 || tau2i_temp > 1.0/DOUBLE_EPS) {
+    if(tau2i_temp <= 0 || tau2i_temp > 1.0/DBL_EPSILON) {
 #ifdef DEBUG
       MYprintf(MYstdout, "tau2i_lasso: j=%d, m=%d, l2=%g, s2=%g, beta=%g, tau2i=%g\n", 
 	       j, m, lambda2, s2, beta[j], tau2i[j]);
@@ -2520,7 +2520,7 @@ void draw_tau2i_ng(const unsigned int m, double *tau2i, double *beta,
     rgig(1, gam - 0.5, sq(beta[j])/s2, lambda2, &tau2); 
   
     /* check to make sure there were no numerical problems */
-    if(tau2 < DOUBLE_EPS || !R_FINITE(tau2)) {
+    if(tau2 < DBL_EPSILON || !R_FINITE(tau2)) {
 #ifdef DEBUG
       MYprintf(MYstdout, "tau2i_ng: j=%d, m=%d, gam=%g, l2=%g, s2=%g, \
 beta=%g, tau2i=%g, tau2=%g\n", 

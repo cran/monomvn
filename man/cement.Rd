@@ -45,7 +45,7 @@ Roderick J.A. Little and Donald B. Rubin (2002).
 \emph{Statistical Analysis with Missing Data}, Second Edition.
 Wilely.  Page 154.
 
-\url{http://bobby.gramacy.com/r_packages/monomvn}
+\url{https://bobby.gramacy.com/r_packages/monomvn/}
 }
 
 \seealso{

@@ -30,7 +30,7 @@
 #include <Rmath.h>
 
 
-#define ZTOL sqrt(DOUBLE_EPS)
+#define ZTOL sqrt(DBL_EPSILON)
 
 /* 
  * gig_gfn: 

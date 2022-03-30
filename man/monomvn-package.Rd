@@ -29,9 +29,9 @@ Robert B. Gramacy \email{rbg@vt.edu}
 Robert B. Gramacy, Joo Hee Lee and Ricardo Silva (2008).
 \emph{On estimating covariances between many assets with histories 
 of highly variable length}. \cr Preprint available on arXiv:0710.5837:
-\url{http://arxiv.org/abs/0710.5837}
+\url{https://arxiv.org/abs/0710.5837}
 
-\url{http://bobby.gramacy.com/r_packages/monomvn}
+\url{https://bobby.gramacy.com/r_packages/monomvn/}
 }
 \keyword{ package }
 \seealso{ \code{\link{monomvn}}, the now defunct \code{norm} package, \pkg{mvnmle} }

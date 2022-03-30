@@ -200,7 +200,7 @@ monomvn(y, pre = TRUE, method = c("plsr", "pcr", "lasso", "lar",
   Robert B. Gramacy, Joo Hee Lee, and Ricardo Silva (2007).
   \emph{On estimating covariances between many assets with histories 
   of highly variable length}. \cr Preprint available on arXiv:0710.5837:
-  \url{http://arxiv.org/abs/0710.5837}
+  \url{https://arxiv.org/abs/0710.5837}
 
   Roderick J.A. Little and Donald B. Rubin (2002).
   \emph{Statistical Analysis with Missing Data}, Second Edition.
@@ -215,7 +215,7 @@ monomvn(y, pre = TRUE, method = c("plsr", "pcr", "lasso", "lar",
   (2003).
   \emph{Least Angle Regression (with discussion).}
   Annals of Statistics \bold{32}(2); see also\cr
-  \url{http://www-stat.stanford.edu/~hastie/Papers/LARS/LeastAngle_2002.pdf}
+  \url{https://hastie.su.domains/Papers/LARS/LeastAngle_2002.pdf}
   
   Trevor Hastie, Robert Tibshirani and Jerome Friedman (2002).
   \emph{Elements of Statistical Learning.} Springer, NY. [HTF]
@@ -224,7 +224,7 @@ monomvn(y, pre = TRUE, method = c("plsr", "pcr", "lasso", "lar",
   by code found on the world wide web, written by Daniel Heitjan.
   Search for \dQuote{fcn.q}
 
-\url{http://bobby.gramacy.com/r_packages/monomvn}
+\url{https://bobby.gramacy.com/r_packages/monomvn/}
 }
 \author{ Robert B. Gramacy \email{rbg@vt.edu}}
 
