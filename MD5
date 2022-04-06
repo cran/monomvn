@@ -1,5 +1,5 @@
-ec74ef6efe6fb0934f70cf2e31a55697 *ChangeLog
-5e648984fb545c6af756cca704510d7d *DESCRIPTION
+3c3638714ab1983a98ab616e2b9361c0 *ChangeLog
+50f845ea78064c2a3ba768757e92898a *DESCRIPTION
 3a52f5d8b0e6d9a4696cbeaf5e563cec *NAMESPACE
 64879e36bfedfbd90cfff3c49f7f2157 *R/addy.R
 b0b180e2bf9ba31f9bf925ec81234322 *R/blasso.R
@@ -51,8 +51,8 @@ bcbffc0ebcb14e3dd4ac96ce8fa180ad *src/Makevars
 db41e39899f89c3c8548f297ce147326 *src/bmonomvn.h
 00a487d50b8c5d90f0515d48571fa485 *src/hshoe.c
 9e486c700ad265ecded7bc920055a848 *src/hshoe.h
-f42a23825e83c9bb1bf61cbc054d070a *src/linalg.c
-c9cce2c24568995b9a9a6cdd5a723a1e *src/linalg.h
+e90480ffa1bad9428d4c296e9e21b776 *src/linalg.c
+34bb5ea52a0789339e46df5bf45badce *src/linalg.h
 d2dec33f02d84e520ab19ea647ea7642 *src/matrix.c
 82a72086e29c44601a675e129bea5401 *src/matrix.h
 8d7cee76de6d23ad81578033675c9c20 *src/monomvn_init.c
@@ -61,7 +61,7 @@ c0a6d4078fe746e23e3fb053234acab9 *src/nu.h
 d8edc1f2258e3da36a63b0b3d6ec2e2b *src/rgig.c
 f2cba28948b739e258e449afa705116f *src/rgig.h
 566af35ef5275604911cef5092623510 *src/rhelp.c
-a084dcd54cc693c3decee62270a814a2 *src/rhelp.h
+dae29d1025761366517b56cb7db0e08f *src/rhelp.h
 8d332ebc9e3b177ed201ed5115211ed4 *src/solve.QP.f
 c8533681cb1b45d333e52067217d5d79 *src/ustructs.cc
 51efeb1be4f9bbbbe07da541ae373850 *src/ustructs.h
