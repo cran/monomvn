@@ -7,9 +7,9 @@
 
 /* .C calls */
 extern void adjust_elist_R(void *, void *, void *, void *, void *);
-extern void blasso_cleanup();
+extern void blasso_cleanup(void);
 extern void blasso_R(void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *);
-extern void bmonomvn_cleanup();
+extern void bmonomvn_cleanup(void);
 extern void bmonomvn_R(void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *);
 extern void get_regress_R(void *, void *, void *, void *, void *, void *, void *, void *);
 extern void Igamma_inv_R(void *, void *, void *, void *, void *);

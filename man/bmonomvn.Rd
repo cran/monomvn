@@ -61,7 +61,7 @@ bmonomvn(y, pre = TRUE, p = 0.9, B = 100, T = 200, thin = 1,
     the outset, saving dynamic allocations}
   \item{method}{ indicates the Bayesian parsimonious regression
     specification to be used, choosing between the lasso (default)
-    of Park \& Casella, the NG extension, the horseshoe,
+    of Park & Casella, the NG extension, the horseshoe,
     a ridge regression special case, and least-squares.
     The \code{"factor"} method treats the first
     \code{p} columns of \code{y} as known factors}
@@ -146,7 +146,7 @@ bmonomvn(y, pre = TRUE, p = 0.9, B = 100, T = 200, thin = 1,
   \dQuote{big \code{p} small \code{n}} problem) then
   Bayesian lasso or ridge regressions -- possibly augmented with Reversible
   Jump (RJ) for model selection -- are used instead.
-  See the Park \& Casella reference below, and the \code{\link{blasso}}
+  See the Park & Casella reference below, and the \code{\link{blasso}}
   documentation.  To guarantee each regression is well posed the
   combination setting of \code{method="lsr"} and \code{RJ="none"}
   is not allowed.

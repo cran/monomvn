@@ -28,13 +28,13 @@ data(market.test)
   on the NYSE and the AMEX from April 1968 until 1998. \code{returns}
   contains returns up until 1997, whereas \code{returns.test} has the
   returns for 1997.  Both data sets have been cleaned in the following
-  way.  All stocks have a share price greater than \$5 and a market
+  way.  All stocks have a share price greater than $5 and a market
   capitalization greater than 20\% based on the size distribution of
   NYSE firms.  Stocks without completely observed return
   series in 1997 were also discarded.
 
   The market returns provided are essentially the monthly return on the
-  S\&P500 during the same period, which is highly correlated with the
+  S&P500 during the same period, which is highly correlated with the
   raw monthly returns weighted by their market capitalization
 }
 \source{

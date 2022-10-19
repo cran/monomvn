@@ -1,5 +1,5 @@
-3c3638714ab1983a98ab616e2b9361c0 *ChangeLog
-50f845ea78064c2a3ba768757e92898a *DESCRIPTION
+1baa6d001da586d5e0406df4b59d7d08 *ChangeLog
+0230079e24ffc8b6b7c2d39438abdfe9 *DESCRIPTION
 3a52f5d8b0e6d9a4696cbeaf5e563cec *NAMESPACE
 64879e36bfedfbd90cfff3c49f7f2157 *R/addy.R
 b0b180e2bf9ba31f9bf925ec81234322 *R/blasso.R
@@ -29,7 +29,7 @@ c6b8bed054a935524c8aa3dceffb2dde *data/returns.rda
 2f6f7f78d179c7531a8f39eb4094e885 *data/returns.test.rda
 bffe8ac955b7b71313047e7180f3c01f *man/blasso.Rd
 d806a39d74e5dd0fc067e862101964d7 *man/blasso.s3.Rd
-5161d1eef5a81d2fb994ddb463ca08c9 *man/bmonomvn.Rd
+597d385204766eed2bea9a1fb09ff187 *man/bmonomvn.Rd
 794a83211d44f971ded6c126cedd6e80 *man/cement.Rd
 cfceacdbe9fec77c1652e8b5f110ce42 *man/default.QP.Rd
 a7ced3fb556ea21d3ef8a1d70b375d9a *man/metrics.Rd
@@ -41,7 +41,7 @@ a7ced3fb556ea21d3ef8a1d70b375d9a *man/metrics.Rd
 d0b590a1bee8db0e2f485da9eb9e9a38 *man/plot.monomvn.Rd
 abf7e25a8d018dc58c20de79dae7fcce *man/randmvn.Rd
 f60a43db32568e1559d6b48b9a10f81e *man/regress.Rd
-7fdb15d9dda243999f858cb3450211ae *man/returns.Rd
+11bf703a7c3aaf6c80769fb9615e0131 *man/returns.Rd
 fbed28ae8e8a589bd734564a545ba643 *man/rmono.Rd
 39f5b0be8eccc3f737dbfe824c1cdaca *man/rwish.Rd
 bcbffc0ebcb14e3dd4ac96ce8fa180ad *src/Makevars
@@ -51,14 +51,14 @@ bcbffc0ebcb14e3dd4ac96ce8fa180ad *src/Makevars
 db41e39899f89c3c8548f297ce147326 *src/bmonomvn.h
 00a487d50b8c5d90f0515d48571fa485 *src/hshoe.c
 9e486c700ad265ecded7bc920055a848 *src/hshoe.h
-e90480ffa1bad9428d4c296e9e21b776 *src/linalg.c
+ba9736dcffd4a8a31474ffef8593725a *src/linalg.c
 34bb5ea52a0789339e46df5bf45badce *src/linalg.h
 d2dec33f02d84e520ab19ea647ea7642 *src/matrix.c
 82a72086e29c44601a675e129bea5401 *src/matrix.h
-8d7cee76de6d23ad81578033675c9c20 *src/monomvn_init.c
+9e0ac8c27bffffc86f87b40edc5a9447 *src/monomvn_init.c
 3458838dde85a5b6b6c18864b39d0289 *src/nu.c
 c0a6d4078fe746e23e3fb053234acab9 *src/nu.h
-d8edc1f2258e3da36a63b0b3d6ec2e2b *src/rgig.c
+6d18d91fd39eb1b5fa0f8451cc718f7d *src/rgig.c
 f2cba28948b739e258e449afa705116f *src/rgig.h
 566af35ef5275604911cef5092623510 *src/rhelp.c
 dae29d1025761366517b56cb7db0e08f *src/rhelp.h
