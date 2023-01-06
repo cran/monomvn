@@ -1,5 +1,5 @@
-1baa6d001da586d5e0406df4b59d7d08 *ChangeLog
-0230079e24ffc8b6b7c2d39438abdfe9 *DESCRIPTION
+8f916ea1ad5df586aaf88effa87d74d9 *ChangeLog
+1d907152b203e9749d21f8ed5ac222a8 *DESCRIPTION
 3a52f5d8b0e6d9a4696cbeaf5e563cec *NAMESPACE
 64879e36bfedfbd90cfff3c49f7f2157 *R/addy.R
 b0b180e2bf9ba31f9bf925ec81234322 *R/blasso.R
@@ -47,7 +47,7 @@ fbed28ae8e8a589bd734564a545ba643 *man/rmono.Rd
 bcbffc0ebcb14e3dd4ac96ce8fa180ad *src/Makevars
 0942c2fd88338e1100175c7639bcc87b *src/blasso.cc
 0de3a0f4a7c22908ec2bbfaef809aca4 *src/blasso.h
-7eec74af9fc3f5d34f60f6dd1cd6da70 *src/bmonomvn.cc
+d188057085ebfa10e899dc81cb0b5b9e *src/bmonomvn.cc
 db41e39899f89c3c8548f297ce147326 *src/bmonomvn.h
 00a487d50b8c5d90f0515d48571fa485 *src/hshoe.c
 9e486c700ad265ecded7bc920055a848 *src/hshoe.h

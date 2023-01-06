@@ -311,7 +311,7 @@ void Bmonomvn::InitBlassoTrace(unsigned int i)
 
   /* create the filename and open the file */
   char fname[256];
-  sprintf(fname, "blasso_M%d_n%d.trace", i, n[i]);
+  snprintf(fname, 256, "blasso_M%d_n%d.trace", i, n[i]);
   trace_lasso[i] = fopen(fname, "w");
   assert(trace_lasso[i]);
 
