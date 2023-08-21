@@ -1429,8 +1429,13 @@ double Blasso::UnproposeTau2i(double *lqp_ratio, unsigned int iin)
 
     /* unpropose the iin-th component of tau2i */
     prop = 1.0/tau2i[iin+EI];          /* remove from the iin-th position */
-    tau2i[iin+EI] = tau2i[m+EI-1];
-    tau2i = (double*) realloc(tau2i, sizeof(double)*(m+EI-1));
+    if(m+EI-1 == 0) {
+      free(tau2i);
+      tau2i = NULL;
+    } else {
+      tau2i[iin+EI] = tau2i[m+EI-1];
+      tau2i = (double*) realloc(tau2i, sizeof(double)*(m+EI-1));
+    }
     /* then the proposal and prior probabilities cancel */
 
   } else if(reg_model == RIDGE && m == 1) { 
@@ -1480,8 +1485,13 @@ void Blasso::RJdown(double qratio)
   
   /* remove component of XtY */
   double xty = XtY[iin+EI];
-  XtY[iin+EI] = XtY[m+EI-1];
-  XtY = (double*) realloc(XtY, sizeof(double)*(m+EI-1));
+  if(m+EI-1 == 0) {
+    free(XtY);
+    XtY = NULL;
+  } else {
+    XtY[iin+EI] = XtY[m+EI-1];
+    XtY = (double*) realloc(XtY, sizeof(double)*(m+EI-1));
+  } 
 
   /* allocate new regression stuff */
   BayesReg *breg_new = new_BayesReg(m+EI-1, n, Xp_new, DiXp_new);
@@ -1506,8 +1516,13 @@ void Blasso::RJdown(double qratio)
     delete_BayesReg(breg); breg = breg_new;
 
     /* draw the new beta vector */
-    beta = (double*) realloc(beta, sizeof(double)*(m+EI-1));
-    draw_beta(m+EI-1, beta, breg, s2, rn);
+    if(m+EI-1 == 0) {
+      free(beta);
+      beta = NULL;
+    } else {
+      beta = (double*) realloc(beta, sizeof(double)*(m+EI-1));
+      draw_beta(m+EI-1, beta, breg, s2, rn);
+    }
     
     /* calculate new residual vector */
     dupv(resid, Y, n);
@@ -2338,8 +2353,13 @@ void Blasso::add_col(unsigned int i, unsigned int col)
   pb[col] = true;
   pin = (int*) realloc(pin, sizeof(int)*(m+1));
   pin[m] = col;
-  pout[i] = pout[M-m-1];
-  pout =(int*) realloc(pout, sizeof(int)*(M-m-1));
+  if(M-m-1 == 0) {
+    free(pout);
+    pout = NULL;
+  } else {
+    pout[i] = pout[M-m-1];
+    pout =(int*) realloc(pout, sizeof(int)*(M-m-1));
+  }
   m++;
 }
 
@@ -2358,8 +2378,13 @@ void Blasso::remove_col(unsigned int i, unsigned int col)
   assert(pb[col] == true);
   assert(pin[i] == (int) col);
   pb[col] = false;
-  pin[i] = pin[m-1];
-  pin = (int*) realloc(pin, sizeof(int)*(m-1));
+  if(m-1 == 0) {
+    free(pin);
+    pin = NULL;
+  } else {
+    pin[i] = pin[m-1];
+    pin = (int*) realloc(pin, sizeof(int)*(m-1));
+  }
   pout =(int*) realloc(pout, sizeof(int)*(M-m+1));
   pout[M-m] = col;
   m--;
