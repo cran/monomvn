@@ -1,5 +1,5 @@
-efb7b8df4473511972c485ccca0b8285 *ChangeLog
-8e0e9a675ff102b65a3142ddf5f11ac1 *DESCRIPTION
+5ed82a1e8a1053d3e9f30852ca76e91b *ChangeLog
+0cf74f6b499a490a585a4863bf0990cb *DESCRIPTION
 3a52f5d8b0e6d9a4696cbeaf5e563cec *NAMESPACE
 64879e36bfedfbd90cfff3c49f7f2157 *R/addy.R
 b0b180e2bf9ba31f9bf925ec81234322 *R/blasso.R
@@ -45,7 +45,7 @@ f60a43db32568e1559d6b48b9a10f81e *man/regress.Rd
 fbed28ae8e8a589bd734564a545ba643 *man/rmono.Rd
 39f5b0be8eccc3f737dbfe824c1cdaca *man/rwish.Rd
 bcbffc0ebcb14e3dd4ac96ce8fa180ad *src/Makevars
-c24aa10e1a903a51e288424ec3972747 *src/blasso.cc
+9afe6004e0225509eacf3f49624c1a3f *src/blasso.cc
 0de3a0f4a7c22908ec2bbfaef809aca4 *src/blasso.h
 d188057085ebfa10e899dc81cb0b5b9e *src/bmonomvn.cc
 db41e39899f89c3c8548f297ce147326 *src/bmonomvn.h

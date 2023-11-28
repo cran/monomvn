@@ -306,9 +306,9 @@ void Blasso::InitPB(double *beta, int *facts, const unsigned int nf)
     m = 0;
     for(unsigned int i=0; i<M; i++) {
       if(beta[i] != 0) { 
-	if(facts && pb[i] != true) 
-	  warning("starting beta[%d] != 0 and col %d is not a factor");
-	else { pb[i] = true; m++; }
+	      if(facts && pb[i] != true) 
+	        warning("starting beta[%d] != 0 and col %d is not a factor", i, i);
+	      else { pb[i] = true; m++; }
       } else pb[i] = false;
       assert(m <= this->Mmax);
     }
