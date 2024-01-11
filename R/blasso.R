@@ -212,7 +212,7 @@ function(X, y, T=1000, thin=NULL, RJ=TRUE, M=NULL, beta=NULL,
     ## check ab or default
     if(is.null(ab) || all(ab == -1)) {
       if(all(ab != -1)) ab <- c(0,0)
-      if(all(ab == -1) || (!RJ && lambda2 > 0 && m >= n)) {
+      if(all(ab == -1) || (!RJ && any(lambda2 > 0) && m >= n)) {
         ab[1] <- 3/2
         ab[2] <- Igamma.inv(ab[1], 0.95*gamma(ab[1]), lower=FALSE)*sum(y^2)
       }

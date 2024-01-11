@@ -1,8 +1,8 @@
-5ed82a1e8a1053d3e9f30852ca76e91b *ChangeLog
-0cf74f6b499a490a585a4863bf0990cb *DESCRIPTION
+0bc41be1244b413d60fef84290c8e6e5 *ChangeLog
+e003ed2173adeef017d070e30fdea72c *DESCRIPTION
 3a52f5d8b0e6d9a4696cbeaf5e563cec *NAMESPACE
 64879e36bfedfbd90cfff3c49f7f2157 *R/addy.R
-b0b180e2bf9ba31f9bf925ec81234322 *R/blasso.R
+1457f4a474b66831ff9c066edfe25684 *R/blasso.R
 a65104010206fddaa4cb0fa5f71886bd *R/blasso.s3.R
 e67f8702560e0e550ce838d148a784be *R/bmonomvn.R
 7aa08d73b4de6570befff12497e21955 *R/bmonomvn.traces.R
@@ -20,9 +20,9 @@ ce7f4b845031798f417f89d92c133956 *R/regress.pls.R
 614b5baa90fb0c7fd1772be92ebdb764 *R/rmono.R
 cc92b3bec075ea06c2765fa6bd5680e1 *R/rwish.R
 19b695727a9e862d4c5bf1e3d6134f01 *R/util.R
-f61db891eb928123aba4412ca322f508 *build/partial.rdb
+7080893e02c49cd296d4424b9be55069 *build/partial.rdb
 763a9b607e5e3c578996d5a5b3ecaca0 *data/cement.miss.rda
-58f3565293f4b11baa1a36f61f0767fa *data/cement.rda
+080b485d329f1e069dd60db8dc373d9f *data/cement.rda
 0f91082a9995d17bd2429e33f43c5c32 *data/market.rda
 cbf4524508d7ebfcdad4e208f452b445 *data/market.test.rda
 c6b8bed054a935524c8aa3dceffb2dde *data/returns.rda
