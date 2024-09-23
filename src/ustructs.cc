@@ -35,8 +35,8 @@ extern "C"
 #include "rhelp.h"
 #include "matrix.h"
 #include "linalg.h"
-#include <assert.h>
 }
+#include <cassert>
 #include "ustructs.h"
 
 

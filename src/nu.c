@@ -27,6 +27,7 @@
 
 #include "nu.h"
 #include "rhelp.h"
+#include "R.h"
 #include <math.h>
 #include <assert.h>
 #include <Rmath.h>
@@ -161,7 +162,7 @@ double draw_nu_reject(const unsigned int n, const double eta)
   } while(f1*f2 >= 0.0 && counter<100);
 
   /* check that we've actually been able to bracket the root */
-  if (counter==100) warning("draw_nu_reject: theta might be too high");
+  if (counter==100) Rf_warning("draw_nu_reject: theta might be too high");
 	
   /* finding the root */
   nustar = nustar_urr_root(nustar_durr,n,eta,x1,x2,1e-7);
@@ -214,7 +215,7 @@ double unif_propose_pos(const double last, double *q_fwd, double *q_bak)
   assert(last >= left && last <= right);
 
   /* if(ret > 10e10) {
-    warning("unif_propose_pos (%g) is bigger than max", ret);
+    Rf_warning("unif_propose_pos (%g) is bigger than max", ret);
     ret = 10;
     } */
   assert(ret > 0);

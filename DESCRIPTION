@@ -1,13 +1,17 @@
 Package: monomvn
 Type: Package
 Title: Estimation for MVN and Student-t Data with Monotone Missingness
-Version: 1.9-20
-Date: 2024-01-11
-Author: Robert B. Gramacy <rbg@vt.edu>, with Fortran contributions from Cleve Moler (dpotri/LINPACK) as updated by Berwin A. Turlach (qpgen2/quadprog)
+Version: 1.9-21
+Date: 2024-09-23
+Authors@R: c(person(given = c("Robert", "B."),
+                      family = "Gramacy",
+                      role = c("aut", "cre"),
+                      email = "rbg@vt.edu",
+                      comment = "with Fortran contributions from Cleve Moler (dpotri/LINPACK) as updated by Berwin A. Turlach (qpgen2/quadprog)"))
 Maintainer: Robert B. Gramacy <rbg@vt.edu>
 Description: Estimation of multivariate normal (MVN) and student-t data of 
  arbitrary dimension where the pattern of missing data is monotone.
- See Pantaleo and Gramacy (2010) <arXiv:0907.2135>.
+ See Pantaleo and Gramacy (2010) <doi:10.48550/arXiv.0907.2135>.
  Through the use of parsimonious/shrinkage regressions 
  (plsr, pcr, lasso, ridge,  etc.), where standard regressions fail, 
  the package can handle a nearly arbitrary amount of missing data. 
@@ -24,6 +28,9 @@ Imports: quadprog, mvtnorm
 License: LGPL
 URL: https://bobby.gramacy.com/r_packages/monomvn/
 NeedsCompilation: yes
-Packaged: 2024-01-11 13:22:50 UTC; bobby
+Packaged: 2024-09-23 13:43:44 UTC; bobby
+Author: Robert B. Gramacy [aut, cre] (with Fortran contributions from Cleve
+    Moler (dpotri/LINPACK) as updated by Berwin A. Turlach
+    (qpgen2/quadprog))
 Repository: CRAN
-Date/Publication: 2024-01-11 14:20:02 UTC
+Date/Publication: 2024-09-23 14:10:05 UTC

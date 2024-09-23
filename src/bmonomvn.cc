@@ -31,8 +31,8 @@ extern "C"
 #include "matrix.h"
 #include "linalg.h"
 #include "nu.h"
-#include <assert.h>
 }
+#include <cassert>
 #include "ustructs.h"
 #include "bmonomvn.h"
 #include "blasso.h"
@@ -226,7 +226,7 @@ void Bmonomvn::InitBlassos(const unsigned int method, int* facts,
       case 3: rm = FACTOR; break;
       case 4: rm = HORSESHOE; break;
       case 5: rm = NG; break;
-      default: error("regression method %d not supported", method);
+      default: Rf_error("regression method %d not supported", method);
       }
       
       /* now deal with RJ */

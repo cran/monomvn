@@ -208,7 +208,7 @@ void Blasso::Init()
   InitRegress();
 
  /* calculate the initial linear mean and corellation matrix */
-  if(!Compute(false)) error("ill-posed regression in Init");
+  if(!Compute(false)) Rf_error("ill-posed regression in Init");
 }
 
 
@@ -307,7 +307,7 @@ void Blasso::InitPB(double *beta, int *facts, const unsigned int nf)
     for(unsigned int i=0; i<M; i++) {
       if(beta[i] != 0) { 
 	      if(facts && pb[i] != true) 
-	        warning("starting beta[%d] != 0 and col %d is not a factor", i, i);
+	        Rf_warning("starting beta[%d] != 0 and col %d is not a factor", i, i);
 	      else { pb[i] = true; m++; }
       } else pb[i] = false;
       assert(m <= this->Mmax);
@@ -316,7 +316,7 @@ void Blasso::InitPB(double *beta, int *facts, const unsigned int nf)
     /* see if we are starting in a non-saturated model when RJ
        is false, and warn if so */
     if(!RJ && m < M) 
-      warning("RJ=FALSE, but not in saturated model (m=%d, M=%d), try RJ=\"p\"",
+      Rf_warning("RJ=FALSE, but not in saturated model (m=%d, M=%d), try RJ=\"p\"",
 	      m, M);
 
   } else { /* otherwise default depends on RJ */
@@ -722,7 +722,7 @@ void Blasso::InitParams(REG_MODEL reg_model, double *beta, double s2,
     this->lambda2 = lambda2;
     if(m > 0 && lambda2 <= 0  && 
        (reg_model == LASSO || reg_model == HORSESHOE || reg_model == NG)) {
-      warning("starting lambda2 (%g) <= 0 is invalid (m=%d, M=%d)", 
+      Rf_warning("starting lambda2 (%g) <= 0 is invalid (m=%d, M=%d)", 
 	      lambda2, m, M);
       this->lambda2 = 1.0;
     } else this->lambda2 = lambda2;
@@ -738,7 +738,7 @@ void Blasso::InitParams(REG_MODEL reg_model, double *beta, double s2,
 
   } else { /* OLS */
     if(lambda2 != 0)
-      warning("starting lambda2 value (%g) must be zero (m=%d, M=%d)", 
+      Rf_warning("starting lambda2 value (%g) must be zero (m=%d, M=%d)", 
 	      lambda2, m, M);
     this->lambda2 = 0.0;
     this->gam = 1.0;
@@ -1107,7 +1107,7 @@ void Blasso::Draw(const unsigned int thin, const bool fixnu)
 
   /* since not drawing Lambda, need to initialize with Compute */
   if(reg_model == RIDGE && r < 0 && delta < 0 && M > 0)
-    if(!Compute(false)) error("ill-posed regression in Draw, s2=%g, m=%d", s2, m);
+    if(!Compute(false)) Rf_error("ill-posed regression in Draw, s2=%g, m=%d", s2, m);
 
   for(unsigned int t=0; t<thin; t++) {
 
@@ -1124,11 +1124,11 @@ void Blasso::Draw(const unsigned int thin, const bool fixnu)
 
     /* recompute the BayesReg module since omega and/or tau2i have changed */
     if(omega2 && tau2i && !Compute(true))
-      error("ill-posed regression in DrawTau2i or DrawOmega2");
+      Rf_error("ill-posed regression in DrawTau2i or DrawOmega2");
     else if(omega2 && !Compute(true))
-      error("ill-posed regression in DrawOmega2");
+      Rf_error("ill-posed regression in DrawOmega2");
     else if(tau2i && !Compute(false)) 
-      error("ill-posed regression in DrawTau2i");
+      Rf_error("ill-posed regression in DrawTau2i");
     
     /* draw nu based on the omega2s */
     if(R_FINITE(nu) && omega2 && !fixnu) DrawNu();
@@ -1306,7 +1306,7 @@ void Blasso::RJup(double qratio)
     lalpha +=  lpq_ratio; 
     /* add in the (log) prior model probabilities */
     lalpha += lprior_model(m+1, Mmax, pi) - lprior_model(m, Mmax, pi); 
-  } else warning("ill-posed regression in RJup");
+  } else Rf_warning("ill-posed regression in RJup");
 
   /* MH accept or reject */
   if(success && unif_rand() < exp(lalpha)*qratio) { /* accept */
@@ -1644,7 +1644,7 @@ void Blasso::DataAugment(void)
       linalg_dgemv(CblasNoTrans,m+EI,n,1.0,DiXp,
 		   m+EI,this->Y,1,0.0,XtY,1);
     }
-    if(!Compute(true)) error("ill-posed regression in DataAugment");
+    if(!Compute(true)) Rf_error("ill-posed regression in DataAugment");
   }
   /* MAY BE THAT LIGHTER INIT DOABLE WITHOUT reinit=true ABOVE */
 }
@@ -1896,7 +1896,7 @@ void Blasso::DrawS2Margin(void)
   s2 = 1.0/rgamma(shape, 1.0/scale);
   
   /* check for a problem */
-  if(scale <= 0) error("ill-posed regression in DrawS2, scale <= 0");
+  if(scale <= 0) Rf_error("ill-posed regression in DrawS2, scale <= 0");
 }
 
 
@@ -1936,7 +1936,7 @@ void Blasso::DrawS2(void)
   s2 = 1.0/rgamma(shape, 1.0/scale);
 
   /* check for a problem */
-  if(scale <= 0) error("ill-posed regression in DrawS2, scale <= 0");
+  if(scale <= 0) Rf_error("ill-posed regression in DrawS2, scale <= 0");
 }
 
 
@@ -2114,7 +2114,7 @@ void Blasso::DrawLambda2(void)
 
     /* lambda2 has changed so need to update beta params */
     if(!Compute(false) || BtB/s2 <= 0) 
-      error("ill-posed regression in DrawLambda2, BtB=%g, s2=%g, m=%d",
+      Rf_error("ill-posed regression in DrawLambda2, BtB=%g, s2=%g, m=%d",
 	    BtB, s2, m);
   }
 }

@@ -20,7 +20,7 @@ void error(const char *str, ...);
 // #include <R.h>
 // #include <Rmath.h>
 // #include <Rinterface.h>
-#include <R_ext/Error.h>
+// #include <R_ext/Error.h>
 extern FILE *MYstdout, *MYstderr;
 #endif
 
