@@ -85,7 +85,6 @@ function(X, y, T=1000, thin=NULL, RJ=TRUE, M=NULL, beta=NULL,
     on.exit(blasso.cleanup())
 
     ## dimensions of the inputs
-    X <- as.matrix(X)
     m <- ncol(X)
     n <- nrow(X)
 
